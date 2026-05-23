@@ -33,7 +33,7 @@
           </div>
 
           <div class="hero-actions showcase-enter" style="--delay: 0.3s">
-            <router-link to="/tanmi" class="hero-link-button hero-link-button--primary">
+            <router-link to="/trail" class="hero-link-button hero-link-button--primary">
               <CompassOutlined />
               <span>步入时空展线</span>
             </router-link>

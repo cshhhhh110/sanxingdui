@@ -65,9 +65,6 @@ spring:
         completions-path: /v1/chat/completions
 
 # ========== 小米 MiMo 模型配置 ==========
-# 兼容 OpenAI 接口协议，填入 key 后即可使用
-# AI 对话模型：MiMo-v2.5-pro / MiMo-v2.5 / MiMo-v2-pro / MiMo-v2-Omni
-# TTS 模型：MiMo-v2.5-TTS / MiMo-v2.5-TTS-VoiceClone / MiMo-v2.5-TTS-VoiceDesign
 mimo:
   api-key: YOUR_MIMO_API_KEY
   base-url: https://token-plan-cn.xiaomimimo.com/v1
@@ -76,11 +73,16 @@ mimo:
   tts:
     model: mimo-v2.5-tts
 
+# ========== DeepSeek 模型配置（备选 AI Provider） ==========
+# OpenAI 兼容协议，base-url: https://api.deepseek.com
+# 模型：deepseek-v4-flash / deepseek-v4-pro
+deepseek:
+  api-key: YOUR_DEEPSEEK_API_KEY
+  base-url: https://api.deepseek.com
+  chat:
+    model: deepseek-v4-flash
+
 # ========== TTS Provider 切换 ==========
-# siliconflow: CosyVoice2 云端TTS（当前默认）
-# mimo:        小米 MiMo TTS
-tts:
-  provider: mimo
 
 # 服务器配置
 server:

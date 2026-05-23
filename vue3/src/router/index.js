@@ -205,6 +205,12 @@ const frontendRoutes = [
         meta: { title: '三星堆探秘', requiresAuth: false }
       },
       {
+        path: 'trail',
+        name: 'TimeSpaceTrail',
+        component: () => import('@/views/frontend/TimeSpaceTrail.vue'),
+        meta: { title: '姝ュ叆鏃剁┖灞曠嚎', requiresAuth: false }
+      },
+      {
         path: 'quiz',
         name: 'quiz',
         component: () => import('@/views/frontend/quiz/index.vue'),

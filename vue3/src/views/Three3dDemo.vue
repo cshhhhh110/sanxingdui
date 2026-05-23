@@ -1559,6 +1559,11 @@ function goToAiChat() {
 .insight-panel {
   display: grid;
   gap: 16px;
+  max-height: calc(100vh - 210px);
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255,255,255,0.08) transparent;
+  padding-right: 6px;
 }
 
 .panel-card {
