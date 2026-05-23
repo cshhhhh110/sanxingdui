@@ -1,0 +1,280 @@
+{
+  "meta": {
+    "project": "sanxingdui-competition-mvp",
+    "version": "1.0.0",
+    "description": "Shared seed dataset for the Sanxingdui competition MVP.",
+    "canonicalArtifactIdField": "entityId"
+  },
+  "sites": [
+    {
+      "siteCode": "SANXINGDUI",
+      "siteName": "Sanxingdui Site",
+      "siteNameZh": "\u4e09\u661f\u5806\u9057\u5740",
+      "longitude": 104.2,
+      "latitude": 30.99,
+      "virtualX": 0,
+      "virtualY": 0,
+      "virtualZ": 0
+    },
+    {
+      "siteCode": "JINSHA",
+      "siteName": "Jinsha Site",
+      "siteNameZh": "\u91d1\u6c99\u9057\u5740",
+      "longitude": 104.01,
+      "latitude": 30.68,
+      "virtualX": 120,
+      "virtualY": 0,
+      "virtualZ": 0
+    }
+  ],
+  "eras": [
+    {
+      "eraCode": "LATE_SHU",
+      "eraName": "Late Ancient Shu",
+      "eraNameZh": "\u53e4\u8700\u665a\u671f",
+      "timeStartYear": -1200,
+      "timeEndYear": -1000
+    },
+    {
+      "eraCode": "JINSHA_TRANSITION",
+      "eraName": "Jinsha Transition",
+      "eraNameZh": "\u53e4\u8700\u4f20\u627f\u9636\u6bb5",
+      "timeStartYear": -1000,
+      "timeEndYear": -650
+    }
+  ],
+  "crafts": [
+    {
+      "craftCode": "SEGMENT_CASTING",
+      "craftName": "Segment Casting",
+      "craftNameZh": "\u5206\u6bb5\u94f8\u9020"
+    },
+    {
+      "craftCode": "ASSEMBLY_CASTING",
+      "craftName": "Assembly Casting",
+      "craftNameZh": "\u5d4c\u94f8\u5de5\u827a"
+    },
+    {
+      "craftCode": "RIVETING",
+      "craftName": "Riveting",
+      "craftNameZh": "\u94c6\u63a5\u5de5\u827a"
+    },
+    {
+      "craftCode": "BRONZE_CASTING",
+      "craftName": "Bronze Casting",
+      "craftNameZh": "\u9752\u94dc\u94f8\u9020"
+    },
+    {
+      "craftCode": "SURFACE_DECORATION",
+      "craftName": "Surface Decoration",
+      "craftNameZh": "\u8868\u9762\u7eb9\u9970\u5904\u7406"
+    },
+    {
+      "craftCode": "GOLD_HAMMERING",
+      "craftName": "Gold Hammering",
+      "craftNameZh": "\u91d1\u7bab\u9524\u63f2"
+    },
+    {
+      "craftCode": "PATTERN_ENGRAVING",
+      "craftName": "Pattern Engraving",
+      "craftNameZh": "\u7eb9\u9970\u523b\u753b"
+    },
+    {
+      "craftCode": "MASK_FORMING",
+      "craftName": "Mask Forming",
+      "craftNameZh": "\u9762\u5177\u5851\u5f62"
+    }
+  ],
+  "artifacts": [
+    {
+      "entityId": "HI-2025-006",
+      "title": "\u9752\u94dc\u795e\u6811\uff08\u4e00\u53f7\u795e\u6811\uff09",
+      "titleEn": "Bronze Sacred Tree (No.1)",
+      "displayTitle": "\u9752\u94dc\u795e\u6811",
+      "displayTitleEn": "Bronze Sacred Tree",
+      "category": "\u9752\u94dc\u5668",
+      "categoryEn": "Bronze",
+      "region": "\u56db\u5ddd\u5e7f\u6c49",
+      "siteCode": "SANXINGDUI",
+      "siteName": "Sanxingdui Site",
+      "siteNameZh": "\u4e09\u661f\u5806\u9057\u5740",
+      "eraCode": "LATE_SHU",
+      "eraName": "Late Ancient Shu",
+      "eraNameZh": "\u53e4\u8700\u665a\u671f",
+      "timeStartYear": -1200,
+      "timeEndYear": -1000,
+      "craftCodes": [
+        "SEGMENT_CASTING",
+        "ASSEMBLY_CASTING",
+        "RIVETING"
+      ],
+      "craftNamesZh": [
+        "\u5206\u6bb5\u94f8\u9020",
+        "\u5d4c\u94f8\u5de5\u827a",
+        "\u94c6\u63a5\u5de5\u827a"
+      ],
+      "symbolicMeaningZh": [
+        "\u901a\u5929\u795e\u6811",
+        "\u5929\u5730\u76f8\u901a",
+        "\u795e\u6743\u796d\u7940",
+        "\u5b87\u5b99\u89c2\u8c61\u5f81"
+      ],
+      "summary": "\u4e2d\u56fd\u73b0\u5b58\u6700\u5927\u5355\u4ef6\u9752\u94dc\u6587\u7269\uff0c\u8c61\u5f81\u53e4\u8700\u5b87\u5b99\u89c2\u4e0e\u901a\u5929\u795e\u6811\u3002",
+      "description": "\u901a\u9ad83.96\u7c73\uff0c\u7531\u5e95\u5ea7\u3001\u6811\u8eab\u3001\u795e\u9f99\u4e09\u90e8\u5206\u7ec4\u6210\uff0c\u4ee3\u8868\u53e4\u8700\u4eba\u5929\u5730\u76f8\u901a\u3001\u4eba\u795e\u5171\u5c45\u7684\u5b87\u5b99\u89c2\u3002",
+      "coverImage": "/images/\u9752\u94dc\u795e\u6811.jpg",
+      "plannedGlbUrl": "/glbs/青铜神树.glb",
+      "resolvedGlbUrl": "/glbs/青铜神树.glb",
+      "modelStatus": "ready"
+    },
+    {
+      "entityId": "HI-2025-003",
+      "title": "\u9752\u94dc\u7eb5\u76ee\u9762\u5177",
+      "titleEn": "Bronze Vertical-Eyed Mask",
+      "displayTitle": "\u9752\u94dc\u7eb5\u76ee\u9762\u5177",
+      "displayTitleEn": "Bronze Vertical-Eyed Mask",
+      "category": "\u9752\u94dc\u5668",
+      "categoryEn": "Bronze",
+      "region": "\u56db\u5ddd\u5e7f\u6c49",
+      "siteCode": "SANXINGDUI",
+      "siteName": "Sanxingdui Site",
+      "siteNameZh": "\u4e09\u661f\u5806\u9057\u5740",
+      "eraCode": "LATE_SHU",
+      "eraName": "Late Ancient Shu",
+      "eraNameZh": "\u53e4\u8700\u665a\u671f",
+      "timeStartYear": -1200,
+      "timeEndYear": -1000,
+      "craftCodes": [
+        "BRONZE_CASTING",
+        "SURFACE_DECORATION"
+      ],
+      "craftNamesZh": [
+        "\u9752\u94dc\u94f8\u9020",
+        "\u8868\u9762\u7eb9\u9970\u5904\u7406"
+      ],
+      "symbolicMeaningZh": [
+        "\u7956\u5148\u795e\u5d07\u62dc",
+        "\u7eb5\u76ee\u795e\u50cf",
+        "\u795e\u6743\u5a01\u6151",
+        "\u796d\u7940\u91cd\u5668"
+      ],
+      "summary": "\u4e09\u661f\u5806\u6700\u5177\u6807\u5fd7\u6027\u7684\u795e\u9020\u50cf\u4e4b\u4e00\uff0c\u4ee5\u6781\u5ea6\u5938\u5f20\u7684\u7eb5\u76ee\u9020\u578b\u8457\u79f0\u3002",
+      "description": "\u773c\u7403\u67f1\u72b6\u5916\u51f8\u3001\u53cc\u8033\u5916\u5c55\uff0c\u5bf9\u5e94\u53e4\u8700\u7956\u5148\u795e\u5d07\u62dc\u4e0e\u5b97\u5e99\u796d\u7940\u4f53\u7cfb\u3002",
+      "coverImage": "/images/\u9752\u94dc\u7eb5\u76ee\u9762\u5177.jpg",
+      "plannedGlbUrl": "/glbs/纵目面具.glb",
+      "resolvedGlbUrl": "/glbs/纵目面具.glb",
+      "modelStatus": "ready"
+    },
+    {
+      "entityId": "HI-2025-005",
+      "title": "\u9752\u94dc\u5927\u7acb\u4eba\u50cf",
+      "titleEn": "Bronze Standing Figure",
+      "displayTitle": "\u9752\u94dc\u5927\u7acb\u4eba\u50cf",
+      "displayTitleEn": "Bronze Standing Figure",
+      "category": "\u9752\u94dc\u5668",
+      "categoryEn": "Bronze",
+      "region": "\u56db\u5ddd\u5e7f\u6c49",
+      "siteCode": "SANXINGDUI",
+      "siteName": "Sanxingdui Site",
+      "siteNameZh": "\u4e09\u661f\u5806\u9057\u5740",
+      "eraCode": "LATE_SHU",
+      "eraName": "Late Ancient Shu",
+      "eraNameZh": "\u53e4\u8700\u665a\u671f",
+      "timeStartYear": -1200,
+      "timeEndYear": -1000,
+      "craftCodes": [
+        "SEGMENT_CASTING",
+        "ASSEMBLY_CASTING"
+      ],
+      "craftNamesZh": [
+        "\u5206\u6bb5\u6d47\u94f8",
+        "\u5d4c\u94f8\u5de5\u827a"
+      ],
+      "symbolicMeaningZh": [
+        "\u738b\u6743\u4e0e\u795e\u6743\u5408\u4e00",
+        "\u5927\u796d\u53f8\u5f62\u8c61",
+        "\u6700\u9ad8\u6743\u5a01\u8c61\u5f81"
+      ],
+      "summary": "\u4e16\u754c\u540c\u65f6\u671f\u6700\u5927\u9752\u94dc\u7acb\u4eba\u50cf\uff0c\u662f\u53e4\u8700\u9886\u8896\u5f62\u8c61\u7684\u91cd\u8981\u8c61\u5f81\u3002",
+      "description": "\u901a\u9ad82.62\u7c73\uff0c\u5934\u6234\u9ad8\u51a0\uff0c\u53cc\u624b\u73af\u63e1\uff0c\u4f53\u73b0\u53e4\u8700\u56fd\u738b\u517c\u5927\u796d\u53f8\u7684\u8eab\u4efd\u3002",
+      "coverImage": "/images/\u9752\u94dc\u5927\u7acb\u4eba\u50cf.jpg",
+      "plannedGlbUrl": "/glbs/青铜大立人像.glb",
+      "resolvedGlbUrl": "/glbs/青铜大立人像.glb",
+      "modelStatus": "ready"
+    },
+    {
+      "entityId": "HI-2025-004",
+      "title": "\u91d1\u6756",
+      "titleEn": "Gold Scepter",
+      "displayTitle": "\u91d1\u6756",
+      "displayTitleEn": "Gold Scepter",
+      "category": "\u91d1\u5668",
+      "categoryEn": "Gold",
+      "region": "\u56db\u5ddd\u5e7f\u6c49",
+      "siteCode": "SANXINGDUI",
+      "siteName": "Sanxingdui Site",
+      "siteNameZh": "\u4e09\u661f\u5806\u9057\u5740",
+      "eraCode": "LATE_SHU",
+      "eraName": "Late Ancient Shu",
+      "eraNameZh": "\u53e4\u8700\u665a\u671f",
+      "timeStartYear": -1200,
+      "timeEndYear": -1000,
+      "craftCodes": [
+        "GOLD_HAMMERING",
+        "PATTERN_ENGRAVING"
+      ],
+      "craftNamesZh": [
+        "\u91d1\u7bab\u9524\u63f2",
+        "\u7eb9\u9970\u523b\u753b"
+      ],
+      "symbolicMeaningZh": [
+        "\u738b\u6743\u6743\u6756",
+        "\u901a\u795e\u6cd5\u5668",
+        "\u9c7c\u51eb\u738b\u671d\u8c61\u5f81"
+      ],
+      "summary": "\u53e4\u8700\u738b\u6743\u8c61\u5f81\u7269\u4e4b\u4e00\uff0c\u4ee5\u91d1\u7bab\u5305\u8986\u6728\u6756\u5e76\u523b\u6709\u795e\u79d8\u7eb9\u9970\u3002",
+      "description": "\u4e00\u7aef\u523b\u6709\u5deb\u5e08\u5934\u50cf\u3001\u9c7c\u3001\u9e1f\u3001\u7bad\u7eb9\uff0c\u88ab\u89c6\u4e3a\u9c7c\u51eb\u738b\u671d\u7684\u6743\u529b\u548c\u795e\u6743\u8c61\u5f81\u3002",
+      "coverImage": "/images/\u5546\u5468\u91d1\u9762\u5177\u6b8b\u7247.jpg",
+      "plannedGlbUrl": "/glbs/三星堆金杖.glb",
+      "resolvedGlbUrl": "/glbs/三星堆金杖.glb",
+      "modelStatus": "ready"
+    },
+    {
+      "entityId": "HI-2025-002",
+      "title": "\u5b8c\u6574\u91d1\u9762\u5177",
+      "titleEn": "Complete Gold Mask",
+      "displayTitle": "\u5b8c\u6574\u91d1\u9762\u5177",
+      "displayTitleEn": "Complete Gold Mask",
+      "category": "\u91d1\u5668",
+      "categoryEn": "Gold",
+      "region": "\u56db\u5ddd\u5e7f\u6c49",
+      "siteCode": "SANXINGDUI",
+      "siteName": "Sanxingdui Site",
+      "siteNameZh": "\u4e09\u661f\u5806\u9057\u5740",
+      "eraCode": "LATE_SHU",
+      "eraName": "Late Ancient Shu",
+      "eraNameZh": "\u53e4\u8700\u665a\u671f",
+      "timeStartYear": -1200,
+      "timeEndYear": -1000,
+      "craftCodes": [
+        "GOLD_HAMMERING",
+        "MASK_FORMING"
+      ],
+      "craftNamesZh": [
+        "\u9524\u63f2\u6210\u578b",
+        "\u9762\u5177\u5851\u5f62"
+      ],
+      "symbolicMeaningZh": [
+        "\u795e\u6027",
+        "\u9ad8\u7b49\u7ea7\u8eab\u4efd",
+        "\u9ec4\u91d1\u5d07\u62dc",
+        "\u4e0d\u673d\u8c61\u5f81"
+      ],
+      "summary": "\u4e09\u661f\u5806\u8fc4\u4eca\u6700\u5b8c\u6574\u3001\u6700\u5927\u578b\u91d1\u9762\u5177\uff0c\u4f53\u73b0\u53e4\u8700\u9ec4\u91d1\u5d07\u62dc\u3002",
+      "description": "\u8986\u76d6\u9752\u94dc\u4eba\u5934\u50cf\u9762\u90e8\uff0c\u8c61\u5f81\u9ad8\u7b49\u7ea7\u8d35\u65cf\u6216\u795e\u5deb\u8eab\u4efd\uff0c\u4e5f\u4f53\u73b0\u4e86\u53e4\u8700\u9ad8\u8d85\u91d1\u5de5\u6c34\u5e73\u3002",
+      "coverImage": "/images/\u5546\u5468\u91d1\u9762\u5177\u6b8b\u7247.jpg",
+      "plannedGlbUrl": "/glbs/\u9ec4\u91d1\u9762\u5177\u6b8b\u7247.glb",
+      "resolvedGlbUrl": "/glbs/\u9ec4\u91d1\u9762\u5177\u6b8b\u7247.glb",
+      "modelStatus": "ready"
+    }
+  ]
+}

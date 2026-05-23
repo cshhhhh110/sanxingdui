@@ -1,0 +1,9 @@
+server:
+  port: 8089
+xunfie:
+  client:
+    hostUrl: https://spark-api.xf-yun.com/v4.0/chat
+    appId: YOUR_XUNFEI_APP_ID
+    apiSecret: YOUR_XUNFEI_API_SECRET
+    apiKey: YOUR_XUNFEI_API_KEY
+    maxResponseTime: 60

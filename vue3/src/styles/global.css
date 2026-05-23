@@ -1,0 +1,96 @@
+/* 引入思源字体 */
+@import url('https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;500;700&family=Noto+Sans+SC:wght@400;500&display=swap');
+
+/* 新中式主题配色变量 */
+:root {
+  /* 主题色 */
+  --color-primary: #2C2C2C;        /* 墨韵黑 */
+  --color-secondary: #D4282D;      /* 朱砂红 */
+  --color-accent: #7BA4A8;         /* 青瓷蓝 */
+  --color-background: #F8F5F0;     /* 宣纸白 */
+  --color-highlight: #C5A572;      /* 金箔黄 */
+  
+  /* 文字颜色 */
+  --color-text-primary: #2C2C2C;
+  --color-text-secondary: #666666;
+  --color-text-light: #999999;
+  
+  /* 字体 */
+  --font-title: 'Noto Serif SC', '思源宋体', serif;
+  --font-body: 'Noto Sans SC', '思源黑体', sans-serif;
+  
+  /* 间距 */
+  --spacing-xs: 0.25rem;
+  --spacing-sm: 0.5rem;
+  --spacing-md: 1rem;
+  --spacing-lg: 1.5rem;
+  --spacing-xl: 2rem;
+  
+  /* 圆角 */
+  --border-radius-sm: 2px;
+  --border-radius-md: 4px;
+  --border-radius-lg: 8px;
+  
+  /* 阴影 */
+  --shadow-sm: 0 2px 8px rgba(44, 44, 44, 0.04);
+  --shadow-md: 0 4px 16px rgba(44, 44, 44, 0.08);
+  --shadow-lg: 0 8px 32px rgba(44, 44, 44, 0.12);
+  
+  /* 过渡动画 */
+  --transition-fast: 0.2s ease;
+  --transition-normal: 0.3s ease;
+  --transition-slow: 0.5s ease;
+}
+
+/* 重置基础样式 */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+/* 设置根元素字体大小，方便使用 rem */
+html {
+  font-size: 16px;
+  font-family: var(--font-body);
+}
+
+body {
+  color: var(--color-text-primary);
+  background-color: var(--color-background);
+  font-family: var(--font-body);
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* 移除列表样式 */
+ul, ol {
+  list-style: none;
+}
+
+/* 移除链接下划线 */
+a {
+  text-decoration: none;
+  color: inherit;
+}
+
+/* 图片默认样式 */
+img {
+  max-width: 100%;
+  height: auto;
+  vertical-align: middle;
+}
+
+
+/* 文本溢出省略号 */
+.text-ellipsis {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* 鼠标样式 */
+.pointer {
+  cursor: pointer;
+}

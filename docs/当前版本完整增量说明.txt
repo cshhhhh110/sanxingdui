@@ -1,0 +1,257 @@
+================================================================
+三星堆竞赛 MVP · 当前版本完整增量说明
+================================================================
+
+本文档描述"终版原项目"→"当前版本"的全部新增和变更内容。
+适用于：答辩演示、协同开发、版本交接。
+
+================================================================
+一、竞赛前台页面（全新 5 页）
+================================================================
+
+1. Home.vue — 竞赛首页
+   路径：vue3/src/views/frontend/Home.vue
+   新增：Hero 标题"玄喵引路 古蜀寻踪"、4 步浏览卡片（时空探索/文物展厅/3D舞台/AI解说）、
+         "进入展陈漫游"CTA 按钮、精选文物推荐、课程/活动区。
+
+2. tanmi.vue — 三星堆时空探索台
+   路径：vue3/src/views/frontend/tanmi.vue
+   新增：三栏双列筛选布局（hero-shell + console-shell）、
+         时代刻度（timeline-stack）、空间坐标（site-grid）、工艺筛选（craft-cloud）、
+         焦点文物 Spotlight 卡片、筛选命中结果网格、下一步 CTA。
+   数据流：POST /api/spacetime/search（后端 API）。
+   特性：选项卡片动态提示（命中 X 件文物 · Y 件可进入 3D）、
+         URL query 同步筛选参数、竞态控制、loading/error 状态分离。
+
+3. 3ddemo.vue — 文物展厅（筛选结果列表）
+   路径：vue3/src/views/3ddemo.vue
+   新增：竞赛文物卡片网格、遗址/时代/工艺元数据标签、3D 模型可用状态标记、
+         进入 3D 展示 + AI 解读双按钮。
+
+4. Three3dDemo.vue — 3D 数字馆 + 知识图谱
+   路径：vue3/src/views/Three3dDemo.vue
+   新增：Three.js GLTF 模型加载（OrbitControls + HDR 环境光）、
+         加载进度条、无模型时的封面图降级。
+   图谱系统（@antv/g6 力导向图）：
+     - 5 种节点类型：artifact / site / era / craft / meaning
+     - 节点懒加载展开邻居（调 GET /api/graph/nodes/{id}/neighbors）
+     - 类型筛选器（可按类型过滤图谱显示）
+     - 图例标注（中心文物/时空坐标/工艺与寓意/相关文物）
+     - 选中节点叙事面板："这是什么""它与谁相连""下一步可去哪里"
+     - 响应式 resize
+   叙事引导：stageJourneyLine 根据是否有前序文物动态生成过渡语。
+
+5. AiChat.vue — AI 文物讲解
+   路径：vue3/src/views/frontend/AiChat.vue
+   新增：文物上下文横幅（遗址/时代/工艺/年代）、
+         RAG 检索 + SSE 流式回答（fetchEventSource）、
+         个性化建议问题生成、语音输入按钮、
+         上下文过渡句（"你刚从 xx 继续走来…"）、
+         跨文物比较提示。
+
+================================================================
+二、玄喵虚拟角色（Live2DAvatar）—— 大幅升级
+================================================================
+
+文件：vue3/src/components/Live2DAvatar.vue
+
+原状态：固定关键词匹配 → WebSocket(讯飞星火) → 打字机 → TTS
+现状态：固定问候兜底 → RAG 知识检索 → 后端 SSE 流式 → 思考态动画 → 打字机 → TTS
+
+新增功能：
+  1. RAG 知识检索
+     - searchKnowledge + buildRagPrompt + buildFallbackReply
+     - 7 份本地知识文档（见"知识库"章节）
+     提问流程：searchKnowledge→buildRagPrompt→SSE 流式→打字+语音
+
+  2. 浏览器语音输入
+     - Web Speech API 封装（browserSpeech.js）
+     - 对话框左下角"语音提问"按钮
+     - 不支持时自动禁用、识别中显示"停止听写"
+
+  3. 思考等待态
+     - 8 条轮播提示语（"玄喵正在思考中…"等）
+     - 每 2.4 秒切换，收到首 token 后停止
+
+  4. TTS 语音播放
+     - 打字速度与音频时长动态同步
+     - TTS 失败时降级为纯打字机
+     - 播放完毕自动触发气泡隐藏
+
+  5. 会话管理
+     - ensureChatSession() 自动创建/复用后端会话
+     - AbortController 支持中断进行中的请求
+
+  6. 三层兜底
+     - 知识未命中 → "不确定，不要编造"
+     - SSE 失败 → buildFallbackReply 简短判断
+     - 全链路断 → "喵～我的小脑袋有点晕"
+
+  7. UI 细节
+     - 音色下拉选择（持久化 localStorage）
+     - 对话框可拖拽
+     - 30 秒无交互自动隐藏
+     - 点击停止播放
+
+清理：
+  - 已删除 WebSocket 相关全部死代码（initWS/handleMessage/ws/wsReconnectTimer）
+
+================================================================
+三、后端API（全新）
+================================================================
+
+3.1 SpacetimeController
+   路径：springboot/.../controller/SpacetimeController.java
+   端点：
+     POST /spacetime/search            — 时空筛选（按时代/遗址/工艺）
+     GET  /graph/artifacts/{entityId}   — 文物关系图谱
+     GET  /graph/nodes/{id}/neighbors  — 图谱邻居懒加载
+
+3.2 SpacetimeService
+   路径：springboot/.../service/SpacetimeService.java（648 行）
+   核心能力：
+     - 时空筛选 + DTO 完整映射（camelCase，craft 拆数组，yearLabel 格式化）
+     - coverImage 从 sys_file_info 按 business_type=HERITAGE_ITEM 查真实路径
+     - displayTitle 自动去掉括号注释
+     - 图谱构建：5 种节点类型，自动计算关联文物数量，生成叙事文案
+     - 邻居懒加载：按 depth 控制返回数量上限
+     - 中英文名称静态映射（site/era/craft）
+
+3.3 新增 DTO
+     springboot/.../dto/query/SpacetimeSearchRequestDTO.java
+     springboot/.../dto/response/SpacetimeSearchResponseDTO.java
+     springboot/.../dto/response/SpacetimeSearchStatsResponseDTO.java
+     springboot/.../dto/response/CompetitionArtifactResponseDTO.java
+     springboot/.../dto/response/ArtifactGraphResponseDTO.java
+     springboot/.../dto/response/ArtifactGraphNodeResponseDTO.java
+     springboot/.../dto/response/ArtifactGraphEdgeResponseDTO.java
+     springboot/.../dto/response/ArtifactGraphStatsResponseDTO.java
+
+3.4 新增 Mapper SQL
+     heritage_item 表：selectSpacetimeItems（status=2 + site_code IS NOT NULL + 动态筛选 + FIND_IN_SET）
+
+================================================================
+四、数据库变更
+================================================================
+
+表：heritage_item
+新增 10 个竞赛字段：
+  site_code          VARCHAR(50)    — 遗址编码（如 SANXINGDUI）
+  site_name          VARCHAR(50)    — 遗址名称（如 三星堆遗址）
+  era_code           VARCHAR(50)    — 时代编码（如 LATE_SHU）
+  era_name           VARCHAR(50)    — 时代名称（如 古蜀晚期）
+  time_start_year    INT            — 开始年份（如 -1200）
+  time_end_year      INT            — 结束年份（如 -1000）
+  craft_codes        VARCHAR(255)   — 工艺编码（逗号分隔）
+  craft_names        VARCHAR(255)   — 工艺名称（逗号分隔）
+  glb_url            VARCHAR(500)   — GLB 模型路径
+  symbolic_meaning   VARCHAR(500)   — 象征寓意（逗号分隔）
+
+5 条核心文物已 UPDATE 写入竞赛数据：
+  HI-2025-006  青铜神树         site=SANXINGDUI  era=LATE_SHU  glb=/glbs/青铜神树.glb
+  HI-2025-003  青铜纵目面具      site=SANXINGDUI  era=LATE_SHU  glb=/glbs/纵目面具.glb
+  HI-2025-005  青铜大立人像      site=SANXINGDUI  era=LATE_SHU  glb=/glbs/青铜大立人像.glb
+  HI-2025-004  金杖             site=SANXINGDUI  era=LATE_SHU  glb=/glbs/三星堆金杖.glb
+  HI-2025-002  完整金面具        site=SANXINGDUI  era=LATE_SHU  glb=/glbs/黄金面具残片.glb
+
+================================================================
+五、MiMo 大模型接入
+================================================================
+
+配置：application.yml（mimo 段）
+
+用途：
+  - TTS 语音合成：mimo-v2.5-tts（通过 Chat 格式接口，api-key 头鉴权）
+  - AI 对话备选：mimo-v2.5-pro（OpenAI 兼容协议，按需切换）
+
+TtsService.java 改造：
+  - 多 Provider 架构（siliconflow | mimo），通过 tts.provider 配置切换
+  - MiMo 三套音色：苏打(默认男声) / 冰糖(女声) / 茉莉(甜美女声)
+  - SiliconFlow 三套音色：alex / bella / anna
+  - GET /tts/voices 返回当前 provider 的音色列表
+
+AI 对话链路：
+  - 主力：Spring AI → SiliconFlow DeepSeek-V3（application.yml spring.ai.openai 段）
+  - MiMo chat 模型已配置可随时切换
+
+================================================================
+六、本地知识库（全新）
+================================================================
+
+7 份知识文档，路径：vue3/public/data/knowledge-*.txt
+
+  knowledge-sanxingdui.txt        — 三星堆遗址概述
+  knowledge-sacred-tree.txt       — 青铜神树（HI-2025-006）
+  knowledge-vertical-eye-mask.txt — 青铜纵目面具（HI-2025-003）
+  knowledge-standing-figure.txt   — 青铜大立人像（HI-2025-005）
+  knowledge-gold-scepter.txt      — 金杖（HI-2025-004）
+  knowledge-gold-mask.txt         — 完整金面具（HI-2025-002）
+  knowledge-craft.txt             — 古蜀青铜与金器工艺
+
+检索模块：vue3/src/utils/knowledgeSearch.js
+  - 7 份文档 fetch + 缓存
+  - 专有名词映射（神树→青铜神树，权杖→金杖 等）
+  - 双字分词 + 标题匹配 + 标签匹配打分
+  - top1 文档拼入 RAG prompt（buildRagPrompt）
+  - 无命中时生成兜底文案（buildFallbackReply）
+
+================================================================
+七、GLB 3D 模型（全新/补充）
+================================================================
+
+路径：vue3/public/glbs/
+
+  青铜神树.glb        — 青铜神树（一号神树）
+  纵目面具.glb        — 青铜纵目面具
+  青铜大立人像.glb    — 青铜大立人像
+  三星堆金杖.glb      — 金杖（新增，之前缺失）
+  黄金面具残片.glb    — 完整金面具
+  掐丝珐琅.glb / 11.glb / 12.glb — 原有模型保留
+
+================================================================
+八、后台管理页面——极简黑白绿线风格统一
+================================================================
+
+全部 10 个页面已统一风格（bg:#fafafa / 卡片:#fff + #e5e5e5 边框 / 按钮黑底 / 表头绿底边线）：
+
+  vue3/src/views/backend/Dashboard.vue
+  vue3/src/views/backend/user/index.vue
+  vue3/src/views/backend/heritage/index.vue
+  vue3/src/views/backend/OrderManage.vue
+  vue3/src/views/backend/activity/index.vue
+  vue3/src/views/backend/course/index.vue
+  vue3/src/views/backend/inheritor/index.vue
+  vue3/src/views/backend/shop/category/index.vue
+  vue3/src/views/backend/shop/product/index.vue
+  vue3/src/views/backend/heritage/detail.vue
+
+================================================================
+九、新增/修改的独立工具模块
+================================================================
+
+新增：
+  vue3/src/utils/knowledgeSearch.js    — RAG 知识检索 + prompt 构建
+  vue3/src/utils/browserSpeech.js      — 浏览器语音识别封装（Web Speech API）
+  vue3/src/api/SpacetimeApi.js         — 竞赛 API 封装（search + graph + neighbors）
+  vue3/src/data/competitionArtifacts.js — 本地种子数据加载 + 查询
+  vue3/src/data/competitionUi.js       — 竞赛页 UI 文案 + 标签映射
+  vue3/src/styles/competitionMotion.css — 竞赛页共用过渡动画
+  vue3/public/data/competition-artifacts.seed.json — 5 件文物种子数据
+
+修改：
+  vue3/src/config/chatReplyConfig.js   — 从 7 条宽泛匹配瘦身为 1 条打招呼正则
+  springboot/.../ai/PromptManage.java  — 系统提示词从 ~450 字压缩为 ~180 字
+  springboot/.../config/ChatClientConfig.java — 新增 MessageWindowChatMemory（12 条）
+
+================================================================
+十、前后端启动命令
+================================================================
+
+  MySQL:   本地 localhost:3306 / heritage_db / root / chenshihao.00
+  主后端:  cd G:\终版\springboot   →  .\mvnw.cmd spring-boot:run    (端口 8889)
+  AI中继:  cd G:\终版\XunFeiTest   →  .\mvnw.cmd spring-boot:run    (端口 8089，即将废弃)
+  前端:    cd G:\终版\vue3          →  npm run dev                   (端口 8800)
+
+  前端 /api → Vite proxy → localhost:8889
+
+

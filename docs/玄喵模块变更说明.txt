@@ -1,0 +1,163 @@
+玄喵模块变更说明（RAG + 语音 + 流式对话升级）
+========================================================
+
+一、这次比之前新增了什么
+1. 问答主链路改为 RAG：
+   用户提问 → 本地知识库检索 → 拼装上下文 → 后端 SSE 流式生成 → 打字机逐字显示 + 语音播报。
+   不再依赖 XunFeiTest WebSocket，不再只靠固定关键词回复。
+2. 本地知识库：
+   7 份 txt 文件覆盖三星堆总述、青铜神树、纵目面具、青铜大立人、金杖、黄金面具、青铜工艺。
+   检索算法：专有名词映射 + 标题词匹配 + 双字分词重叠度，取最高分文档。
+3. 浏览器语音输入：
+   基于 Web Speech API，支持 Chrome/Edge，对话框和主聊天页都有麦克风按钮。
+4. 思考等待态：
+   回答前轮播"玄喵正在思考中…""正在整理资料…"等提示语，每 2.4 秒切换。
+5. 固定回复瘦身：
+   只保留"你好/在吗/你是谁"等打招呼匹配，其余全部走 RAG。
+6. 回答更短更聚焦：
+   系统提示词强制 60-120 字、最多 3 句，知识文档只取首句 80 字注入 prompt。
+7. 三层兜底：
+   知识未命中 → 诚实说"不确定"；SSE 失败 → buildFallbackReply 简短判断；全链路断 → "稍后再问我吧"。
+
+二、涉改文件清单（共 16 个）
+
+A. 新增文件（需完整复制）
+
+   [前端]
+   1. vue3/src/utils/knowledgeSearch.js
+      - RAG 检索 + prompt 构建 + 兜底文案
+      - 依赖：vue3/public/data/knowledge-*.txt
+      - 无需额外 npm 包
+
+   2. vue3/src/utils/browserSpeech.js
+      - 浏览器语音识别封装（Web Speech API）
+      - 导出 getBrowserSpeechRecognitionCtor / createBrowserSpeechRecognition
+      - 无需额外 npm 包
+
+   3. vue3/public/data/knowledge-sanxingdui.txt
+      - 三星堆遗址概述
+
+   4. vue3/public/data/knowledge-sacred-tree.txt
+      - 青铜神树（HI-2025-006）
+
+   5. vue3/public/data/knowledge-vertical-eye-mask.txt
+      - 青铜纵目面具（HI-2025-003）
+
+   6. vue3/public/data/knowledge-standing-figure.txt
+      - 青铜大立人像（HI-2025-005）
+
+   7. vue3/public/data/knowledge-gold-scepter.txt
+      - 金杖（HI-2025-004）
+
+   8. vue3/public/data/knowledge-gold-mask.txt
+      - 完整金面具（HI-2025-002）
+
+   9. vue3/public/data/knowledge-craft.txt
+      - 古蜀青铜与金器工艺
+
+B. 修改文件（需对比替换关键段落）
+
+   [前端]
+   10. vue3/src/components/Live2DAvatar.vue
+       - 新增 import：knowledgeSearch.js / browserSpeech.js / AiChatApi.js / fetchEventSource
+       - 新增 data：currentSessionId / ragAbortController / isListening / thinkingXxx
+       - 新增 methods：askWithRag / ensureChatSession / playSpeechOnly / startThinkingStatus / toggleVoiceInput / getRagContextPayload
+       - 改动 submitQuestion：固定回复未命中 → 走 askWithRag
+       - 改动 startTypewriterAndSpeech：新增 options 参数（playDelayMs / charDelay / thinkingIntervalMs）
+       - 待删逻辑：initWS / handleMessage / ws / wsReconnectTimer（WebSocket 链路已不用）
+       - style 新增：.dialog-btn-voice / .dialog-btn-voice--active
+
+   11. vue3/src/views/frontend/AiChat.vue
+       - 新增 import：knowledgeSearch.js / browserSpeech.js
+       - 新增语音输入按钮 + 逻辑
+       - 提问链路改为 RAG（同玄喵弹窗逻辑）
+       - 未改：SSE 消费方式（仍用 fetchEventSource）
+
+   12. vue3/src/config/chatReplyConfig.js
+       - 原：7 条宽泛关键词匹配（含"介绍""是什么""皮影戏"等）
+       - 改：1 条打招呼正则匹配（你好/嗨/在吗/玄喵/你是谁），其余全部删掉
+
+   [后端]
+   13. springboot/src/main/java/org/example/springboot/ai/PromptManage.java
+       - 原：~450 字长 prompt，含虚构工具函数、示例口吻
+       - 改：~180 字短 prompt，强制 60-120 字 / 最多 3 句 / 资料不足说不确定
+
+   14. springboot/src/main/java/org/example/springboot/config/ChatClientConfig.java
+       - 新增：MessageWindowChatMemory，最多保留 12 条历史消息
+       - 依赖：spring-ai-openai（已存在）
+
+C. 不动但被依赖的文件
+
+   15. vue3/src/api/AiChatApi.js —— 后端 AI 会话 API（createSession / getChatStreamUrl）
+   16. vue3/src/api/TtsApi.js —— TTS 合成 + 音色列表
+
+三、替换步骤（按顺序操作）
+
+   第 1 步：复制 9 个新增文件到对应路径
+           7 个 knowledge-*.txt → vue3/public/data/
+           knowledgeSearch.js   → vue3/src/utils/
+           browserSpeech.js     → vue3/src/utils/
+
+   第 2 步：替换前端 3 个修改文件
+           chatReplyConfig.js   → 直接覆盖
+           Live2DAvatar.vue     → 直接覆盖
+           AiChat.vue           → 直接覆盖
+
+   第 3 步：替换后端 2 个修改文件
+           PromptManage.java    → 直接覆盖
+           ChatClientConfig.java → 直接覆盖（或只加 chatMemory Bean）
+
+   第 4 步：安装前端依赖
+           cd vue3
+           npm install @microsoft/fetch-event-source
+           （如果已有则跳过）
+
+   第 5 步：验证
+           - 启动后端 → 启动前端
+           - 点击玄喵 → 输入"青铜神树有什么特点"
+           - 应看到：思考态提示语 → 流式打字 → 语音播报
+           - 输入"你好" → 应命中固定回复
+           - 输入"今天天气" → 应走兜底"不确定"
+
+四、协同开发注意
+   1. 知识文档格式约定：
+      - 首行 = 标题
+      - 末行 = 元数据（实体ID：xxx | 朝代：xxx | 出土地点：xxx | 工艺：xxx）
+      - 中间 = 正文，每份 200-500 字
+      - 新增主题时同步在 knowledgeSearch.js 的 DOC_FILES 和 ALIAS_MAP 里加条目
+   2. 浏览器语音输入仅支持 Chrome/Edge，Firefox/Safari 按钮自动禁用。
+   3. 调体验优先改 startTypewriterAndSpeech 的 options 参数：playDelayMs / charDelay / thinkingIntervalMs。
+   4. WebSocket 代码（initWS/handleMessage）还在但已不参与问答，RAG 稳定后可整段删除。
+   5. RAG 现在只取 top1 文档，若后续需要多文档融合改 askWithRag 里的 searchKnowledge(question, 1) 第二个参数。
+   6. PromptManage.java 的 prompt 是所有 AI 对话共用，改这里会影响主聊天页和玄喵两处。
+
+
+五、文件路径一览表
+
+┌──────────────────────────────────────────────────────────────────┐
+│ 类型 │ # │ 文件路径                                              │
+├──────┼───┼───────────────────────────────────────────────────────┤
+│ 新增 │ 1 │ vue3/src/utils/knowledgeSearch.js                     │
+│ 新增 │ 2 │ vue3/src/utils/browserSpeech.js                       │
+│ 新增 │ 3 │ vue3/public/data/knowledge-sanxingdui.txt             │
+│ 新增 │ 4 │ vue3/public/data/knowledge-sacred-tree.txt            │
+│ 新增 │ 5 │ vue3/public/data/knowledge-vertical-eye-mask.txt      │
+│ 新增 │ 6 │ vue3/public/data/knowledge-standing-figure.txt        │
+│ 新增 │ 7 │ vue3/public/data/knowledge-gold-scepter.txt           │
+│ 新增 │ 8 │ vue3/public/data/knowledge-gold-mask.txt              │
+│ 新增 │ 9 │ vue3/public/data/knowledge-craft.txt                  │
+├──────┼───┼───────────────────────────────────────────────────────┤
+│ 修改 │10 │ vue3/src/components/Live2DAvatar.vue                  │
+│ 修改 │11 │ vue3/src/views/frontend/AiChat.vue                    │
+│ 修改 │12 │ vue3/src/config/chatReplyConfig.js                    │
+│ 修改 │13 │ springboot/src/main/java/org/example/springboot/      │
+│      │   │   ai/PromptManage.java                                │
+│ 修改 │14 │ springboot/src/main/java/org/example/springboot/      │
+│      │   │   config/ChatClientConfig.java                        │
+├──────┼───┼───────────────────────────────────────────────────────┤
+│ 不动 │15 │ vue3/src/api/AiChatApi.js                             │
+│ 不动 │16 │ vue3/src/api/TtsApi.js                                │
+└──────┴───┴───────────────────────────────────────────────────────┘
+
+  依赖：npm install @microsoft/fetch-event-source（前端 SSE 流式消费）
+  注意：XunFeiTest(8089) WebSocket 链路已废弃，上述文件不再依赖它

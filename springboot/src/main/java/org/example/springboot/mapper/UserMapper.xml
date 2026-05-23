@@ -1,0 +1,17 @@
+<!-- 新增：带是否新用户的查询，不影响任何原有功能 -->
+<select id="getUserWithNewFlagById" resultType="org.example.springboot.entity.User">
+    SELECT
+    u.*,
+    IF(
+    TIMESTAMPDIFF(HOUR, u.created_at, NOW()) <= 24
+    OR
+    (
+    (SELECT COUNT(*) FROM activity_signup s WHERE s.user_id = u.id) = 0
+    AND (SELECT COUNT(*) FROM ai_chat_session c WHERE c.user_id = u.id) <= 1
+    AND (SELECT COUNT(*) FROM quiz_record q WHERE q.user_id = u.id) = 0
+    AND (SELECT COUNT(*) FROM shop_order o WHERE o.user_id = u.id) = 0
+    ),
+    1, 0) AS is_new_user
+    FROM `user` u
+    WHERE u.id = #{userId}
+</select>

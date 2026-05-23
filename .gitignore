@@ -1,0 +1,47 @@
+# === 敏感配置（真实密钥不提交） ===
+springboot/src/main/resources/application.yml
+XunFeiTest/src/main/resources/application.yml
+
+# === 构建产物 ===
+springboot/target/
+XunFeiTest/target/
+vue3/dist/
+vue3/node_modules/
+
+# === IDE ===
+.idea/
+.vscode/
+*.iml
+.claude/
+
+# === 日志 ===
+*.log
+vite-*.log
+
+# === 上传文件（本地测试数据不提交） ===
+springboot/files/
+
+# === 操作系统 ===
+.DS_Store
+Thumbs.db
+
+# === 临时文件 ===
+tmp/
+*.tmp
+
+# === 不相关项目 ===
+星语塔罗/
+运行.docx
+
+# === 打包产物 ===
+*.zip
+
+# === 大文件（GLB模型单独分享） ===
+vue3/public/glbs/
+vue3/public/environment.hdr
+
+# === 旧备份目录（不提交） ===
+vue3_backup_*/
+vue3_replaced_*/
+merge_backups/
+vue3/vue3/

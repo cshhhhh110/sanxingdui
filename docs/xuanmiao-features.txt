@@ -1,0 +1,141 @@
+玄喵（Live2DAvatar）功能清单 · 供协同开发者阅读
+========================================================
+
+文件位置：vue3/src/components/Live2DAvatar.vue（1045行，单文件组件）
+
+========================================================
+一、核心功能
+========================================================
+
+1. Live2D 虚拟角色
+   - 使用 live2d-widget@3.1.4 CDN 加载（hijiki 模型）
+   - 右下角固定定位，点击弹出提问对话框
+   - 加载失败自动切换备用 CDN
+
+2. 侧边唤出标签
+   - 右侧中段固定标签"玄喵"，点击展开/收起面板
+   - 30秒无交互自动隐藏，鼠标悬停取消隐藏
+   - 有新消息时标签显示红点脉冲动画
+
+3. AI 对话气泡
+   - 打字机逐字显示（50ms/字），光标闪烁动画
+   - 超出最大高度自动滚动，自定义滚动条样式
+   - 播放中显示红色脉冲边框 + "点击停止播放"提示
+   - 停止后 30 秒自动淡出隐藏
+
+========================================================
+二、问答引擎（重点）
+========================================================
+
+提问优先级：固定关键词 → RAG 知识检索 → 本地兜底
+
+4. 固定关键词匹配（chatReplyConfig.js）
+   - 命中"玄喵/你好/青铜神树/黄金面具/金杖/纵目面具/大立人/三星堆/祭祀坑/皮影戏"
+   - 直接返回预设文案，不走网络
+
+5. RAG 知识检索（knowledgeSearch.js + 7份txt）
+   - 提问未命中关键词 → 调 askWithRag()
+   - 7份知识文档：三星堆概述/青铜神树/纵目面具/大立人/金杖/金面具/青铜工艺
+   - 位置：vue3/public/data/knowledge-*.txt
+   - 匹配算法：专有名词映射 + 标题词匹配 + 双字分词重叠度
+   - 取 top1 文档拼入 RAG prompt
+
+6. SSE 流式对话
+   - 通过 AiChatApi.createSession() 创建会话（后端 /ai-chat/session/start）
+   - 通过 fetchEventSource（@microsoft/fetch-event-source）调后端 /ai-chat/stream
+   - 支持 AbortController 中断
+   - 流式返回完成后自动播放 TTS 语音
+
+7. 等待动画
+   - AI 思考期间轮播8条提示语（"玄喵正在思考中…"等）
+   - 每 2.4 秒切换一条
+
+8. 本地兜底
+   - 会话创建失败 / SSE 失败 → buildFallbackReply() 生成简短判断
+   - 知识文档未匹配 → 提示"暂时没有足够本地资料，我不编造"
+
+========================================================
+三、语音功能
+========================================================
+
+9. TTS 语音合成（TtsApi.js → 后端 /tts/speech）
+   - 支持 SiliconFlow CosyVoice2 和 MiMo TTS（后端自动切换）
+   - 打字速度与音频时长同步匹配（charDelay = duration * 1000 / text.length）
+   - TTS 失败时自动降级为纯打字机效果
+   - 音频播放完毕自动触发气泡隐藏
+
+10. 音色切换
+    - 对话框内下拉选择，位置：vue3/public/data/ 无，从后端 GET /tts/voices 获取
+    - 选择持久化到 localStorage(xuanmiao_voice)
+
+11. 浏览器语音输入（browserSpeech.js）
+    - 基于 Web Speech API（webkitSpeechRecognition / SpeechRecognition）
+    - 对话框左下角"语音提问"按钮
+    - 不支持时按钮自动禁用
+    - 识别结果自动填入输入框
+
+========================================================
+四、交互细节
+========================================================
+
+12. 对话框拖拽
+    - 鼠标按住标题栏拖拽移动
+    - 关闭按钮/输入框/下拉框区域不触发拖拽
+    - 位置实时跟随鼠标
+
+13. 组件销毁保护
+    - isDestroyed 标志位，所有异步回调先检查
+    - beforeUnmount 清理：WebSocket/定时器/音频/AbortController/Live2D/事件监听
+
+14. Live2D 画布交互
+    - MutationObserver 监听 canvas 创建
+    - 点击 canvas 弹出对话框（带按压缩放反馈）
+    - 面板关闭时 canvas 不可点击
+
+========================================================
+五、依赖关系
+========================================================
+
+入口文件依赖：
+  Live2DAvatar.vue
+    ├── chatReplyConfig.js         —— 固定关键词匹配（先保留，RAG稳定后移除）
+    ├── knowledgeSearch.js         —— RAG 知识检索 + prompt构建 + 兜底文案
+    ├── AiChatApi.js               —— 会话CRUD + SSE流式URL
+    ├── TtsApi.js                  —— TTS合成 + 音色列表
+    ├── browserSpeech.js           —— 浏览器语音识别封装
+    ├── store/user.js              —— 取 token
+    └── @microsoft/fetch-event-source  —— SSE 流式消费
+
+后端依赖：
+  /ai-chat/session/start    —— 创建会话
+  /ai-chat/stream           —— SSE 流式对话（Spring AI → SiliconFlow DeepSeek-V3）
+  /tts/speech               —— TTS 合成
+  /tts/voices               —— 音色列表
+
+知识文档：
+  vue3/public/data/knowledge-sanxingdui.txt
+  vue3/public/data/knowledge-sacred-tree.txt
+  vue3/public/data/knowledge-vertical-eye-mask.txt
+  vue3/public/data/knowledge-standing-figure.txt
+  vue3/public/data/knowledge-gold-scepter.txt
+  vue3/public/data/knowledge-gold-mask.txt
+  vue3/public/data/knowledge-craft.txt
+
+========================================================
+六、待清理
+========================================================
+
+- initWS() / handleMessage() / ws / wsReconnectTimer —— WebSocket 链路已不再用于问答，可删除
+- chatReplyConfig.js —— RAG 稳定后可删除 import 和 matchFixedAnswer 调用
+- XunFeiTest(8089) —— 整个项目可停用
+
+========================================================
+七、开发者注意事项
+========================================================
+
+- 所有异步回调必须检查 this.isDestroyed，否则组件销毁后报错
+- bubbleEl（#ai-bubble）可能为 null，操作前必须判空
+- TTS 音频 onloadedmetadata 可能不触发，加了 500ms 超时兜底
+- 拖拽排除列表在 startDrag() 里，新增可交互元素记得加
+- RAG prompt 里 extractLead() 只取首句前80字，避免 prompt 过长
+- 知识文档放在 public/data/ 下，浏览器直接 fetch，不走后端
