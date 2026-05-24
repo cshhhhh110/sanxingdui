@@ -6,10 +6,17 @@
     </div>
 
     <div class="goods-list">
-      <div class="goods-item" v-for="(item, index) in goodsList" :key="index" @click="handleJump(item)">
+      <div
+        class="goods-item"
+        :class="{ 'model-unavailable': !item.glbUrl }"
+        v-for="(item, index) in goodsList"
+        :key="index"
+        @click="handleJump(item)"
+      >
         <div class="goods-img">
           <img :src="item.imgUrl" :alt="item.name" />
           <div class="goods-era-tag">商周时期</div>
+          <div v-if="!item.glbUrl" class="model-status">暂无 3D</div>
         </div>
         <div class="goods-desc">
           <h4>{{ item.name }}</h4>
@@ -60,20 +67,24 @@ export default {
           name: "青铜大立人像",
           desc: "被誉为“东方巨人”。人像高180厘米，身穿繁复的三层云雷纹法衣，双手环抱握成管状，神情庄重，仿佛正在主持一场极为隆重浩大的神殿祭祀仪式，是古蜀巫王或至高神职人员的写照。",
           imgUrl: "images/青铜大立人像.jpg",
-          glbUrl: "/glbs/daliren.glb",
+          glbUrl: "glbs/青铜大立人像.glb",
         },
         {
           entityId: "HI-2025-001",
           name: "商周玉边璋",
           desc: "古蜀玉石工艺的巅峰代表。器身通体抛光精美，表面极度罕见地刻有古蜀人祭祀神山的精细图案（包括山川、人物、祭台等），是研究古蜀宗教仪式、服饰与信仰最珍贵的文字替代档案。",
           imgUrl: "images/商周玉边璋.jpg",
-          glbUrl: "/glbs/bianzhang.glb",
+          glbUrl: "",
         },
       ],
     };
   },
   methods: {
     handleJump(item) {
+      if (!item.glbUrl) {
+        return;
+      }
+
       this.$router.push({
         path: "/3d",
         query: {
@@ -153,6 +164,14 @@ export default {
   transition: all 0.28s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
+.goods-item.model-unavailable {
+  cursor: default;
+}
+
+.goods-item.model-unavailable .goods-img img {
+  filter: grayscale(0.25);
+}
+
 .goods-item:hover {
   transform: translateY(-5px);
   border-color: #cfa95c; /* 悬浮时透出金沙面具般的细金边 */
@@ -184,6 +203,18 @@ export default {
   border-radius: 4px;
   font-weight: 500;
   backdrop-filter: blur(2px);
+}
+
+.model-status {
+  position: absolute;
+  right: 8px;
+  bottom: 8px;
+  padding: 3px 7px;
+  color: #fff;
+  font-size: 11px;
+  font-weight: 700;
+  background: rgba(31, 47, 37, 0.72);
+  border-radius: 4px;
 }
 
 /* 探索出土时的流光流金动效 */

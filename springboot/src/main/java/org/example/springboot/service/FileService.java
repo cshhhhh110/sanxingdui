@@ -490,7 +490,12 @@ public class FileService {
      * 转换为DTO列表
      */
     private List<FileInfoDTO> convertToDTOList(List<SysFileInfo> fileList) {
-        return fileList.stream().map(this::convertToDTO).toList();
+        return fileList.stream()
+                .filter(fileInfo -> StrUtil.isBlank(fileInfo.getFilePath())
+                        || fileInfo.getFilePath().startsWith("http")
+                        || FileUtil.fileExists(fileInfo.getFilePath()))
+                .map(this::convertToDTO)
+                .toList();
     }
 
     /**
