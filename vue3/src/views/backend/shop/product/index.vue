@@ -1,287 +1,253 @@
 <template>
-  <div class="shop-product-page">
-    <div class="page-header">
-      <div class="title-wrapper">
-        <span class="title-indicator"></span>
-        <h2>商品管理</h2>
-        <span class="sub-badge">基础商品资产库与上下架调配</span>
+  <div class="product-page">
+    <header class="page-top">
+      <div class="page-top__main">
+        <h1 class="page-top__title">商品管理</h1>
       </div>
-      <a-button type="primary" class="btn-create" @click="showCreateModal">
-        <template #icon>
-          <PlusOutlined />
-        </template>
+      <a-button type="primary" class="btn-primary" @click="showCreateModal">
         新增商品
       </a-button>
-    </div>
+    </header>
 
-    <div class="search-section">
-      <a-form layout="inline" :model="searchForm" class="museum-search-form">
-        <a-form-item label="商品标题">
-          <a-input
-              v-model:value="searchForm.title"
-              placeholder="请输入商品标题"
-              allow-clear
-              style="width: 200px"
-          />
-        </a-form-item>
-        <a-form-item label="商品分类">
-          <a-select
-              v-model:value="searchForm.categoryId"
-              placeholder="请选择分类"
-              allow-clear
-              style="width: 150px"
-              class="museum-select"
-          >
-            <a-select-option
-                v-for="category in categoryList"
-                :key="category.id"
-                :value="category.id"
-            >
-              {{ category.name }}
-            </a-select-option>
-          </a-select>
-        </a-form-item>
-        <a-form-item label="状态">
-          <a-select
-              v-model:value="searchForm.status"
-              placeholder="请选择状态"
-              allow-clear
-              style="width: 120px"
-              class="museum-select"
-          >
-            <a-select-option :value="1">上架</a-select-option>
-            <a-select-option :value="0">下架</a-select-option>
-          </a-select>
-        </a-form-item>
-        <a-form-item label="库存">
-          <a-select
-              v-model:value="searchForm.hasStock"
-              placeholder="请选择"
-              allow-clear
-              style="width: 120px"
-              class="museum-select"
-          >
-            <a-select-option :value="true">有库存</a-select-option>
-            <a-select-option :value="false">无库存</a-select-option>
-          </a-select>
-        </a-form-item>
-        <a-form-item class="search-actions">
-          <a-space :size="12">
-            <a-button type="primary" class="btn-search" @click="handleSearch">
-              <template #icon><SearchOutlined /></template>
-              查询
-            </a-button>
-            <a-button class="btn-reset" @click="handleReset">
-              <template #icon><ReloadOutlined /></template>
-              重置
-            </a-button>
-          </a-space>
-        </a-form-item>
-      </a-form>
-    </div>
-
-    <div class="table-section">
-      <a-table
-          :columns="columns"
-          :data-source="tableData"
-          :pagination="pagination"
-          :loading="loading"
-          row-key="id"
-          @change="handleTableChange"
-          class="museum-theme-table"
+    <section class="filter-bar">
+      <a-input
+        v-model:value="searchForm.title"
+        placeholder="商品标题"
+        allow-clear
+        class="filter-input filter-input--wide"
+        @pressEnter="handleSearch"
+      />
+      <a-select
+        v-model:value="searchForm.categoryId"
+        placeholder="商品分类"
+        allow-clear
+        class="filter-select"
       >
-        <template #coverImage="{ record }">
-          <div class="cover-image-wrapper">
+        <a-select-option v-for="category in categoryList" :key="category.id" :value="category.id">
+          {{ category.name }}
+        </a-select-option>
+      </a-select>
+      <a-select
+        v-model:value="searchForm.status"
+        placeholder="状态"
+        allow-clear
+        class="filter-select"
+      >
+        <a-select-option :value="1">上架</a-select-option>
+        <a-select-option :value="0">下架</a-select-option>
+      </a-select>
+      <a-select
+        v-model:value="searchForm.hasStock"
+        placeholder="库存"
+        allow-clear
+        class="filter-select"
+      >
+        <a-select-option :value="true">有库存</a-select-option>
+        <a-select-option :value="false">无库存</a-select-option>
+      </a-select>
+      <div class="filter-bar__btns">
+        <a-button type="primary" class="btn-primary" @click="handleSearch">查询</a-button>
+        <a-button class="btn-ghost" @click="handleReset">重置</a-button>
+      </div>
+    </section>
+
+    <section class="column-bar">
+      <span class="column-bar__label">列顺序</span>
+      <span class="column-bar__hint">拖拽标签可调换位置</span>
+      <div class="column-chips">
+        <span
+          v-for="(key, index) in draggableColumnKeys"
+          :key="key"
+          class="column-chip"
+          :class="{
+            'column-chip--dragging': dragState.dragKey === key,
+            'column-chip--over': dragState.overKey === key && dragState.dragKey !== key
+          }"
+          draggable="true"
+          @dragstart="onColumnDragStart($event, key, index)"
+          @dragend="onColumnDragEnd"
+          @dragover.prevent="onColumnDragOver(key)"
+          @dragleave="onColumnDragLeave(key)"
+          @drop.prevent="onColumnDrop(key)"
+        >
+          <span class="column-chip__grip">⋮⋮</span>
+          {{ getColumnTitle(key) }}
+        </span>
+        <span class="column-chip column-chip--fixed">操作</span>
+      </div>
+      <button type="button" class="column-reset" @click="resetColumnOrder">恢复默认</button>
+    </section>
+
+    <section class="table-wrap">
+      <a-table
+        :columns="orderedColumns"
+        :data-source="tableData"
+        :loading="loading"
+        :pagination="pagination"
+        :scroll="{ x: tableScrollX }"
+        @change="handleTableChange"
+        row-key="id"
+        size="middle"
+        class="minimal-table"
+      >
+        <template #bodyCell="{ column, record }">
+          <template v-if="column.key === 'coverImage'">
             <a-image
-                v-if="record.coverFilePath"
-                :src="record.coverFilePath"
-                :width="54"
-                :height="54"
-                :preview="true"
-                class="museum-table-img"
+              v-if="record.coverFilePath"
+              :src="record.coverFilePath"
+              :width="48"
+              :height="48"
+              :preview="true"
+              class="cover-thumb"
             />
-            <div v-else class="no-img-placeholder">暂无图片</div>
-          </div>
-        </template>
+            <span v-else class="no-cover">—</span>
+          </template>
 
-        <template #price="{ record }">
-          <span class="table-price-text">
-            ¥{{ record.price }}
-          </span>
-        </template>
+          <template v-else-if="column.key === 'title'">
+            <button type="button" class="cell-link cell-link--title" @click="showDetailModal(record)">
+              {{ record.title }}
+            </button>
+          </template>
 
-        <template #stock="{ record }">
-          <span class="stock-badge" :class="record.stock > 0 ? 'stock-in' : 'stock-out'">
-            {{ record.stock }}
-          </span>
-        </template>
+          <template v-else-if="column.key === 'categoryName'">
+            <span class="cell-tag">{{ record.categoryName || '—' }}</span>
+          </template>
 
-        <template #status="{ record }">
-          <div class="status-cell-wrapper">
-            <a-switch
-                :checked="record.status === 1"
-                @change="(checked) => handleStatusChange(record.id, checked ? 1 : 0)"
-                :loading="record.statusLoading"
-                class="museum-switch"
-            />
-            <span class="status-text" :class="record.status === 1 ? 'status-active' : 'status-disabled'">
+          <template v-else-if="column.key === 'price'">
+            <span class="cell-price">¥{{ record.price }}</span>
+          </template>
+
+          <template v-else-if="column.key === 'stock'">
+            <span :class="['cell-stock', record.stock > 0 ? 'cell-stock--has' : 'cell-stock--empty']">
+              {{ record.stock }}
+            </span>
+          </template>
+
+          <template v-else-if="column.key === 'status'">
+            <span :class="['cell-status', record.status === 1 ? 'cell-status--on' : 'cell-status--off']">
               {{ record.statusName }}
             </span>
-          </div>
-        </template>
+          </template>
 
-        <template #action="{ record }">
-          <div class="action-cell">
-            <a-button type="link" size="small" class="link-btn detail-link" @click="showDetailModal(record)">详情</a-button>
-            <a-divider type="vertical" class="action-divider" />
-            <a-button type="link" size="small" class="link-btn edit-link" @click="showEditModal(record)">编辑</a-button>
-            <a-divider type="vertical" class="action-divider" />
+          <template v-else-if="column.key === 'createTime'">
+            <span class="cell-mono">{{ formatDate(record.createTime) }}</span>
+          </template>
 
-            <a-dropdown :align="{ overflow: { adjustX: true, adjustY: true } }" overlayClassName="museum-dropdown-menu">
-              <a-button type="link" size="small" class="more-btn">
-                更多 <DownOutlined class="down-arrow-icon" />
-              </a-button>
-              <template #overlay>
-                <a-menu @click="({ key }) => handleAction(key, record)" class="museum-menu-items">
-                  <a-menu-item key="stock" class="item-stock">库存管理</a-menu-item>
-                  <a-menu-divider class="item-divider" />
-                  <a-menu-item key="delete" danger class="item-delete">删除商品</a-menu-item>
-                </a-menu>
-              </template>
-            </a-dropdown>
-          </div>
+          <template v-else-if="column.key === 'action'">
+            <div class="action-group">
+              <button type="button" class="cell-link" @click="showDetailModal(record)">详情</button>
+              <span class="action-sep">|</span>
+              <button type="button" class="cell-link" @click="showEditModal(record)">编辑</button>
+              <span class="action-sep">|</span>
+              <a-dropdown>
+                <button type="button" class="cell-link cell-link--more">
+                  更多 <DownOutlined />
+                </button>
+                <template #overlay>
+                  <a-menu class="minimal-dropdown" @click="({ key }) => handleAction(key, record)">
+                    <a-menu-item key="stock">库存管理</a-menu-item>
+                    <a-menu-divider />
+                    <a-menu-item key="delete" danger>删除</a-menu-item>
+                  </a-menu>
+                </template>
+              </a-dropdown>
+            </div>
+          </template>
         </template>
       </a-table>
-    </div>
+    </section>
 
     <a-modal
-        :title="modalTitle"
-        :open="modalVisible"
-        :mask-closable="false"
-        @cancel="handleCancel"
-        :confirm-loading="submitLoading"
-        width="840px"
-        wrapClassName="museum-custom-modal"
+      v-model:open="modalVisible"
+      :title="modalTitle"
+      width="840px"
+      class="minimal-modal"
+      :mask-closable="false"
+      @cancel="handleCancel"
     >
-      <div class="edit-form-container">
-        <div class="status-bar" :class="isEdit ? 'status-edit' : 'status-create'">
-          <div class="status-bar__left">
-            <span class="status-dot"></span>
-            <span class="status-bar__text">{{ isEdit ? '您正在对现有商品档案执行属性修订' : '您正在创建一份全新的核心物资与商品档案映射' }}</span>
-          </div>
-        </div>
-
+      <div class="modal-body">
         <a-form
-            ref="formRef"
-            :model="formData"
-            :rules="formRules"
-            :label-col="{ span: 4 }"
-            :wrapper-col="{ span: 20 }"
-            class="edit-form"
+          ref="formRef"
+          :model="formData"
+          :rules="formRules"
+          :label-col="{ span: 4 }"
+          :wrapper-col="{ span: 20 }"
+          class="minimal-form"
         >
-          <div class="form-section-card">
-            <div class="form-section__header">
-              <span class="section-mark"></span>
-              <h4>基本信息</h4>
-            </div>
-            <div class="form-section__content">
-              <a-form-item label="商品标题" name="title">
-                <a-input v-model:value="formData.title" placeholder="请输入核心商品主标题" :maxlength="200" class="museum-input" />
-              </a-form-item>
-              <a-form-item label="副标题" name="subtitle">
-                <a-input v-model:value="formData.subtitle" placeholder="请输入辅助展示或卖点宣贯的副标题" :maxlength="255" class="museum-input" />
-              </a-form-item>
-              <a-form-item label="商品分类" name="categoryId">
-                <a-select v-model:value="formData.categoryId" placeholder="请指派对应商品所属的规范目类" class="museum-select-input">
-                  <a-select-option v-for="category in categoryList" :key="category.id" :value="category.id">
-                    {{ category.name }}
-                  </a-select-option>
-                </a-select>
-              </a-form-item>
-            </div>
+          <a-form-item label="商品标题" name="title">
+            <a-input v-model:value="formData.title" placeholder="请输入商品标题" :maxlength="200" />
+          </a-form-item>
+
+          <a-form-item label="副标题" name="subtitle">
+            <a-input v-model:value="formData.subtitle" placeholder="请输入副标题" :maxlength="255" />
+          </a-form-item>
+
+          <a-form-item label="商品分类" name="categoryId">
+            <a-select v-model:value="formData.categoryId" placeholder="请选择分类">
+              <a-select-option v-for="category in categoryList" :key="category.id" :value="category.id">
+                {{ category.name }}
+              </a-select-option>
+            </a-select>
+          </a-form-item>
+
+          <div class="form-row">
+            <a-form-item label="商品价格" name="price">
+              <a-input-number v-model:value="formData.price" :min="0" :precision="2" placeholder="0.00" style="width: 100%" />
+            </a-form-item>
+            <a-form-item label="库存数量" name="stock">
+              <a-input-number v-model:value="formData.stock" :min="0" :precision="0" placeholder="0" style="width: 100%" />
+            </a-form-item>
           </div>
 
-          <div class="form-section-card">
-            <div class="form-section__header">
-              <span class="section-mark"></span>
-              <h4>价格与库存</h4>
-            </div>
-            <div class="form-section__content grid-two-columns">
-              <a-form-item label="商品价格" name="price">
-                <a-input-number v-model:value="formData.price" placeholder="0.00" :min="0" :precision="2" :step="0.01" class="museum-number-input">
-                  <template #addonBefore><span class="currency-prefix">¥</span></template>
-                </a-input-number>
-              </a-form-item>
-              <a-form-item label="库存数量" name="stock">
-                <a-input-number v-model:value="formData.stock" placeholder="请输入初始库存总额" :min="0" :precision="0" class="museum-number-input" />
-              </a-form-item>
-            </div>
-          </div>
+          <a-form-item label="封面图片" name="coverFileId">
+            <a-upload
+              v-model:file-list="coverFileList"
+              list-type="picture-card"
+              :before-upload="beforeImageUpload"
+              :custom-request="handleCoverUpload"
+              :max-count="1"
+              @remove="handleCoverRemove"
+            >
+              <div v-if="coverFileList.length < 1" class="upload-trigger">
+                <PlusOutlined />
+                <div>上传封面</div>
+              </div>
+            </a-upload>
+          </a-form-item>
 
-          <div class="form-section-card">
-            <div class="form-section__header">
-              <span class="section-mark"></span>
-              <h4>图片管理</h4>
-            </div>
-            <div class="form-section__content upload-wrapper-box">
-              <a-form-item label="封面图片" name="coverFileId">
-                <a-upload v-model:file-list="coverFileList" list-type="picture-card" :before-upload="beforeImageUpload" :custom-request="handleCoverUpload" :max-count="1" @remove="handleCoverRemove" class="museum-uploader">
-                  <div v-if="coverFileList.length < 1" class="upload-trigger-btn">
-                    <PlusOutlined class="upload-icon" />
-                    <div class="upload-text">上传封面</div>
-                  </div>
-                </a-upload>
-                <div class="upload-tip">建议正方形 800×800px，支持 JPG、PNG 格式，单张上限 5MB 且主封面必须上传。</div>
-              </a-form-item>
-              <a-form-item label="商品图片" name="imageFiles">
-                <a-upload v-model:file-list="imageFileList" list-type="picture-card" :before-upload="beforeImageUpload" :custom-request="handleImageUpload" :max-count="10" @remove="handleImageRemove" multiple class="museum-uploader">
-                  <div v-if="imageFileList.length < 10" class="upload-trigger-btn">
-                    <PlusOutlined class="upload-icon" />
-                    <div class="upload-text">上传图片</div>
-                  </div>
-                </a-upload>
-                <div class="upload-tip">最多支持上传 10 张画册轮播主图，建议尺寸 800×800px。</div>
-              </a-form-item>
-            </div>
-          </div>
+          <a-form-item label="商品图片" name="imageFiles">
+            <a-upload
+              v-model:file-list="imageFileList"
+              list-type="picture-card"
+              :before-upload="beforeImageUpload"
+              :custom-request="handleImageUpload"
+              :max-count="10"
+              @remove="handleImageRemove"
+              multiple
+            >
+              <div v-if="imageFileList.length < 10" class="upload-trigger">
+                <PlusOutlined />
+                <div>上传图片</div>
+              </div>
+            </a-upload>
+          </a-form-item>
 
-          <div class="form-section-card">
-            <div class="form-section__header">
-              <span class="section-mark"></span>
-              <h4>商品详情</h4>
-            </div>
-            <div class="form-section__content rich-editor-container">
-              <a-form-item label="商品详情" name="detail" :wrapper-col="{ span: 24 }" class="editor-full-item">
-                <RichTextEditor v-model="formData.detail" placeholder="请在这里撰写深度详实、排版精美的富文本详情介绍" height="400px" />
-              </a-form-item>
-            </div>
-          </div>
+          <a-form-item label="商品详情" name="detail">
+            <RichTextEditor v-model="formData.detail" placeholder="请输入商品详情" height="300px" />
+          </a-form-item>
 
-          <div class="form-section-card">
-            <div class="form-section__header">
-              <span class="section-mark"></span>
-              <h4>状态管理</h4>
-            </div>
-            <div class="form-section__content">
-              <a-form-item label="上架状态" name="status">
-                <a-radio-group v-model:value="formData.status" class="museum-radio-group">
-                  <a-radio :value="1" class="museum-radio">
-                    <span class="radio-label-txt text-active">立即上架公示</span>
-                  </a-radio>
-                  <a-radio :value="0" class="museum-radio">
-                    <span class="radio-label-txt text-disabled">暂存下架锁定</span>
-                  </a-radio>
-                </a-radio-group>
-              </a-form-item>
-            </div>
-          </div>
+          <a-form-item label="上架状态" name="status">
+            <a-radio-group v-model:value="formData.status">
+              <a-radio :value="1">上架</a-radio>
+              <a-radio :value="0">下架</a-radio>
+            </a-radio-group>
+          </a-form-item>
         </a-form>
       </div>
-
       <template #footer>
-        <div class="edit-footer">
-          <a-button @click="handleCancel" class="cancel-btn">取消</a-button>
-          <a-button type="primary" @click="handleSubmit" :loading="submitLoading" class="submit-btn">
+        <div class="modal-footer">
+          <a-button @click="handleCancel">取消</a-button>
+          <a-button type="primary" @click="handleSubmit" :loading="submitLoading">
             {{ isEdit ? '保存更改' : '创建商品' }}
           </a-button>
         </div>
@@ -289,107 +255,68 @@
     </a-modal>
 
     <a-modal
-        title="商品档案详情"
-        :open="detailVisible"
-        @cancel="detailVisible = false"
-        :footer="null"
-        width="840px"
-        wrapClassName="museum-custom-modal detail-modal-skin"
+      title="商品详情"
+      v-model:open="detailVisible"
+      :footer="null"
+      width="840px"
+      class="minimal-modal"
     >
-      <div v-if="currentProduct" class="product-detail">
-        <div class="detail-header-card">
-          <div class="detail-header__cover">
-            <a-image v-if="currentProduct.coverFilePath" :src="currentProduct.coverFilePath" :preview="true" class="header-cover-img" />
-            <div v-else class="no-cover-icon">暂无封面</div>
-          </div>
-          <div class="detail-header__info">
-            <h3 class="detail-header__title">{{ currentProduct.title }}</h3>
-            <div v-if="currentProduct.subtitle" class="detail-header__subtitle">{{ currentProduct.subtitle }}</div>
-            <div class="detail-header__meta">
-              <span class="meta-tag-status" :class="currentProduct.status === 1 ? 'tag-on' : 'tag-off'">
+      <div v-if="currentProduct" class="detail-content">
+        <div class="detail-header">
+          <a-image v-if="currentProduct.coverFilePath" :src="currentProduct.coverFilePath" :width="120" :preview="true" />
+          <div v-else class="detail-no-cover">暂无封面</div>
+          <div class="detail-info">
+            <h3>{{ currentProduct.title }}</h3>
+            <p v-if="currentProduct.subtitle">{{ currentProduct.subtitle }}</p>
+            <div class="detail-meta">
+              <span :class="['detail-status', currentProduct.status === 1 ? 'on' : 'off']">
                 {{ currentProduct.statusName }}
               </span>
-              <span class="meta-v-divider">|</span>
-              <span class="meta-category-label">所属分类：<strong>{{ currentProduct.categoryName }}</strong></span>
+              <span class="detail-category">{{ currentProduct.categoryName }}</span>
             </div>
           </div>
         </div>
-
-        <div class="info-data-grid">
-          <div class="grid-data-cell price-highlight">
-            <div class="cell-label">标准标价</div>
-            <div class="cell-value">¥{{ currentProduct.price }}</div>
+        <div class="detail-stats">
+          <div class="stat-item">
+            <span class="stat-label">价格</span>
+            <span class="stat-value price">¥{{ currentProduct.price }}</span>
           </div>
-          <div class="grid-data-cell">
-            <div class="cell-label">现有库存</div>
-            <div class="cell-value">
-              <span class="stock-indicator" :class="currentProduct.stock > 0 ? 'has' : 'empty'">
-                {{ currentProduct.stock }} 件
-              </span>
-            </div>
+          <div class="stat-item">
+            <span class="stat-label">库存</span>
+            <span class="stat-value">{{ currentProduct.stock }} 件</span>
           </div>
-          <div class="grid-data-cell">
-            <div class="cell-label">初次录入时间</div>
-            <div class="cell-value datetime-str">{{ currentProduct.createTime }}</div>
-          </div>
-          <div class="grid-data-cell">
-            <div class="cell-label">末次更动时间</div>
-            <div class="cell-value datetime-str">{{ currentProduct.updateTime }}</div>
+          <div class="stat-item">
+            <span class="stat-label">创建时间</span>
+            <span class="stat-value">{{ formatDate(currentProduct.createTime) }}</span>
           </div>
         </div>
-
-        <div class="detail-rich-section">
-          <div class="rich-section__title">
-            <span class="title-dot"></span>
-            <h5>深度详情描述</h5>
-          </div>
-          <div class="rich-section__content">
-            <div v-if="currentProduct.detail" class="product-detail-content" v-html="currentProduct.detail"></div>
-            <div v-else class="no-content-gray">暂未就该商品档案配置任何富文本图文详情</div>
-          </div>
-        </div>
+        <div v-if="currentProduct.detail" class="detail-rich" v-html="currentProduct.detail"></div>
+        <div v-else class="detail-no-content">暂无商品详情</div>
       </div>
     </a-modal>
 
     <a-modal
-        title="库存数额变更"
-        :open="stockVisible"
-        @ok="handleStockSubmit"
-        @cancel="stockVisible = false"
-        :confirm-loading="stockLoading"
-        width="440px"
-        wrapClassName="museum-custom-modal tiny-modal-skin"
+      title="库存管理"
+      v-model:open="stockVisible"
+      width="440px"
+      class="minimal-modal"
+      @ok="handleStockSubmit"
     >
-      <div class="stock-modify-container">
-        <a-form :label-col="{ span: 6 }" :wrapper-col="{ span: 17 }" class="stock-form-inner">
-          <a-form-item label="商品目标">
-            <span class="stock-target-title">{{ currentProduct?.title }}</span>
-          </a-form-item>
-          <a-form-item label="当前存量">
-            <span class="stock-current-badge" :class="(currentProduct?.stock || 0) > 0 ? 'ok' : 'warn'">
-              {{ currentProduct?.stock }} 件
-            </span>
-          </a-form-item>
-          <a-form-item label="修正数额">
-            <a-input-number
-                v-model:value="newStock"
-                placeholder="请输入重置后的确切库存量"
-                :min="0"
-                :precision="0"
-                class="museum-number-input"
-                style="width: 100%"
-            />
-          </a-form-item>
-        </a-form>
+      <div class="stock-form">
+        <p class="stock-product">{{ currentProduct?.title }}</p>
+        <p class="stock-current">当前库存：{{ currentProduct?.stock }} 件</p>
+        <a-form-item label="新库存">
+          <a-input-number v-model:value="newStock" :min="0" :precision="0" style="width: 100%" />
+        </a-form-item>
       </div>
     </a-modal>
   </div>
 </template>
 
 <script setup>
-import { ref, reactive, onMounted, computed, nextTick } from 'vue';
-import {message, Modal} from 'ant-design-vue';
-import { PlusOutlined, SearchOutlined, ReloadOutlined, DownOutlined } from '@ant-design/icons-vue';
+import { ref, reactive, onMounted, computed, nextTick } from 'vue'
+import { message } from 'ant-design-vue'
+import { PlusOutlined, DownOutlined } from '@ant-design/icons-vue'
 import {
   getProductPage,
   getProductById,
@@ -399,130 +326,45 @@ import {
   onShelfProduct,
   offShelfProduct,
   updateProductStock
-} from '@/api/ShopProductApi';
-import { getEnabledCategories } from '@/api/ShopCategoryApi';
-import {uploadBusinessFile, getFilesByBusinessField, deleteBusinessFile} from '@/api/FileApi';
-import { useBusinessUUID } from '@/composables/useBusinessUUID';
-import RichTextEditor from '@/components/common/RichTextEditor.vue';
+} from '@/api/ShopProductApi'
+import { getEnabledCategories } from '@/api/ShopCategoryApi'
+import { uploadBusinessFile, getFilesByBusinessField, deleteBusinessFile } from '@/api/FileApi'
+import RichTextEditor from '@/components/common/RichTextEditor.vue'
 
-// 响应式数据
-const loading = ref(false);
-const tableData = ref([]);
-const modalVisible = ref(false);
-const detailVisible = ref(false);
-const stockVisible = ref(false);
-const submitLoading = ref(false);
-const stockLoading = ref(false);
-const formRef = ref();
-const isEdit = ref(false);
-const currentEditId = ref(null);
-const currentProduct = ref(null);
-const categoryList = ref([]);
-const coverFileList = ref([]);
-const imageFileList = ref([]); // 商品图片列表
-const newStock = ref(0);
-const businessUUID = ref('')
-// ========== 组件属性 ==========
-const props = defineProps({
-  // 媒体列表
-  modelValue: {
-    type: Array,
-    default: () => []
-  },
-  // 媒体类型
-  mediaType: {
-    type: String,
-    default: 'ALL',
-    validator: (value) => ['IMG', 'VIDEO', 'AUDIO', 'PDF', 'ALL'].includes(value)
-  },
-  // 业务类型
-  businessType: {
-    type: String,
-    default: 'HERITAGE_ITEM'
-  },
-  // 业务字段
-  businessField: {
-    type: String,
-    default: 'media'
-  },
-  // 业务ID（策略C使用）
-  businessId: {
-    type: [String, Number],
-    default: null
-  },
-  // 是否使用策略C（直接业务绑定上传）
-  useStrategyC: {
-    type: Boolean,
-    default: false
-  },
-  // 是否支持多选
-  multiple: {
-    type: Boolean,
-    default: true
-  },
-  // 是否支持排序
-  sortable: {
-    type: Boolean,
-    default: true
-  },
-  // 是否只读
-  readonly: {
-    type: Boolean,
-    default: false
-  },
-  // 是否禁用
-  disabled: {
-    type: Boolean,
-    default: false
-  },
-  // 最大文件数量
-  maxCount: {
-    type: Number,
-    default: 10
-  },
-  // 最大文件大小（MB）
-  maxSize: {
-    type: Number,
-    default: 50
-  }
-})
+const COLUMN_STORAGE_KEY = 'backend-product-column-order'
 
-// ========== 事件定义 ==========
-const emit = defineEmits([
-  'update:modelValue',
-  'upload-success',
-  'upload-error',
-  'remove',
-  'preview'
-])
+const loading = ref(false)
+const tableData = ref([])
+const modalVisible = ref(false)
+const detailVisible = ref(false)
+const stockVisible = ref(false)
+const submitLoading = ref(false)
+const stockLoading = ref(false)
+const formRef = ref()
+const isEdit = ref(false)
+const currentEditId = ref(null)
+const currentProduct = ref(null)
+const categoryList = ref([])
+const coverFileList = ref([])
+const imageFileList = ref([])
+const newStock = ref(0)
 
-// ========== 响应式数据 ==========
-const uploadRef = ref()
-const previewVisible = ref(false)
-const previewMedia = ref(null)
-const mediaList = computed({
-  get: () => props.modelValue || [],
-  set: (value) => emit('update:modelValue', value)
-})
-// 搜索表单
 const searchForm = reactive({
   title: '',
   categoryId: null,
   status: null,
   hasStock: null
-});
+})
 
-// 分页配置
 const pagination = reactive({
   current: 1,
   pageSize: 10,
   total: 0,
   showSizeChanger: true,
   showQuickJumper: true,
-  showTotal: (total) => `共 ${total} 条记录`
-});
+  showTotal: total => `共 ${total} 条`
+})
 
-// 表单数据
 const formData = reactive({
   title: '',
   subtitle: '',
@@ -531,9 +373,8 @@ const formData = reactive({
   stock: 0,
   detail: '',
   status: 1
-});
+})
 
-// 表单验证规则
 const formRules = {
   title: [
     { required: true, message: '请输入商品标题', trigger: 'blur' },
@@ -550,95 +391,124 @@ const formRules = {
     { required: true, message: '请输入库存数量', trigger: 'blur' },
     { type: 'number', min: 0, message: '库存数量不能小于0', trigger: 'blur' }
   ]
-};
+}
 
-// 表格列定义
-const columns = [
-  {
-    title: '商品ID',
-    dataIndex: 'id',
-    key: 'id',
-    width: 120,
-    ellipsis: true
-  },
-  {
-    title: '封面',
-    key: 'coverImage',
-    slots: { customRender: 'coverImage' },
-    width: 100
-  },
-  {
-    title: '商品标题',
-    dataIndex: 'title',
-    key: 'title',
-    width: 200,
-    ellipsis: true
-  },
-  {
-    title: '分类',
-    dataIndex: 'categoryName',
-    key: 'categoryName',
-    width: 120
-  },
-  {
-    title: '价格',
-    key: 'price',
-    slots: { customRender: 'price' },
-    width: 100
-  },
-  {
-    title: '库存',
-    key: 'stock',
-    slots: { customRender: 'stock' },
-    width: 80
-  },
-  {
-    title: '状态',
-    key: 'status',
-    slots: { customRender: 'status' },
-    width: 120
-  },
-  {
-    title: '创建时间',
-    dataIndex: 'createTime',
-    key: 'createTime',
-    width: 180
-  },
-  {
-    title: '操作',
-    key: 'action',
-    slots: { customRender: 'action' },
-    width: 240,
-    fixed: 'right'
+const COLUMN_DEF_MAP = {
+  id: { title: '商品ID', dataIndex: 'id', key: 'id', width: 200 },
+  coverImage: { title: '封面', key: 'coverImage', width: 80, align: 'center' },
+  title: { title: '商品标题', dataIndex: 'title', key: 'title', ellipsis: true },
+  categoryName: { title: '分类', key: 'categoryName', width: 120 },
+  price: { title: '价格', key: 'price', width: 90, align: 'right' },
+  stock: { title: '库存', key: 'stock', width: 80, align: 'center' },
+  status: { title: '状态', key: 'status', width: 90, align: 'center' },
+  createTime: { title: '创建时间', key: 'createTime', width: 168 }
+}
+
+const DEFAULT_COLUMN_ORDER = ['id', 'coverImage', 'title', 'categoryName', 'price', 'stock', 'status', 'createTime']
+
+const ACTION_COLUMN = {
+  title: '操作',
+  key: 'action',
+  width: 160,
+  fixed: 'right',
+  align: 'center'
+}
+
+function loadColumnOrder() {
+  try {
+    const saved = localStorage.getItem(COLUMN_STORAGE_KEY)
+    if (!saved) return [...DEFAULT_COLUMN_ORDER]
+    const parsed = JSON.parse(saved)
+    const valid = parsed.filter((k) => DEFAULT_COLUMN_ORDER.includes(k))
+    const missing = DEFAULT_COLUMN_ORDER.filter((k) => !valid.includes(k))
+    return valid.length ? [...valid, ...missing] : [...DEFAULT_COLUMN_ORDER]
+  } catch {
+    return [...DEFAULT_COLUMN_ORDER]
   }
-];
+}
 
-// 计算属性
-const modalTitle = computed(() => {
-  return isEdit.value ? '编辑商品' : '新增商品';
-});
+const columnOrder = ref(loadColumnOrder())
+const draggableColumnKeys = computed(() => columnOrder.value)
 
-// 生命周期
-onMounted(() => {
-  fetchCategoryList();
-  fetchProductList();
-});
+const orderedColumns = computed(() => {
+  const cols = columnOrder.value.map((key) => COLUMN_DEF_MAP[key]).filter(Boolean)
+  return [...cols, ACTION_COLUMN]
+})
 
-// 方法
+const tableScrollX = computed(() =>
+  orderedColumns.value.reduce((sum, col) => sum + (col.width || 120), 0)
+)
+
+function getColumnTitle(key) {
+  return COLUMN_DEF_MAP[key]?.title || key
+}
+
+function saveColumnOrder() {
+  localStorage.setItem(COLUMN_STORAGE_KEY, JSON.stringify(columnOrder.value))
+}
+
+function resetColumnOrder() {
+  columnOrder.value = [...DEFAULT_COLUMN_ORDER]
+  localStorage.removeItem(COLUMN_STORAGE_KEY)
+  message.success('列顺序已恢复默认')
+}
+
+const dragState = reactive({ dragKey: null, dragIndex: -1, overKey: null })
+
+function onColumnDragStart(e, key, index) {
+  dragState.dragKey = key
+  dragState.dragIndex = index
+  e.dataTransfer.effectAllowed = 'move'
+  e.dataTransfer.setData('text/plain', key)
+}
+
+function onColumnDragEnd() {
+  dragState.dragKey = null
+  dragState.dragIndex = -1
+  dragState.overKey = null
+}
+
+function onColumnDragOver(key) { dragState.overKey = key }
+function onColumnDragLeave(key) { if (dragState.overKey === key) dragState.overKey = null }
+
+function onColumnDrop(targetKey) {
+  const fromKey = dragState.dragKey
+  if (!fromKey || fromKey === targetKey) return
+  const list = [...columnOrder.value]
+  const fromIdx = list.indexOf(fromKey)
+  const toIdx = list.indexOf(targetKey)
+  if (fromIdx < 0 || toIdx < 0) return
+  list.splice(fromIdx, 1)
+  list.splice(toIdx, 0, fromKey)
+  columnOrder.value = list
+  saveColumnOrder()
+  dragState.overKey = null
+}
+
+const modalTitle = computed(() => isEdit.value ? '编辑商品' : '新增商品')
+
+const formatDate = (d) => {
+  if (!d) return '—'
+  try {
+    return new Date(d).toLocaleString('zh-CN', {
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit'
+    })
+  } catch { return d }
+}
+
 const fetchCategoryList = () => {
   getEnabledCategories({
-    onSuccess: (res) => {
-      categoryList.value = res || [];
-    },
-    onError: (error) => {
-      message.error('获取分类列表失败：' + error.message);
-    }
-  });
-};
+    onSuccess: (res) => { categoryList.value = res || [] },
+    onError: () => {}
+  })
+}
 
 const fetchProductList = () => {
-  loading.value = true;
-
+  loading.value = true
   const params = {
     page: pagination.current,
     pageSize: pagination.pageSize,
@@ -646,57 +516,49 @@ const fetchProductList = () => {
     categoryId: searchForm.categoryId,
     status: searchForm.status,
     hasStock: searchForm.hasStock
-  };
-
+  }
   getProductPage(params, {
     onSuccess: (res) => {
-      tableData.value = res.records || [];
-      pagination.total = res.total || 0;
-      pagination.current = res.current || 1;
-      loading.value = false;
+      tableData.value = res.records || []
+      pagination.total = res.total || 0
+      pagination.current = res.current || 1
+      loading.value = false
     },
-    onError: (error) => {
-      message.error('获取商品列表失败：' + error.message);
-      loading.value = false;
-    }
-  });
-};
+    onError: () => { loading.value = false }
+  })
+}
 
 const handleSearch = () => {
-  pagination.current = 1;
-  fetchProductList();
-};
+  pagination.current = 1
+  fetchProductList()
+}
 
 const handleReset = () => {
-  searchForm.title = '';
-  searchForm.categoryId = null;
-  searchForm.status = null;
-  searchForm.hasStock = null;
-  pagination.current = 1;
-  fetchProductList();
-};
+  searchForm.title = ''
+  searchForm.categoryId = null
+  searchForm.status = null
+  searchForm.hasStock = null
+  pagination.current = 1
+  fetchProductList()
+}
 
 const handleTableChange = (pag) => {
-  pagination.current = pag.current;
-  pagination.pageSize = pag.pageSize;
-  fetchProductList();
-};
+  pagination.current = pag.current
+  pagination.pageSize = pag.pageSize
+  fetchProductList()
+}
 
 const showCreateModal = () => {
-  isEdit.value = false;
-  currentEditId.value = null;
-  modalVisible.value = true;
-  nextTick(() => {
-    resetForm();
-  });
-};
+  isEdit.value = false
+  currentEditId.value = null
+  modalVisible.value = true
+  nextTick(() => resetForm())
+}
 
 const showEditModal = (record) => {
-  isEdit.value = true;
-  currentEditId.value = record.id;
-  modalVisible.value = true;
-
-  // 获取商品详情
+  isEdit.value = true
+  currentEditId.value = record.id
+  modalVisible.value = true
   getProductById(record.id, {
     onSuccess: (res) => {
       nextTick(() => {
@@ -708,51 +570,96 @@ const showEditModal = (record) => {
           stock: res.stock,
           detail: res.detail,
           status: res.status
-        });
-
-        // 设置封面图片
-        if (res.coverFilePath) {
-          coverFileList.value = [{
-            uid: '-1',
-            name: 'cover.jpg',
-            status: 'done',
-            url: res.coverFilePath
-          }];
-        } else {
-          coverFileList.value = [];
-        }
-
-        // 加载商品图片列表
-        loadProductImages(record.id);
-
-        if (formRef.value) {
-          formRef.value.clearValidate();
-        }
-      });
+        })
+        coverFileList.value = res.coverFilePath ? [{ uid: '-1', name: 'cover.jpg', status: 'done', url: res.coverFilePath }] : []
+        loadProductImages(record.id)
+        formRef.value?.clearValidate()
+      })
     },
-    onError: (error) => {
-      message.error('获取商品详情失败：' + error.message);
-    }
-  });
-};
+    onError: () => {}
+  })
+}
 
 const showDetailModal = (record) => {
   getProductById(record.id, {
     onSuccess: (res) => {
-      currentProduct.value = res;
-      detailVisible.value = true;
+      currentProduct.value = res
+      detailVisible.value = true
     },
-    onError: (error) => {
-      message.error('获取商品详情失败：' + error.message);
-    }
-  });
-};
+    onError: () => {}
+  })
+}
 
 const showStockModal = (record) => {
-  currentProduct.value = record;
-  newStock.value = record.stock;
-  stockVisible.value = true;
-};
+  currentProduct.value = record
+  newStock.value = record.stock
+  stockVisible.value = true
+}
+
+const loadProductImages = (productId) => {
+  getFilesByBusinessField('SHOP_PRODUCT', productId, 'images', {
+    onSuccess: (res) => {
+      imageFileList.value = res?.map((file, index) => ({
+        uid: `-${index + 2}`,
+        name: file.originalName || `image-${index + 1}.jpg`,
+        status: 'done',
+        url: file.filePath,
+        fileId: file.id
+      })) || []
+    },
+    onError: () => { imageFileList.value = [] }
+  })
+}
+
+const beforeImageUpload = (file) => {
+  const isImage = file.type.startsWith('image/')
+  if (!isImage) { message.error('只能上传图片文件') }
+  return isImage
+}
+
+const handleCoverUpload = ({ file, onSuccess, onError }) => {
+  uploadBusinessFile(file, 'SHOP_PRODUCT', currentEditId.value, 'cover', {
+    onSuccess: (res) => {
+      coverFileList.value = [{ uid: '-1', name: file.name, status: 'done', url: res.filePath }]
+      message.success('封面上传成功')
+      onSuccess()
+    },
+    onError: () => {
+      message.error('封面上传失败')
+      onError()
+    }
+  })
+}
+
+const handleCoverRemove = () => {
+  coverFileList.value = []
+  return true
+}
+
+const handleImageUpload = ({ file, onSuccess, onError }) => {
+  uploadBusinessFile(file, 'SHOP_PRODUCT', currentEditId.value, 'images', {
+    onSuccess: (res) => {
+      imageFileList.value.push({ uid: file.uid, name: file.name, status: 'done', url: res.filePath })
+      message.success('图片上传成功')
+      onSuccess()
+    },
+    onError: () => {
+      message.error('图片上传失败')
+      onError()
+    }
+  })
+}
+
+const handleImageRemove = (file) => {
+  imageFileList.value = imageFileList.value.filter(item => item.uid !== file.uid)
+  if (file.fileId) {
+    deleteBusinessFile(file.fileId, {
+      onSuccess: () => {},
+      onError: () => {}
+    })
+  }
+  return true
+}
 
 const resetForm = () => {
   Object.assign(formData, {
@@ -762,732 +669,484 @@ const resetForm = () => {
     price: null,
     stock: 0,
     detail: '',
-    status: 1,
-    tempProductId: null
-  });
-  coverFileList.value = [];
-  imageFileList.value = [];
-
-  if (formRef.value) {
-    formRef.value.resetFields();
-    formRef.value.clearValidate();
-  }
-};
-
-// 加载商品图片列表
-const loadProductImages = (productId) => {
-  getFilesByBusinessField('SHOP_PRODUCT', productId, 'images', {
-    onSuccess: (res) => {
-      if (res && res.length > 0) {
-        imageFileList.value = res.map((file, index) => ({
-          uid: `-${index + 2}`,
-          name: file.originalName || `image-${index + 1}.jpg`,
-          status: 'done',
-          url: file.filePath,
-          fileId: file.id
-        }));
-      } else {
-        imageFileList.value = [];
-      }
-    },
-    onError: () => {
-      imageFileList.value = [];
-    }
-  });
-};
-
-const beforeImageUpload = (file) => {
-  const isImage = file.type.startsWith('image/');
-  if (!isImage) {
-    message.error('只能上传图片文件！');
-    return false;
-  }
-  const isLt5M = file.size / 1024 / 1024 < 5;
-  if (!isLt5M) {
-    message.error('图片大小不能超过 5MB！');
-    return false;
-  }
-  return true;
-};
-
-const handleCoverUpload = async (options) => {
-  const { file, onSuccess, onError } = options;
-
-  const businessInfo = {
-    businessType: 'SHOP_PRODUCT',
-    businessId: currentEditId.value || useBusinessUUID().generateUUID(),
-    businessField: 'cover'
-  };
-
-  uploadBusinessFile(file, businessInfo, false, {
-    onSuccess: (res) => {
-      coverFileList.value = [{
-        uid: file.uid,
-        name: file.name,
-        status: 'done',
-        url: res.filePath
-      }];
-      onSuccess(res, file);
-      message.success('封面上传成功');
-      if (businessInfo.businessId && !businessUUID.value) {
-        businessUUID.value = businessInfo.businessId
-      }
-    },
-    onError: (error) => {
-      onError(error);
-      message.error('封面上传失败：' + error.message);
-    }
-  });
-};
-
-const handleCoverRemove = () => {
-  coverFileList.value = [];
-};
-
-const handleImageUpload = async (options) => {
-  const { file, onSuccess, onError } = options;
-
-  // 确保有商品ID（新增时生成UUID，编辑时使用现有ID）
-  let productId = currentEditId.value;
-  if (!productId) {
-    // 如果是新增商品，需要先生成一个UUID
-    if (!formData.tempProductId) {
-      formData.tempProductId = businessUUID;
-    }
-    productId = formData.tempProductId;
-  }
-
-  const businessInfo = {
-    businessType: 'SHOP_PRODUCT',
-    businessId: productId,
-    businessField: 'images' // 使用 'images' 字段区分商品图片列表
-  };
-
-  uploadBusinessFile(file, businessInfo, false, {
-    onSuccess: (res) => {
-      imageFileList.value.push({
-        uid: file.uid,
-        name: file.name,
-        status: 'done',
-        url: res.filePath,
-        fileId: res.id
-      });
-      onSuccess(res, file);
-      message.success('图片上传成功');
-    },
-    onError: (error) => {
-      onError(error);
-      message.error('图片上传失败：' + error.message);
-    }
-  });
-};
-
-function handleImageRemove (media, index) {
-  Modal.confirm({
-    title: '确定要删除这个文件吗？',
-    content: '删除后无法恢复',
-    okText: '确定',
-    cancelText: '取消',
-    onOk: () => {
-      // 如果有文件ID，调用后端API删除
-      if (media.id || media.fileId) {
-        const fileId = media.id || media.fileId
-        console.log('删除文件，文件ID:', fileId)
-        console.log('删除文件，完整媒体对象:', media)
-
-        deleteBusinessFile({fileId:media.fileId}, {
-          successMsg: '文件删除成功',
-          onSuccess: () => {
-            // 从前端列表中移除
-            const newList = [...mediaList.value]
-            newList.splice(index, 1)
-            mediaList.value = newList
-
-            emit('remove', media, index)
-          },
-          onError: (error) => {
-            console.error('删除文件失败:', error)
-            message.error('删除文件失败，请重试')
-          }
-        })
-      } else {
-        // 如果没有文件ID，只从前端列表中移除（可能是刚上传但未保存的文件）
-        console.log('删除本地文件（无ID）:', media)
-        const newList = [...mediaList.value]
-        newList.splice(index, 1)
-        mediaList.value = newList
-
-        message.success('删除成功')
-        emit('remove', media, index)
-      }
-    }
+    status: 1
   })
+  coverFileList.value = []
+  imageFileList.value = []
+  formRef.value?.resetFields()
+  formRef.value?.clearValidate()
 }
 
 const handleSubmit = () => {
-  formRef.value.validate().then(() => {
-    submitLoading.value = true;
-
-    const params = { ...formData };
-
-    const callbacks = {
+  formRef.value?.validate().then(() => {
+    submitLoading.value = true
+    const params = { ...formData }
+    const apiCall = isEdit.value ? updateProduct : createProduct
+    if (isEdit.value) params.id = currentEditId.value
+    apiCall(params, {
       successMsg: isEdit.value ? '更新商品成功' : '创建商品成功',
       onSuccess: () => {
-        submitLoading.value = false;
-        modalVisible.value = false;
-        fetchProductList();
-        nextTick(() => {
-          resetForm();
-        });
+        submitLoading.value = false
+        modalVisible.value = false
+        fetchProductList()
+        nextTick(() => resetForm())
       },
-      onError: (error) => {
-        message.error((isEdit.value ? '更新' : '创建') + '商品失败：' + error.message);
-        submitLoading.value = false;
-      }
-    };
-
-    // 根据是否编辑调用不同的API
-    if (isEdit.value) {
-      updateProduct(currentEditId.value, params, callbacks);
-    } else {
-      // 如果是新增，使用已生成的UUID（上传图片时生成）或生成新的UUID
-      params.id = formData.tempProductId || useBusinessUUID().generateUUID();
-      createProduct(params, callbacks);
-    }
-  });
-};
+      onError: () => { submitLoading.value = false }
+    })
+  })
+}
 
 const handleCancel = () => {
-  modalVisible.value = false;
-  nextTick(() => {
-    resetForm();
-  });
-};
-
-const handleStatusChange = (id, status) => {
-  const record = tableData.value.find(item => item.id === id);
-  if (record) {
-    record.statusLoading = true;
-  }
-
-  const apiCall = status === 1 ? onShelfProduct : offShelfProduct;
-
-  apiCall(id, {
-    successMsg: status === 1 ? '上架商品成功' : '下架商品成功',
-    onSuccess: () => {
-      if (record) {
-        record.status = status;
-        record.statusName = status === 1 ? '上架' : '下架';
-        record.statusLoading = false;
-      }
-    },
-    onError: (error) => {
-      message.error('更新状态失败：' + error.message);
-      if (record) {
-        record.statusLoading = false;
-      }
-    }
-  });
-};
+  modalVisible.value = false
+  nextTick(() => resetForm())
+}
 
 const handleStockSubmit = () => {
-  if (newStock.value === null || newStock.value === undefined) {
-    message.error('请输入库存数量');
-    return;
-  }
-
-  stockLoading.value = true;
-
+  stockLoading.value = true
   updateProductStock(currentProduct.value.id, newStock.value, {
-    successMsg: '更新库存成功',
+    successMsg: '库存更新成功',
     onSuccess: () => {
-      stockLoading.value = false;
-      stockVisible.value = false;
-      fetchProductList();
+      stockLoading.value = false
+      stockVisible.value = false
+      fetchProductList()
     },
-    onError: (error) => {
-      message.error('更新库存失败：' + error.message);
-      stockLoading.value = false;
-    }
-  });
-};
-
-const handleDelete = (id) => {
-  Modal.confirm({
-    title: '确认删除',
-    content: '确定要删除这个商品吗？此操作不可恢复！',
-    okText: '确定删除',
-    cancelText: '取消',
-    okType: 'danger',
-    onOk() {
-      deleteProduct(id, {
-        successMsg: '删除商品成功',
-        onSuccess: () => {
-          fetchProductList();
-        },
-        onError: (error) => {
-          message.error('删除商品失败：' + error.message);
-        }
-      });
-    }
-  });
-};
+    onError: () => { stockLoading.value = false }
+  })
+}
 
 const handleAction = (key, record) => {
-  if (key === 'delete') {
-    handleDelete(record.id);
-  } else if (key === 'stock') {
-    showStockModal(record);
+  if (key === 'stock') {
+    showStockModal(record)
+  } else if (key === 'delete') {
+    message.error('删除功能暂未实现')
   }
-};
+}
+
+onMounted(() => {
+  fetchCategoryList()
+  fetchProductList()
+})
 </script>
 
-<style scoped>
-/* ==========================================================================
-   全局画布与流式网格底色
-   ========================================================================== */
-.shop-product-page { padding: 32px 36px 48px; background: #fafafa; min-height: 100vh; color: #1f2937; font-family: var(--font-body, -apple-system, BlinkMacSystemFont, sans-serif); }
-.page-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; padding-bottom: 16px; border-bottom: 1px solid rgba(66,102,79,0.1); }
-.title-wrapper { display: flex; align-items: baseline; gap: 14px; }
-.title-indicator { width: 3px; height: 20px; background: #42664f; border-radius: 0; flex-shrink: 0; }
-.page-header h2 { margin: 0; font-size: 22px; font-weight: 700; color: #1f2937; letter-spacing: 1px; }
-.sub-badge { font-size: 12px; color: #657b6f; background: rgba(66,102,79,0.06); padding: 3px 12px; border-radius: 2px; font-weight: 500; }
-.btn-create { background: #111 !important; border-color: #111 !important; color: #fff !important; border-radius: 6px !important; height: 36px !important; padding: 0 18px !important; font-weight: 500; display: inline-flex; align-items: center; gap: 6px;
-  transition: all 0.2s ease;
+<style lang="scss" scoped>
+$accent: #42664f;
+$black: #111111;
+$muted: #6b6b6b;
+$border: #e8e8e8;
+$bg: #fafafa;
+$white: #ffffff;
+
+.product-page {
+  min-height: 100%;
+  padding: 28px 32px 40px;
+  background: $white;
+  color: $black;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
 }
 
-.btn-create:hover {
-  background: #33503d !important;
-  transform: translateY(-1px);
-  box-shadow: 0 6px 16px rgba(66, 102, 79, 0.25) !important;
-}
-
-/* ==========================================================================
-   无边框轻卡片化筛选区
-   ========================================================================== */
-.search-section { background: #fff; padding: 18px 22px; border-radius: 8px; margin-bottom: 20px; border: 1px solid #e5e5e5; }
-
-.museum-search-form :deep(.ant-form-item) {
-  margin-right: 20px !important;
-  margin-bottom: 0 !important;
-  display: inline-flex;
-  align-items: center;
-}
-
-.museum-search-form :deep(.ant-form-item-label > label) {
-  color: #4e5e54 !important;
-  font-weight: 500;
-}
-
-.museum-search-form :deep(.ant-input),
-.museum-search-form :deep(.ant-select-selector) {
-  border-radius: 8px !important;
-  border-color: #ced6d1 !important;
-  height: 36px !important;
-}
-
-.museum-search-form :deep(.ant-select-selector) {
+.page-top {
   display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 28px;
+  padding-bottom: 20px;
+  border-bottom: 1px solid $black;
+}
+
+.page-top__title {
+  margin: 0;
+  font-size: 22px;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+}
+
+.filter-bar {
+  display: flex;
+  flex-wrap: wrap;
   align-items: center;
+  gap: 10px;
+  margin-bottom: 16px;
+  padding: 14px 16px;
+  background: $bg;
+  border: 1px solid $border;
 }
 
-.museum-search-form :deep(.ant-input:hover),
-.museum-search-form :deep(.ant-input:focus),
-.museum-search-form :deep(.ant-select-focused .ant-select-selector),
-.museum-search-form :deep(.ant-select-selector:hover) {
-  border-color: #42664f !important;
-  box-shadow: 0 0 0 2px rgba(66, 102, 79, 0.1) !important;
-}
+.filter-input { width: 140px; &--wide { width: 180px; } }
+.filter-select { width: 120px; }
 
-.search-actions {
-  margin-right: 0 !important;
+.filter-bar__btns {
+  display: flex;
+  gap: 8px;
   margin-left: auto;
 }
 
-.btn-search {
-  background: #42664f !important;
-  border-color: #42664f !important;
-  border-radius: 8px !important;
-  height: 36px !important;
+.column-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px 12px;
+  padding: 12px 16px;
+  border: 1px solid $border;
+  border-bottom: none;
+  background: $white;
 }
-.btn-search:hover { background: #33503d !important; }
 
-.btn-reset {
-  background: #edf1ee !important;
-  border-color: transparent !important;
-  color: #42664f !important;
-  border-radius: 8px !important;
-  height: 36px !important;
+.column-bar__label {
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
 }
-.btn-reset:hover { background: #dee5e1 !important; color: #263d2f !important; }
 
-/* ==========================================================================
-   古蜀墨绿质感表格面板
-   ========================================================================== */
-.table-section { background: #fff; padding: 24px; border-radius: 8px; border: 1px solid #e5e5e5; }
-.museum-theme-table :deep(.ant-table-thead > tr > th) {
-  background: #fafafa !important; color: #3e5246 !important; font-weight: 600;
-  font-size: 12px; letter-spacing: 0.5px; text-transform: uppercase;
-  border-bottom: 2px solid #e9eee9; padding: 12px 16px;
+.column-bar__hint {
+  font-size: 11px;
+  color: $muted;
 }
-.museum-theme-table :deep(.ant-table-tbody > tr > td) { border-bottom: 1px solid #f2f4f2; padding: 12px 16px; font-size: 13px; }
-.museum-theme-table :deep(.ant-table-tbody > tr:hover > td) { background: #fafafa !important; }
 
-/* 单元格微雕美化 */
-.cover-image-wrapper {
+.column-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  flex: 1;
+}
+
+.column-chip {
   display: inline-flex;
-  border: 1px solid #e1e6e2;
-  padding: 2px;
-  border-radius: 6px;
-  background: #fff;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 10px;
+  font-size: 12px;
+  background: $white;
+  border: 1px solid $black;
+  cursor: grab;
+  user-select: none;
+
+  &--dragging { opacity: 0.45; border-style: dashed; }
+  &--over { background: rgba($accent, 0.12); border-color: $accent; }
+  &--fixed { cursor: default; color: $muted; border-color: $border; background: $bg; }
 }
-.museum-table-img {
+
+.column-chip__grip {
+  font-size: 10px;
+  color: $muted;
+  letter-spacing: -2px;
+}
+
+.column-reset {
+  margin-left: auto;
+  padding: 0;
+  font-size: 12px;
+  color: $muted;
+  background: none;
+  border: none;
+  cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  &:hover { color: $accent; }
+}
+
+.table-wrap {
+  border: 1px solid $border;
+  border-top: none;
+}
+
+.minimal-table {
+  :deep(.ant-table) {
+    background: $white;
+    color: $black;
+  }
+
+  :deep(.ant-table-thead > tr > th) {
+    background: $black !important;
+    color: $white !important;
+    font-weight: 500;
+    font-size: 12px;
+    border-bottom: none !important;
+    padding: 12px 14px !important;
+  }
+
+  :deep(.ant-table-tbody > tr > td) {
+    border-bottom: 1px solid $border !important;
+    padding: 12px 14px !important;
+    font-size: 13px;
+  }
+
+  :deep(.ant-table-tbody > tr:hover > td) {
+    background: $bg !important;
+  }
+
+  :deep(.ant-pagination-item-active) {
+    border-color: $accent !important;
+    a { color: $accent !important; }
+  }
+
+  :deep(.ant-pagination-item:hover),
+  :deep(.ant-pagination-prev:hover .ant-pagination-item-link),
+  :deep(.ant-pagination-next:hover .ant-pagination-item-link) {
+    border-color: $accent !important;
+    color: $accent !important;
+  }
+}
+
+.cover-thumb {
   border-radius: 4px;
   object-fit: cover;
 }
-.no-img-placeholder {
-  width: 54px;
-  height: 54px;
-  background: #f5f7f6;
-  color: #9aa79e;
-  font-size: 11px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: 4px;
-}
 
-.table-price-text {
-  color: #d9534f;
-  font-weight: 600;
-  font-size: 15px;
-  font-family: 'Courier New', Courier, monospace;
-}
-
-.stock-badge {
+.no-cover {
+  color: $muted;
   font-size: 12px;
-  font-weight: 600;
-  padding: 2px 10px;
-  border-radius: 10px;
 }
-.stock-in { background: rgba(66, 102, 79, 0.1); color: #42664f; }
-.stock-out { background: rgba(217, 83, 79, 0.1); color: #d9534f; }
 
-/* 状态单元格 */
-.status-cell-wrapper {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-.status-text { font-size: 13px; font-weight: 500; }
-.status-active { color: #42664f; }
-.status-disabled { color: #929e96; }
-
-/* 操作面板 */
-.action-cell { display: flex; align-items: center; }
-.link-btn { font-weight: 600; padding: 0 !important; }
-.detail-link { color: #5a7564 !important; }
-.detail-link:hover { color: #35473c !important; }
-.edit-link { color: #42664f !important; }
-.edit-link:hover { color: #111 !important; }
-.action-divider { border-color: #d1dad4 !important; margin: 0 8px; }
-
-.more-btn {
-  color: #66756c !important;
+.cell-link {
+  padding: 0;
+  font-size: 12px;
   font-weight: 500;
-  padding: 0 !important;
+  color: $accent;
+  background: none;
+  border: none;
+  cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  &:hover { color: $black; }
+  &--title { font-weight: 600; font-size: 13px; }
+  &--more { display: inline-flex; align-items: center; gap: 2px; }
+}
+
+.cell-tag {
+  font-size: 12px;
+  padding: 2px 8px;
+  background: rgba($accent, 0.08);
+  color: $accent;
+  border-radius: 2px;
+}
+
+.cell-price {
+  font-weight: 600;
+  color: $accent;
+  font-size: 13px;
+}
+
+.cell-stock {
+  font-size: 12px;
+  font-weight: 500;
+  &--has { color: $accent; }
+  &--empty { color: $muted; }
+}
+
+.cell-status {
+  font-size: 12px;
+  font-weight: 500;
+  &--on { color: $accent; }
+  &--off { color: $muted; }
+}
+
+.cell-mono {
+  font-size: 12px;
+  font-family: 'SF Mono', 'Fira Code', monospace;
+  color: $muted;
+}
+
+.action-group {
   display: inline-flex;
   align-items: center;
-  gap: 2px;
-}
-.more-btn:hover { color: #42664f !important; }
-.down-arrow-icon { font-size: 10px; transition: transform 0.2s; }
-
-/* ==========================================================================
-   新增/编辑表单弹窗内部美化
-   ========================================================================== */
-.edit-form-container {
-  padding: 24px 32px;
+  gap: 4px;
 }
 
-/* 状态提示横幅 */
-.status-bar {
-  display: flex;
-  align-items: center;
-  padding: 12px 18px;
-  border-radius: 8px;
-  margin-bottom: 24px;
-  border-left: 4px solid;
-}
-.status-dot { width: 6px; height: 6px; border-radius: 50%; display: inline-block; }
-.status-bar__left { display: flex; align-items: center; gap: 10px; }
-.status-bar__text { font-size: 13px; font-weight: 500; }
-
-.status-create {
-  background: #f0f6f2; border-color: #42664f; color: #42664f;
-  .status-dot { background: #42664f; }
-}
-.status-edit {
-  background: #fdfaf5; border-color: #c29147; color: #c29147;
-  .status-dot { background: #c29147; }
+.action-sep {
+  color: $border;
+  font-size: 11px;
+  user-select: none;
 }
 
-/* 表单分栏卡片解构 */
-.form-section-card {
-  background: #fafbfc;
-  border: 1px solid #e6eae7;
-  border-radius: 12px;
-  padding: 20px 24px;
-  margin-bottom: 20px;
-  transition: all 0.3s;
-}
-.form-section-card:hover {
-  border-color: #ced6d1;
-  background: #fdfdfd;
+.btn-primary {
+  background: $accent !important;
+  border-color: $accent !important;
+  color: $white !important;
+  border-radius: 0 !important;
+  height: 34px !important;
+  font-size: 13px !important;
+  box-shadow: none !important;
+  &:hover { background: darken($accent, 6%) !important; border-color: darken($accent, 6%) !important; }
 }
 
-.form-section__header {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin-bottom: 18px;
-  padding-bottom: 8px;
-  border-bottom: 1px dashed #edf1ee;
-}
-.section-mark {
-  width: 3px;
-  height: 14px;
-  background: #42664f;
-  border-radius: 1px;
-}
-.form-section__header h4 {
-  margin: 0;
-  font-size: 14px;
-  font-weight: 600;
-  color: #1c2a20;
+.btn-ghost {
+  background: $white !important;
+  border: 1px solid $black !important;
+  color: $black !important;
+  border-radius: 0 !important;
+  height: 34px !important;
+  font-size: 13px !important;
+  box-shadow: none !important;
+  &:hover { border-color: $accent !important; color: $accent !important; }
 }
 
-/* 表单内部组件样式重塑 */
-.edit-form :deep(.ant-form-item) {
-  margin-bottom: 18px;
-}
-.edit-form :deep(.ant-form-item:last-child) {
-  margin-bottom: 0;
-}
-.edit-form :deep(.ant-form-item-label > label) {
-  font-weight: 500;
-  color: #3b4a40;
+.filter-input :deep(.ant-input),
+.filter-select :deep(.ant-select-selector) {
+  border-radius: 0 !important;
+  border-color: $border !important;
+  font-size: 13px !important;
 }
 
-.museum-input,
-.edit-form :deep(.ant-select-selector),
-.museum-number-input {
-  border-radius: 6px !important;
-  border-color: #ced6d1 !important;
+.filter-input :deep(.ant-input:focus),
+.filter-input :deep(.ant-input-affix-wrapper-focused),
+.filter-select :deep(.ant-select-focused .ant-select-selector) {
+  border-color: $accent !important;
+  box-shadow: none !important;
 }
-.museum-input { height: 38px !important; }
-.edit-form :deep(.ant-select-selector) { height: 38px !important; display: flex; align-items: center; }
 
-.museum-number-input :deep(.ant-input-number-input) { height: 36px !important; }
-.currency-prefix { font-weight: 600; color: #42664f; padding: 0 4px; }
+.modal-body { padding: 8px 0; }
 
-.grid-two-columns {
+.form-row {
   display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 0 20px;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
 }
 
-/* 上传模块重构 */
-.upload-wrapper-box :deep(.ant-form-item) {
-  display: block;
+.minimal-form :deep(.ant-form-item-label > label) {
+  font-size: 12px;
+  color: $muted !important;
 }
-.upload-wrapper-box :deep(.ant-form-item-label) {
-  text-align: left;
-  margin-bottom: 6px;
+
+.minimal-form :deep(.ant-input),
+.minimal-form :deep(.ant-select-selector),
+.minimal-form :deep(.ant-radio-wrapper) {
+  border-radius: 0 !important;
 }
-.upload-trigger-btn {
+
+.upload-trigger {
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  color: #617367;
-}
-.upload-icon { font-size: 18px; margin-bottom: 6px; color: #42664f; }
-.upload-text { font-size: 12px; font-weight: 500; }
-.upload-tip { font-size: 12px; color: #7f9285; margin-top: 8px; line-height: 1.4; }
-
-.museum-uploader :deep(.ant-upload-select-picture-card) {
-  border-radius: 8px !important;
-  border-style: dashed !important;
-  background: #fafafa !important;
-  border-color: #ced6d1 !important;
-}
-.museum-uploader :deep(.ant-upload-select-picture-card:hover) {
-  border-color: #42664f !important;
+  width: 100%;
+  height: 100%;
+  font-size: 12px;
+  color: $muted;
 }
 
-/* 富文本单独适配 */
-.editor-full-item :deep(.ant-form-item-control) {
-  width: 100% !important;
-  max-width: 100% !important;
-}
-
-/* 单选组 */
-.museum-radio-group { display: flex; gap: 24px; }
-.radio-label-txt { font-weight: 500; font-size: 13px; }
-.text-active { color: #42664f; }
-.text-disabled { color: #8a968f; }
-
-/* 底部操作 */
-.edit-footer { display: flex; justify-content: flex-end; gap: 12px; width: 100%; }
-.cancel-btn { border-radius: 6px !important; border-color: #ced6d1 !important; color: #55635a !important; }
-.submit-btn { background: #42664f !important; border-color: #42664f !important; border-radius: 6px !important; }
-.submit-btn:hover { background: #33503d !important; }
-
-/* ==========================================================================
-   商品详情弹窗美化样式
-   ========================================================================== */
-.detail-header-card {
+.modal-footer {
   display: flex;
-  gap: 20px;
-  align-items: center;
-  background: linear-gradient(135deg, #f4f7f5 0%, #e9efe0 100%);
-  padding: 24px;
-  border-radius: 12px;
-  margin-bottom: 24px;
-  border: 1px solid rgba(66, 102, 79, 0.08);
+  justify-content: flex-end;
+  gap: 8px;
 }
-.detail-header__cover {
-  width: 84px;
-  height: 84px;
-  border-radius: 8px;
-  overflow: hidden;
-  box-shadow: 0 4px 12px rgba(0,0,0,0.06);
-  background: #fff;
-  border: 2px solid #fff;
-  flex-shrink: 0;
-}
-.header-cover-img { width: 100%; height: 100%; object-fit: cover; }
-.no-cover-icon { height: 100%; display: flex; align-items: center; justify-content: center; font-size: 11px; color: #9aa79e; background: #fafbfc; }
 
-.detail-header__info { flex: 1; }
-.detail-header__title { margin: 0 0 4px 0; font-size: 18px; font-weight: 600; color: #16241c; }
-.detail-header__subtitle { font-size: 13px; color: #5a6e61; margin-bottom: 8px; line-height: 1.4; }
-
-.detail-header__meta { display: flex; align-items: center; gap: 10px; }
-.meta-tag-status { font-size: 11px; font-weight: 600; padding: 1px 8px; border-radius: 4px; }
-.tag-on { background: #42664f; color: #fff; }
-.tag-off { background: #929e96; color: #fff; }
-.meta-v-divider { color: #ced6d1; font-size: 12px; }
-.meta-category-label { font-size: 13px; color: #4e5e54; strong { color: #223328; font-weight: 600; } }
-
-/* 数据矩阵 */
-.info-data-grid {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
+.detail-header {
+  display: flex;
   gap: 16px;
-  margin-bottom: 24px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid $border;
+  margin-bottom: 16px;
 }
-.grid-data-cell {
-  background: #fafbfc;
-  border: 1px solid #edf1ee;
-  border-radius: 8px;
-  padding: 14px;
+
+.detail-no-cover {
+  width: 120px;
+  height: 120px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: $bg;
+  color: $muted;
+  font-size: 12px;
+}
+
+.detail-info {
+  flex: 1;
+  h3 { margin: 0 0 8px; font-size: 18px; font-weight: 600; }
+  p { margin: 0 0 8px; color: $muted; font-size: 13px; }
+}
+
+.detail-meta {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}
+
+.detail-status {
+  font-size: 12px;
+  font-weight: 500;
+  padding: 2px 8px;
+  border-radius: 2px;
+  &.on { background: rgba($accent, 0.1); color: $accent; }
+  &.off { background: rgba($muted, 0.1); color: $muted; }
+}
+
+.detail-category {
+  font-size: 12px;
+  color: $muted;
+}
+
+.detail-stats {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+  margin-bottom: 16px;
+}
+
+.stat-item {
   text-align: center;
+  padding: 12px;
+  background: $bg;
+  border-radius: 4px;
 }
-.cell-label { font-size: 12px; color: #738578; margin-bottom: 6px; font-weight: 500; }
-.cell-value { font-size: 14px; color: #212c24; font-weight: 600; }
-.price-highlight {
-  background: #fffdfb; border-color: #fceddb;
-  .cell-value { color: #d9534f; font-size: 18px; font-family: Georgia, 'Times New Roman', Times, serif; }
+
+.stat-label {
+  display: block;
+  font-size: 11px;
+  color: $muted;
+  margin-bottom: 4px;
 }
-.stock-indicator.has { color: #42664f; }
-.stock-indicator.empty { color: #d9534f; }
-.datetime-str { font-size: 12px !important; font-weight: 500; color: #515f55; }
 
-/* 富文本显示面板 */
-.detail-rich-section {
-  background: #ffffff;
-  border: 1px solid #e9ecef;
-  border-radius: 10px;
-  padding: 20px;
+.stat-value {
+  font-size: 16px;
+  font-weight: 600;
+  &.price { color: $accent; }
 }
-.rich-section__title { display: flex; align-items: center; gap: 8px; margin-bottom: 14px; padding-bottom: 10px; border-bottom: 1px solid #f0f2f1; }
-.title-dot { width: 5px; height: 5px; background: #42664f; border-radius: 50%; }
-.rich-section__title h5 { margin: 0; font-size: 14px; font-weight: 600; color: #212c24; }
-.product-detail-content { background: #fafbfa; border-radius: 6px; padding: 16px; max-height: 380px; overflow-y: auto; color: #313d35; line-height: 1.7; }
-.no-content-gray { text-align: center; color: #a1ae02; font-size: 13px; padding: 32px 0; color: #9aa79e; }
 
-/* ==========================================================================
-   库存变更微弹窗
-   ========================================================================== */
-.stock-modify-container { padding: 20px 12px 4px; }
-.stock-target-title { font-weight: 600; color: #16241c; display: inline-block; line-height: 1.4; }
-.stock-current-badge { font-weight: 600; padding: 2px 10px; border-radius: 6px; font-size: 12px; }
-.stock-current-badge.ok { background: rgba(66,102,79,0.08); color: #42664f; }
-.stock-current-badge.warn { background: rgba(217,83,79,0.08); color: #d9534f; }
+.detail-rich {
+  padding-top: 16px;
+  border-top: 1px solid $border;
+}
 
-@media (max-width: 768px) {
-  .grid-two-columns, .info-data-grid { grid-template-columns: repeat(2, 1fr) !important; }
+.detail-no-content {
+  padding: 32px;
+  text-align: center;
+  color: $muted;
+  font-size: 13px;
+  background: $bg;
+}
+
+.stock-form {
+  .stock-product { font-weight: 600; margin-bottom: 4px; }
+  .stock-current { color: $muted; font-size: 13px; margin-bottom: 16px; }
 }
 </style>
 
 <style lang="scss">
-.museum-custom-modal {
-  .ant-modal-content { border-radius: 8px !important; overflow: hidden; box-shadow: 0 12px 40px rgba(0,0,0,0.12) !important; }
-  .ant-modal-header {
-    background: #f5f8f6 !important;
-    padding: 16px 24px !important;
-    border-bottom: 1px solid #e1e8e4 !important;
-    .ant-modal-title { color: #1a2620 !important; font-weight: 600 !important; font-size: 16px; }
-  }
-  .ant-modal-body { padding: 0 !important; }
-  .ant-modal-footer { padding: 14px 24px !important; background: #fafbfc !important; border-top: 1px solid #edf1ee !important; }
+$accent: #42664f;
+$black: #111111;
+$muted: #6b6b6b;
+$border: #e8e8e8;
+$white: #ffffff;
+
+.minimal-modal {
+  .ant-modal-content { border-radius: 0 !important; box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12) !important; }
+  .ant-modal-header { border-bottom: 1px solid $border !important; padding: 16px 20px !important; }
+  .ant-modal-title { font-size: 15px !important; font-weight: 600 !important; color: $black !important; }
+  .ant-modal-body { padding: 20px !important; }
+  .ant-modal-footer { padding: 14px 20px !important; border-top: 1px solid $border !important; }
 }
 
-/* 详情弹窗皮肤独立微调（去除尾部） */
-.detail-modal-skin .ant-modal-body { padding: 24px 32px 32px !important; }
-
-/* 更多项菜单重组 */
-.museum-dropdown-menu {
-  .ant-dropdown-menu {
-    border-radius: 8px !important;
-    padding: 4px !important;
-    box-shadow: 0 4px 16px rgba(0,0,0,0.08) !important;
-  }
-  .ant-dropdown-menu-item {
-    font-size: 13px !important;
-    padding: 7px 14px !important;
-    border-radius: 4px !important;
-    font-weight: 500;
-  }
-  .item-stock { color: #42664f !important; }
-  .item-stock:hover { background-color: #f2f6f3 !important; }
-  .item-delete { color: #d9534f !important; }
-  .item-delete:hover { background-color: #fff1f0 !important; }
-  .item-divider { margin: 4px 0 !important; border-color: #f0f2f1 !important; }
+.minimal-modal .ant-btn-primary {
+  background: $accent !important;
+  border-color: $accent !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
 }
 
-/* 表格全局基础组件着色系统注入 */
-.museum-theme-table {
-  .ant-pagination-item-active {
-    border-color: #42664f !important;
-    background: #42664f !important;
-    a { color: #ffffff !important; }
-  }
-  .ant-pagination-item:hover, .ant-pagination-next:hover, .ant-pagination-prev:hover {
-    border-color: #42664f !important;
-    a { color: #42664f !important; }
-  }
-}
-.museum-switch.ant-switch-checked {
-  background-color: #42664f !important;
-}
-
-/* InputNumber 及 Select 激活态微雕 */
-.museum-number-input:hover, .museum-number-input-focused,
-.edit-form .ant-select-focused:not(.ant-select-disabled) .ant-select-selector {
-  border-color: #42664f !important;
-  box-shadow: 0 0 0 2px rgba(66, 102, 79, 0.1) !important;
+.minimal-dropdown {
+  .ant-dropdown-menu-item { font-size: 13px !important; }
+  .ant-dropdown-menu-item-danger { color: #ff4d4f !important; }
 }
 </style>

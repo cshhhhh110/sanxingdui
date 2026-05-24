@@ -1,104 +1,107 @@
 <template>
-  <div class="course-management">
-    <!-- 顶部装饰条 -->
-    <div class="top-stripe"></div>
-
-    <!-- 页面标题栏 -->
-    <div class="page-header">
-      <div class="header-left">
-        <div class="header-icon">
-          <i class="fas fa-book-open"></i>
-        </div>
-        <div class="header-text">
-          <span class="header-label">MANAGEMENT</span>
-          <h2>课程管理</h2>
-        </div>
+  <div class="course-page">
+    <header class="page-top">
+      <div class="page-top__main">
+        <h1 class="page-top__title">课程管理</h1>
       </div>
-      <a-button class="btn-create" @click="showCreateModal">
-        <template #icon>
-          <i class="fas fa-plus"></i>
-        </template>
+      <a-button type="primary" class="btn-primary" @click="showCreateModal">
         新增课程
       </a-button>
-    </div>
+    </header>
 
-    <!-- 搜索筛选区域 -->
-    <div class="search-section">
-      <div class="search-title">
-        <i class="fas fa-filter"></i>
-        筛选条件
+    <section class="filter-bar">
+      <a-input
+        v-model:value="searchForm.title"
+        placeholder="标题"
+        allow-clear
+        class="filter-input filter-input--wide"
+        @pressEnter="handleSearch"
+      />
+      <a-select
+        v-model:value="searchForm.level"
+        placeholder="难度"
+        allow-clear
+        class="filter-select"
+      >
+        <a-select-option
+            v-for="option in COURSE_LEVEL_OPTIONS"
+            :key="option.value"
+            :value="option.value"
+        >
+          {{ option.label }}
+        </a-select-option>
+      </a-select>
+      <a-select
+        v-model:value="searchForm.status"
+        placeholder="状态"
+        allow-clear
+        class="filter-select"
+      >
+        <a-select-option :value="0">草稿</a-select-option>
+        <a-select-option :value="1">已发布</a-select-option>
+        <a-select-option :value="2">下架</a-select-option>
+      </a-select>
+      <div class="filter-bar__btns">
+        <a-button type="primary" class="btn-primary" @click="handleSearch">查询</a-button>
+        <a-button class="btn-ghost" @click="handleReset">重置</a-button>
       </div>
-      <a-form :model="searchForm" layout="inline" class="search-form">
-        <a-form-item label="标题">
-          <a-input
-              v-model:value="searchForm.title"
-              placeholder="请输入课程标题"
-              allow-clear
-              style="width: 200px"
-          />
-        </a-form-item>
+    </section>
 
-        <a-form-item label="难度">
-          <a-select
-              v-model:value="searchForm.level"
-              placeholder="请选择难度"
-              allow-clear
-              style="width: 150px"
-          >
-            <a-select-option
-                v-for="option in COURSE_LEVEL_OPTIONS"
-                :key="option.value"
-                :value="option.value"
-            >
-              {{ option.label }}
-            </a-select-option>
-          </a-select>
-        </a-form-item>
-
-        <a-form-item label="状态">
-          <a-select
-              v-model:value="searchForm.status"
-              placeholder="请选择状态"
-              allow-clear
-              style="width: 120px"
-          >
-            <a-select-option :value="0">草稿</a-select-option>
-            <a-select-option :value="1">已发布</a-select-option>
-            <a-select-option :value="2">下架</a-select-option>
-          </a-select>
-        </a-form-item>
-
-        <a-form-item>
-          <a-space>
-            <button class="btn-search" @click="handleSearch">
-              <i class="fas fa-search"></i> 搜索
-            </button>
-            <button class="btn-reset" @click="handleReset">
-              <i class="fas fa-redo"></i> 重置
-            </button>
-          </a-space>
-        </a-form-item>
-      </a-form>
-    </div>
-
-    <!-- 数据表格 -->
-    <div class="table-section">
-      <div class="table-header-bar">
-        <span class="table-count">
-          共 <em>{{ pagination.total }}</em> 条课程记录
+    <section class="column-bar">
+      <span class="column-bar__label">列顺序</span>
+      <span class="column-bar__hint">拖拽标签可调换位置</span>
+      <div class="column-chips">
+        <span
+          v-for="(key, index) in draggableColumnKeys"
+          :key="key"
+          class="column-chip"
+          :class="{
+            'column-chip--dragging': dragState.dragKey === key,
+            'column-chip--over': dragState.overKey === key && dragState.dragKey !== key
+          }"
+          draggable="true"
+          @dragstart="onColumnDragStart($event, key, index)"
+          @dragend="onColumnDragEnd"
+          @dragover.prevent="onColumnDragOver(key)"
+          @dragleave="onColumnDragLeave(key)"
+          @drop.prevent="onColumnDrop(key)"
+        >
+          <span class="column-chip__grip">⋮⋮</span>
+          {{ getColumnTitle(key) }}
         </span>
+        <span class="column-chip column-chip--fixed">操作</span>
       </div>
+      <button type="button" class="column-reset" @click="resetColumnOrder">恢复默认</button>
+    </section>
+
+    <section class="table-wrap">
       <a-table
-          :columns="columns"
+          :columns="orderedColumns"
           :data-source="tableData"
           :loading="loading"
           :pagination="pagination"
           @change="handleTableChange"
           row-key="id"
-          class="custom-table"
+          :scroll="{ x: tableScrollX }"
+          size="middle"
+          class="minimal-table"
       >
         <template #bodyCell="{ column, record }">
-          <template v-if="column.key === 'coverFileId'">
+          <template v-if="column.key === 'title'">
+            <button type="button" class="cell-link cell-link--title" @click="handleEdit(record)">
+              {{ record.title }}
+            </button>
+          </template>
+
+          <template v-else-if="column.key === 'level'">
+            <span class="cell-tag">{{ getCourseLevelName(record.level) || '—' }}</span>
+          </template>
+
+          <template v-else-if="column.key === 'chapterCount'">
+            <span class="cell-mono">{{ record.chapterCount || 0 }}</span>
+          </template>
+
+          <template v-else-if="column.key === 'coverFileId'">
             <div class="cover-wrap">
               <img
                   v-if="record.coverFilePath"
@@ -106,48 +109,46 @@
                   alt="封面"
                   class="cover-img"
               />
-              <div v-else class="cover-empty">
-                <i class="fas fa-image"></i>
-              </div>
+              <div v-else class="cover-empty">—</div>
             </div>
           </template>
 
           <template v-else-if="column.key === 'status'">
-            <span :class="['status-badge', `status-${record.status}`]">
+            <span :class="['cell-status', `cell-status--${record.status}`]">
               {{ record.statusName }}
             </span>
           </template>
 
+          <template v-else-if="column.key === 'createTime'">
+            <span class="cell-mono">{{ formatDate(record.createTime) }}</span>
+          </template>
+
           <template v-else-if="column.key === 'action'">
-            <div class="action-cell">
-              <button class="act-btn act-chapter" @click="handleViewChapters(record)">
-                <i class="fas fa-list-ul"></i> 章节管理
-              </button>
-              <button class="act-btn act-edit" @click="handleEdit(record)">
-                <i class="fas fa-pen"></i> 编辑
-              </button>
+            <div class="action-group">
+              <button type="button" class="cell-link" @click="handleViewChapters(record)">章节管理</button>
+              <span class="action-sep">|</span>
+              <button type="button" class="cell-link" @click="handleEdit(record)">编辑</button>
+              <span class="action-sep">|</span>
               <a-popconfirm
                   title="确定要删除此课程吗？"
                   ok-text="确定"
                   cancel-text="取消"
                   @confirm="handleDelete(record.id)"
               >
-                <button class="act-btn act-delete">
-                  <i class="fas fa-trash-alt"></i> 删除
-                </button>
+                <button type="button" class="cell-link cell-link--danger">删除</button>
               </a-popconfirm>
             </div>
           </template>
         </template>
       </a-table>
-    </div>
+    </section>
 
     <!-- 创建/编辑课程弹窗 -->
     <a-modal
         v-model:open="isModalVisible"
         :title="modalTitle"
         width="800px"
-        class="custom-modal"
+        class="minimal-modal"
         @ok="handleModalOk"
         @cancel="handleModalCancel"
     >
@@ -156,7 +157,7 @@
             :model="formData"
             :label-col="{ span: 4 }"
             :wrapper-col="{ span: 20 }"
-            class="custom-form"
+            class="minimal-form"
         >
           <a-form-item label="课程标题" required>
             <a-input v-model:value="formData.title" placeholder="请输入课程标题" />
@@ -219,20 +220,12 @@
         title="章节管理"
         width="1000px"
         :footer="null"
-        class="custom-modal"
+        class="minimal-modal"
     >
       <div class="chapter-header">
-        <div class="chapter-header-left">
-          <div class="chapter-course-tag">
-            <i class="fas fa-book"></i>
-          </div>
-          <div>
-            <div class="chapter-label">当前课程</div>
-            <div class="chapter-course-name">{{ currentCourse?.title }}</div>
-          </div>
-        </div>
-        <button class="btn-add-chapter" @click="showAddChapterModal">
-          <i class="fas fa-plus"></i> 添加章节
+        <span class="chapter-course-name">{{ currentCourse?.title }}</span>
+        <button type="button" class="btn-primary" @click="showAddChapterModal">
+          添加章节
         </button>
       </div>
 
@@ -242,35 +235,31 @@
           :loading="chapterLoading"
           :pagination="false"
           row-key="id"
-          class="custom-table chapter-table"
+          size="middle"
+          class="minimal-table"
       >
         <template #bodyCell="{ column, record }">
           <template v-if="column.key === 'videoFileId'">
             <span
                 v-if="record.videoFiles && record.videoFiles.length > 0"
-                class="video-badge has-video"
+                class="video-count"
             >
-              <i class="fas fa-film"></i> {{ record.videoFiles.length }} 个视频
+              {{ record.videoFiles.length }} 个视频
             </span>
-            <span v-else class="video-badge no-video">
-              <i class="fas fa-file-alt"></i> 无视频
-            </span>
+            <span v-else class="video-empty">无视频</span>
           </template>
 
           <template v-else-if="column.key === 'action'">
-            <div class="action-cell">
-              <button class="act-btn act-edit" @click="handleEditChapter(record)">
-                <i class="fas fa-pen"></i> 编辑
-              </button>
+            <div class="action-group">
+              <button type="button" class="cell-link" @click="handleEditChapter(record)">编辑</button>
+              <span class="action-sep">|</span>
               <a-popconfirm
                   title="确定要删除此章节吗？"
                   ok-text="确定"
                   cancel-text="取消"
                   @confirm="handleDeleteChapter(record.id)"
               >
-                <button class="act-btn act-delete">
-                  <i class="fas fa-trash-alt"></i> 删除
-                </button>
+                <button type="button" class="cell-link cell-link--danger">删除</button>
               </a-popconfirm>
             </div>
           </template>
@@ -283,7 +272,7 @@
         v-model:open="isChapterFormVisible"
         :title="chapterFormTitle"
         width="700px"
-        class="custom-modal"
+        class="minimal-modal"
         @ok="handleChapterFormOk"
         @cancel="handleChapterFormCancel"
     >
@@ -292,7 +281,7 @@
             :model="chapterFormData"
             :label-col="{ span: 4 }"
             :wrapper-col="{ span: 20 }"
-            class="custom-form"
+            class="minimal-form"
         >
           <a-form-item label="章节标题" required>
             <a-input v-model:value="chapterFormData.title" placeholder="请输入章节标题" />
@@ -341,7 +330,7 @@
 </template>
 
 <script setup>
-import { ref, reactive, onMounted } from 'vue'
+import { ref, reactive, computed, onMounted } from 'vue'
 import { message } from 'ant-design-vue'
 import { generateUUID } from '@/composables/useBusinessUUID'
 import {
@@ -376,21 +365,107 @@ const pagination = reactive({
 })
 
 // 表格列定义
-const columns = [
-  { title: '课程ID', dataIndex: 'id', key: 'id', width: 180 },
-  { title: '标题', dataIndex: 'title', key: 'title' },
-  {
-    title: '难度等级',
-    key: 'level',
-    width: 100,
-    customRender: ({ record }) => getCourseLevelName(record.level)
-  },
-  { title: '封面', key: 'coverFileId', width: 100 },
-  { title: '章节数', dataIndex: 'chapterCount', key: 'chapterCount', width: 100 },
-  { title: '状态', key: 'status', width: 100 },
-  { title: '创建时间', dataIndex: 'createTime', key: 'createTime', width: 180 },
-  { title: '操作', key: 'action', fixed: 'right', width: 240 }
-]
+const COLUMN_STORAGE_KEY = 'backend-course-column-order'
+
+const COLUMN_DEF_MAP = {
+  id: { title: '课程ID', dataIndex: 'id', key: 'id', width: 180 },
+  title: { title: '标题', dataIndex: 'title', key: 'title', ellipsis: true },
+  level: { title: '难度', key: 'level', width: 90 },
+  coverFileId: { title: '封面', key: 'coverFileId', width: 80, align: 'center' },
+  chapterCount: { title: '章节数', dataIndex: 'chapterCount', key: 'chapterCount', width: 80, align: 'center' },
+  status: { title: '状态', key: 'status', width: 90, align: 'center' },
+  createTime: { title: '创建时间', dataIndex: 'createTime', key: 'createTime', width: 168 }
+}
+
+const DEFAULT_COLUMN_ORDER = ['id', 'title', 'level', 'coverFileId', 'chapterCount', 'status', 'createTime']
+
+const ACTION_COLUMN = {
+  title: '操作',
+  key: 'action',
+  width: 200,
+  fixed: 'right',
+  align: 'center'
+}
+
+function loadColumnOrder() {
+  try {
+    const saved = localStorage.getItem(COLUMN_STORAGE_KEY)
+    if (!saved) return [...DEFAULT_COLUMN_ORDER]
+    const parsed = JSON.parse(saved)
+    const valid = parsed.filter((k) => DEFAULT_COLUMN_ORDER.includes(k))
+    const missing = DEFAULT_COLUMN_ORDER.filter((k) => !valid.includes(k))
+    return valid.length ? [...valid, ...missing] : [...DEFAULT_COLUMN_ORDER]
+  } catch {
+    return [...DEFAULT_COLUMN_ORDER]
+  }
+}
+
+const columnOrder = ref(loadColumnOrder())
+const draggableColumnKeys = computed(() => columnOrder.value)
+
+const orderedColumns = computed(() => {
+  const cols = columnOrder.value.map((key) => COLUMN_DEF_MAP[key]).filter(Boolean)
+  return [...cols, ACTION_COLUMN]
+})
+
+const tableScrollX = computed(() =>
+  orderedColumns.value.reduce((sum, col) => sum + (col.width || 120), 0)
+)
+
+function getColumnTitle(key) {
+  return COLUMN_DEF_MAP[key]?.title || key
+}
+
+function saveColumnOrder() {
+  localStorage.setItem(COLUMN_STORAGE_KEY, JSON.stringify(columnOrder.value))
+}
+
+function resetColumnOrder() {
+  columnOrder.value = [...DEFAULT_COLUMN_ORDER]
+  localStorage.removeItem(COLUMN_STORAGE_KEY)
+  message.success('列顺序已恢复默认')
+}
+
+const dragState = reactive({
+  dragKey: null,
+  dragIndex: -1,
+  overKey: null
+})
+
+function onColumnDragStart(e, key, index) {
+  dragState.dragKey = key
+  dragState.dragIndex = index
+  e.dataTransfer.effectAllowed = 'move'
+  e.dataTransfer.setData('text/plain', key)
+}
+
+function onColumnDragEnd() {
+  dragState.dragKey = null
+  dragState.dragIndex = -1
+  dragState.overKey = null
+}
+
+function onColumnDragOver(key) {
+  dragState.overKey = key
+}
+
+function onColumnDragLeave(key) {
+  if (dragState.overKey === key) dragState.overKey = null
+}
+
+function onColumnDrop(targetKey) {
+  const fromKey = dragState.dragKey
+  if (!fromKey || fromKey === targetKey) return
+  const list = [...columnOrder.value]
+  const fromIdx = list.indexOf(fromKey)
+  const toIdx = list.indexOf(targetKey)
+  if (fromIdx < 0 || toIdx < 0) return
+  list.splice(fromIdx, 1)
+  list.splice(toIdx, 0, fromKey)
+  columnOrder.value = list
+  saveColumnOrder()
+  dragState.overKey = null
+}
 
 // 课程弹窗相关
 const isModalVisible = ref(false)
@@ -901,373 +976,372 @@ const getFullImagePath = (path) => {
   return path.startsWith('/') ? path : '/' + path
 }
 
+const formatDate = (dateStr) => {
+  if (!dateStr) return '—'
+  try {
+    return new Date(dateStr).toLocaleString('zh-CN', {
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit'
+    })
+  } catch {
+    return dateStr
+  }
+}
+
 onMounted(() => {
   loadData()
 })
 </script>
 
-<style scoped lang="less">
-// ── 设计 Token ──────────────────────────────────────────────
-@primary:        #42664f;
-@primary-light:  #5a8a6a;
-@primary-dark:   #2e4a38;
-@primary-bg:     #fafafa;
-@primary-muted:  #e5e5e5;
-@surface:        #ffffff;
-@border:         #e5e5e5;
-@text-main:      #1a2e22;
-@text-sub:       #6b8270;
-@text-hint:      #a5b8ab;
-@radius-lg:      12px;
-@radius-md:      8px;
-@radius-sm:      6px;
-@shadow-card:    0 2px 12px rgba(66, 102, 79, 0.08);
+<style lang="scss" scoped>
+$accent: #42664f;
+$black: #111111;
+$muted: #6b6b6b;
+$border: #e8e8e8;
+$bg: #fafafa;
+$white: #ffffff;
 
-// ── 全局容器 ────────────────────────────────────────────────
-.course-management {
-  min-height: 100vh;
-  background: @primary-bg;
-  padding: 32px 36px 48px;
-  font-family: var(--font-body, 'PingFang SC', sans-serif);
+.course-page {
+  min-height: 100%;
+  padding: 28px 32px 40px;
+  background: $white;
+  color: $black;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
 }
 
-// ── 顶部装饰条 ──────────────────────────────────────────────
-.top-stripe { display: none; }
-
-// ── 页面标题栏 ──────────────────────────────────────────────
-.page-header {
+.page-top {
   display: flex;
+  align-items: flex-end;
   justify-content: space-between;
-  align-items: center;
-  padding: 0 0 16px;
-  background: transparent;
-  border-bottom: 1px solid rgba(66,102,79,0.1);
-  margin-bottom: 24px;
-
-  .header-left { display: flex; align-items: baseline; gap: 12px; }
-  .header-icon { display: none; }
-
-  .header-text {
-    display: flex;
-    flex-direction: row;
-    align-items: baseline;
-    gap: 10px;
-
-    .header-label { display: none; }
-
-    h2 {
-      margin: 0;
-      font-size: 22px;
-      font-weight: 700;
-      color: @text-main;
-      letter-spacing: 1px;
-    }
-  }
-
-  .header-text::before {
-    content: '';
-    width: 3px; height: 20px;
-    background: @primary;
-    border-radius: 0;
-    flex-shrink: 0;
-  }
-
-  .btn-create {
-    height: 40px;
-    padding: 0 22px;
-    background: @primary;
-    border: none;
-    border-radius: @radius-md;
-    color: #fff;
-    font-size: 14px;
-    font-weight: 600;
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    transition: all 0.2s ease;
-    box-shadow: 0 3px 10px rgba(66, 102, 79, 0.3);
-
-    &:hover {
-      background: @primary-light;
-      box-shadow: 0 5px 16px rgba(66, 102, 79, 0.4);
-      transform: translateY(-1px);
-    }
-
-    i { font-size: 13px; }
-  }
+  gap: 16px;
+  margin-bottom: 28px;
+  padding-bottom: 20px;
+  border-bottom: 1px solid $black;
 }
 
-// ── 搜索区域 ────────────────────────────────────────────────
-.search-section {
-  margin: 0 0 20px;
-  padding: 18px 22px;
-  background: @surface;
-  border-radius: @radius-lg;
-  border: 1px solid @border;
-}
-
-.btn-search {
-  height: 34px;
-  padding: 0 18px;
-  background: @primary;
-  border: none;
-  border-radius: @radius-sm;
-  color: #fff;
-  font-size: 13px;
+.page-top__title {
+  margin: 0;
+  font-size: 22px;
   font-weight: 600;
-  cursor: pointer;
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  transition: all 0.2s;
-
-  &:hover { background: @primary-light; }
-  i { font-size: 12px; }
+  letter-spacing: -0.02em;
 }
 
-.btn-reset {
-  height: 34px;
-  padding: 0 18px;
-  background: transparent;
-  border: 1.5px solid @border;
-  border-radius: @radius-sm;
-  color: @text-sub;
-  font-size: 13px;
-  font-weight: 500;
-  cursor: pointer;
-  display: inline-flex;
+.filter-bar {
+  display: flex;
+  flex-wrap: wrap;
   align-items: center;
-  gap: 6px;
-  transition: all 0.2s;
-
-  &:hover { border-color: @primary; color: @primary; }
-  i { font-size: 12px; }
+  gap: 10px;
+  margin-bottom: 16px;
+  padding: 14px 16px;
+  background: $bg;
+  border: 1px solid $border;
 }
 
-// ── 表格区域 ────────────────────────────────────────────────
-.table-section {
-  margin: 0 32px;
-  background: @surface;
-  border-radius: @radius-lg;
-  border: 1px solid @border;
-  box-shadow: @shadow-card;
-  overflow: hidden;
+.filter-input {
+  width: 140px;
 
-  .table-header-bar {
-    padding: 16px 24px;
-    border-bottom: 1px solid @border;
-    background: #fafafa;
+  &--wide {
+    width: 180px;
+  }
+}
 
-    .table-count {
-      font-size: 13px;
-      color: @text-sub;
-      font-weight: 500;
+.filter-select {
+  width: 120px;
+}
 
-      em {
-        font-style: normal;
-        font-weight: 700;
-        color: @primary;
-        font-size: 15px;
-      }
+.filter-bar__btns {
+  display: flex;
+  gap: 8px;
+  margin-left: auto;
+}
+
+.column-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px 12px;
+  padding: 12px 16px;
+  border: 1px solid $border;
+  border-bottom: none;
+  background: $white;
+}
+
+.column-bar__label {
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.column-bar__hint {
+  font-size: 11px;
+  color: $muted;
+}
+
+.column-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  flex: 1;
+}
+
+.column-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 10px;
+  font-size: 12px;
+  background: $white;
+  border: 1px solid $black;
+  cursor: grab;
+  user-select: none;
+
+  &--dragging {
+    opacity: 0.45;
+    border-style: dashed;
+  }
+
+  &--over {
+    background: rgba($accent, 0.12);
+    border-color: $accent;
+  }
+
+  &--fixed {
+    cursor: default;
+    color: $muted;
+    border-color: $border;
+    background: $bg;
+  }
+}
+
+.column-chip__grip {
+  font-size: 10px;
+  color: $muted;
+  letter-spacing: -2px;
+}
+
+.column-reset {
+  margin-left: auto;
+  padding: 0;
+  font-size: 12px;
+  color: $muted;
+  background: none;
+  border: none;
+  cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+
+  &:hover {
+    color: $accent;
+  }
+}
+
+.table-wrap {
+  border: 1px solid $border;
+}
+
+.minimal-table {
+  :deep(.ant-table-thead > tr > th) {
+    background: $black !important;
+    color: $white !important;
+    font-weight: 500;
+    font-size: 12px;
+    border-bottom: none !important;
+    padding: 12px 14px !important;
+  }
+
+  :deep(.ant-table-tbody > tr > td) {
+    border-bottom: 1px solid $border !important;
+    padding: 12px 14px !important;
+    font-size: 13px;
+  }
+
+  :deep(.ant-table-tbody > tr:hover > td) {
+    background: $bg !important;
+  }
+
+  :deep(.ant-pagination-item-active) {
+    border-color: $accent !important;
+
+    a {
+      color: $accent !important;
     }
   }
 }
 
-// ── 封面图 ──────────────────────────────────────────────────
+.cell-mono {
+  font-family: ui-monospace, monospace;
+  font-size: 12px;
+  color: $muted;
+}
+
+.cell-tag {
+  display: inline-block;
+  padding: 2px 8px;
+  font-size: 11px;
+  border: 1px solid $border;
+  color: $accent;
+  border-color: $accent;
+  background: rgba($accent, 0.08);
+}
+
+.cell-status {
+  font-size: 12px;
+  font-weight: 500;
+
+  &--0 { color: $muted; }
+  &--1 { color: $accent; }
+  &--2 { color: $black; }
+}
+
+.cell-link {
+  padding: 0;
+  font-size: 12px;
+  font-weight: 500;
+  color: $accent;
+  background: none;
+  border: none;
+  cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+
+  &--title {
+    font-weight: 600;
+    text-align: left;
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  &--danger {
+    color: $black;
+  }
+
+  &:hover {
+    color: $black;
+  }
+}
+
+.action-group {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.action-sep {
+  color: $border;
+  font-size: 11px;
+  user-select: none;
+}
+
 .cover-wrap {
   .cover-img {
-    width: 58px;
-    height: 58px;
+    width: 48px;
+    height: 48px;
     object-fit: cover;
-    border-radius: @radius-sm;
-    border: 2px solid @primary-muted;
+    border: 1px solid $border;
     display: block;
   }
 
   .cover-empty {
-    width: 58px;
-    height: 58px;
-    border-radius: @radius-sm;
-    background: @primary-bg;
-    border: 2px dashed @primary-muted;
+    width: 48px;
+    height: 48px;
+    background: $bg;
+    border: 1px dashed $border;
     display: flex;
     align-items: center;
     justify-content: center;
-    color: @text-hint;
-    font-size: 18px;
+    color: $muted;
+    font-size: 14px;
   }
 }
 
-// ── 状态徽章 ────────────────────────────────────────────────
-.status-badge {
-  display: inline-block;
-  padding: 3px 10px;
-  border-radius: 20px;
+.video-count {
   font-size: 12px;
-  font-weight: 600;
-  letter-spacing: 0.5px;
-
-  &.status-0 {
-    background: #f5f5f5;
-    color: #888;
-    border: 1px solid #e0e0e0;
-  }
-  &.status-1 {
-    background: #edf7f0;
-    color: @primary;
-    border: 1px solid @primary-muted;
-  }
-  &.status-2 {
-    background: #f5f5f5;
-    color: #aaa;
-    border: 1px solid #e0e0e0;
-  }
+  color: $accent;
 }
 
-// ── 视频徽章 ────────────────────────────────────────────────
-.video-badge {
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  padding: 3px 10px;
-  border-radius: 20px;
+.video-empty {
   font-size: 12px;
-  font-weight: 600;
-
-  &.has-video {
-    background: #edf7f0;
-    color: @primary;
-    border: 1px solid @primary-muted;
-    i { color: @primary-light; }
-  }
-
-  &.no-video {
-    background: #f5f5f5;
-    color: @text-hint;
-    border: 1px solid #e0e0e0;
-  }
+  color: $muted;
 }
 
-// ── 操作按钮组 ──────────────────────────────────────────────
-.action-cell {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  flex-wrap: wrap;
-}
-
-.act-btn {
-  height: 28px;
-  padding: 0 10px;
-  border-radius: @radius-sm;
-  font-size: 12px;
-  font-weight: 500;
-  cursor: pointer;
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  border: 1.5px solid;
-  transition: all 0.18s ease;
-  white-space: nowrap;
-
-  i { font-size: 11px; }
-
-  &.act-chapter {
-    background: #edf7f0;
-    border-color: @primary-muted;
-    color: @primary;
-    &:hover { background: @primary; color: #fff; border-color: @primary; }
-  }
-
-  &.act-edit {
-    background: #e8f4fd;
-    border-color: #b8d9f0;
-    color: #1a7fc1;
-    &:hover { background: #1a7fc1; color: #fff; border-color: #1a7fc1; }
-  }
-
-  &.act-delete {
-    background: #fef0f0;
-    border-color: #f5b8b8;
-    color: #d94040;
-    &:hover { background: #d94040; color: #fff; border-color: #d94040; }
-  }
-}
-
-// ── 章节管理弹窗内部 ────────────────────────────────────────
 .chapter-header {
   display: flex;
+  align-items: center;
   justify-content: space-between;
-  align-items: center;
-  padding: 16px 20px;
-  background: linear-gradient(90deg, #f0f8f2 0%, #f8fbf9 100%);
-  border-radius: @radius-md;
-  border: 1px solid @primary-muted;
+  gap: 16px;
   margin-bottom: 16px;
-
-  .chapter-header-left {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-  }
-
-  .chapter-course-tag {
-    width: 36px;
-    height: 36px;
-    background: @primary;
-    border-radius: @radius-sm;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    color: #fff;
-    font-size: 16px;
-    flex-shrink: 0;
-  }
-
-  .chapter-label {
-    font-size: 11px;
-    font-weight: 600;
-    color: @text-hint;
-    letter-spacing: 1px;
-    text-transform: uppercase;
-    margin-bottom: 2px;
-  }
-
-  .chapter-course-name {
-    font-size: 15px;
-    font-weight: 700;
-    color: @text-main;
-  }
+  padding: 12px 16px;
+  background: $bg;
+  border: 1px solid $border;
 }
 
-.btn-add-chapter {
-  height: 34px;
-  padding: 0 16px;
-  background: @primary;
-  border: none;
-  border-radius: @radius-sm;
-  color: #fff;
-  font-size: 13px;
+.chapter-course-name {
+  font-size: 14px;
   font-weight: 600;
-  cursor: pointer;
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  transition: all 0.2s;
-  box-shadow: 0 2px 8px rgba(66, 102, 79, 0.25);
-
-  &:hover { background: @primary-light; }
-  i { font-size: 12px; }
+  color: $black;
 }
 
-.chapter-table {
-  :deep(.ant-table-tbody > tr > td) {
-    vertical-align: middle;
+.btn-primary {
+  background: $accent !important;
+  border-color: $accent !important;
+  color: $white !important;
+  border-radius: 0 !important;
+  height: 34px !important;
+  font-size: 13px !important;
+  box-shadow: none !important;
+
+  &:hover {
+    background: darken($accent, 6%) !important;
+    border-color: darken($accent, 6%) !important;
   }
 }
 
-// ── 表单弹窗 ────────────────────────────────────────────────
+.btn-ghost {
+  background: $white !important;
+  border: 1px solid $black !important;
+  color: $black !important;
+  border-radius: 0 !important;
+  height: 34px !important;
+  font-size: 13px !important;
+  box-shadow: none !important;
+
+  &:hover {
+    border-color: $accent !important;
+    color: $accent !important;
+  }
+}
+
+.filter-input :deep(.ant-input),
+.filter-select :deep(.ant-select-selector) {
+  border-radius: 0 !important;
+  border-color: $border !important;
+}
+
+.filter-input :deep(.ant-input:focus),
+.filter-input :deep(.ant-input-affix-wrapper-focused),
+.filter-select.ant-select-focused :deep(.ant-select-selector) {
+  border-color: $accent !important;
+  box-shadow: none !important;
+}
+
+.minimal-form :deep(.ant-form-item-label > label) {
+  font-size: 12px;
+  color: $muted !important;
+}
+
+.minimal-form :deep(.ant-input),
+.minimal-form :deep(.ant-select-selector) {
+  border-radius: 0 !important;
+}
+
 .modal-body {
   padding: 8px 0;
 }
@@ -1277,113 +1351,86 @@ onMounted(() => {
   flex-direction: column;
   align-items: center;
   gap: 6px;
-  color: @text-hint;
+  color: $muted;
 
-  i { font-size: 22px; color: @primary-muted; }
+  i { font-size: 22px; color: $accent; }
   span { font-size: 12px; }
 }
 
 .upload-hint {
   font-size: 12px;
-  color: @text-hint;
+  color: $muted;
   margin-top: 6px;
   line-height: 1.5;
 }
+</style>
 
-// ── Ant Design 覆写 ─────────────────────────────────────────
-:deep(.ant-table) {
-  font-size: 13px;
+<style lang="scss">
+$accent: #42664f;
+$black: #111111;
+$muted: #6b6b6b;
+$border: #e8e8e8;
+$bg: #fafafa;
+$white: #ffffff;
 
-  .ant-table-thead > tr > th {
-    background: #fafafa;
-    color: @text-sub;
-    font-weight: 600;
-    font-size: 12px;
-    letter-spacing: 0.5px;
-    border-bottom: 2px solid @primary-muted;
-    text-transform: uppercase;
-    padding: 12px 16px;
+.minimal-modal {
+  .ant-modal-content {
+    padding: 0 !important;
+    border: 1px solid $black !important;
+    border-radius: 0 !important;
+    box-shadow: none !important;
   }
 
-  .ant-table-tbody > tr > td {
-    padding: 12px 16px;
-    border-bottom: 1px solid #f2f4f2;
-    color: @text-main;
-    vertical-align: middle;
-    font-size: 13px;
+  .ant-modal-header {
+    padding: 16px 20px !important;
+    border-bottom: 1px solid $border !important;
+    background: $white !important;
+
+    .ant-modal-title {
+      font-size: 15px !important;
+      font-weight: 600 !important;
+      color: $black !important;
+    }
   }
 
-  .ant-table-tbody > tr:hover > td {
-    background: #fafafa;
+  .ant-modal-body {
+    padding: 20px !important;
   }
-}
 
-:deep(.ant-input),
-:deep(.ant-input-affix-wrapper),
-:deep(.ant-picker),
-:deep(.ant-input-number),
-:deep(.ant-select:not(.ant-select-customize-input) .ant-select-selector) {
-  border-color: @border !important;
-  border-radius: @radius-sm !important;
-  font-size: 13px;
-
-  &:focus,
-  &:hover {
-    border-color: @primary !important;
-    box-shadow: 0 0 0 2px rgba(66, 102, 79, 0.1) !important;
+  .ant-modal-footer {
+    padding: 14px 20px !important;
+    border-top: 1px solid $border !important;
+    background: #fafafa !important;
   }
-}
 
-:deep(.ant-btn-primary) {
-  background: @primary;
-  border-color: @primary;
-  border-radius: @radius-sm;
-
-  &:hover { background: @primary-light; border-color: @primary-light; }
-}
-
-:deep(.ant-modal-header) {
-  border-bottom: 2px solid @primary-muted;
-  padding: 16px 24px;
-
-  .ant-modal-title {
-    font-size: 16px;
-    font-weight: 700;
-    color: @text-main;
+  .ant-btn {
+    height: 34px !important;
+    padding: 0 20px !important;
+    font-size: 13px !important;
+    border-radius: 0 !important;
+    box-shadow: none !important;
   }
-}
 
-:deep(.ant-modal-footer) {
-  border-top: 1px solid @border;
-  padding: 12px 24px;
+  .ant-btn-default {
+    background: $white !important;
+    border: 1px solid $black !important;
+    color: $black !important;
+
+    &:hover {
+      border-color: $accent !important;
+      color: $accent !important;
+    }
+  }
 
   .ant-btn-primary {
-    background: @primary;
-    border-color: @primary;
+    background: $accent !important;
+    border-color: $accent !important;
+    color: $white !important;
+
+    &:hover {
+      background: darken($accent, 6%) !important;
+      border-color: darken($accent, 6%) !important;
+    }
   }
-}
-
-:deep(.ant-upload.ant-upload-select-picture-card) {
-  border: 2px dashed @primary-muted;
-  border-radius: @radius-md;
-  background: @primary-bg;
-
-  &:hover { border-color: @primary; }
-}
-
-:deep(.ant-form-item-label > label) {
-  color: @text-sub;
-  font-weight: 600;
-  font-size: 13px;
-}
-
-:deep(.ant-pagination-item-active) {
-  border-color: @primary;
-  a { color: @primary; }
-}
-
-:deep(.ant-pagination-item:hover) {
-  border-color: @primary;
-  a { color: @primary; }
 }
 </style>

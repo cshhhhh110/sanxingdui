@@ -1,4 +1,4 @@
-﻿<template>
+<template>
   <div class="heritage-home">
     <section class="hero-banner">
       <div class="particle-bg">
@@ -1225,4 +1225,3 @@ const viewCourseDetail = (id) => router.push(`/course/${id}`)
   }
 }
 </style>
-

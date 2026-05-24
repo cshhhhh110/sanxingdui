@@ -1,7 +1,8 @@
-﻿<template>
+<template>
   <a-layout-header class="frontend-navbar">
     <!-- 原有导航栏结构保持不变 -->
-    <div class="navbar-container" :class="{ 'navbar-container--immersive': immersive }">
+    <div class="navbar-container">
+      <!-- Logo和站点名称 -->
       <div class="navbar-logo">
         <router-link to="/home">
           <img :src="siteConfig.logo.icon" alt="Logo" class="logo-icon" />
@@ -9,59 +10,76 @@
         </router-link>
       </div>
 
+      <!-- 导航菜单 -->
       <a-menu
-        v-model:selectedKeys="selectedKeys"
-        mode="horizontal"
-        class="navbar-menu"
-        :class="{ 'navbar-menu--immersive': immersive }"
-        :style="{ lineHeight: '64px', borderBottom: 'none' ,color:'#282828' }"
-        @click="handleMenuClick"
+          v-model:selectedKeys="selectedKeys"
+          mode="horizontal"
+          class="navbar-menu"
+          :style="{ lineHeight: '64px', borderBottom: 'none' ,color:'#282828' }"
       >
+        <!-- 原有菜单项保持不变 -->
         <a-menu-item key="home">
-          <span>首页</span>
+          <router-link to="/home">
+            <span>首页</span>
+          </router-link>
         </a-menu-item>
         <a-menu-item key="tanmi">
-          <span>三星堆探秘</span>
+          <router-link to="/tanmi">
+            <span>三星堆探秘</span>
+          </router-link>
         </a-menu-item>
-        <a-menu-item key="heritage">
-          <span>古蜀瑰宝</span>
-        </a-menu-item>
-        <a-menu-item key="inheritor">
-          <span>文博专家</span>
-        </a-menu-item>
-        <a-menu-item key="activity">
-          <span>文化活动</span>
-        </a-menu-item>
+        
         <a-menu-item key="course">
-          <span>研学课堂</span>
+          <router-link to="/course">
+            <span>研学课堂</span>
+          </router-link>
         </a-menu-item>
         <a-menu-item key="shop">
-          <span>文创商城</span>
+          <router-link to="/shop">
+            <span>文创商城</span>
+          </router-link>
         </a-menu-item>
         <a-menu-item key="3dlist">
-          <span>3D数字馆</span>
+          <router-link to="/3dlist">
+            <span>3D数字馆</span>
+          </router-link>
         </a-menu-item>
         <a-menu-item key="quiz">
-          <span>知识问答</span>
+          <router-link to="/quiz">
+            <span>知识问答</span>
+          </router-link>
+        </a-menu-item>
+        <a-menu-item key="heritage">
+          <router-link to="/heritage">
+            <span>古蜀瑰宝</span>
+          </router-link>
+        </a-menu-item>
+        <a-menu-item key="inheritor">
+          <router-link to="/inheritor">
+            <span>文博专家</span>
+          </router-link>
+        </a-menu-item>
+        <a-menu-item key="activity">
+          <router-link to="/activity">
+            <span>文化活动</span>
+          </router-link>
         </a-menu-item>
         <a-menu-item key="ai-chat">
-          <span>AI文博助手</span>
+          <router-link to="/ai-chat">
+            <span>AI文博助手</span>
+          </router-link>
         </a-menu-item>
         <a-menu-item key="profile" v-if="isLoggedIn">
-          <span>个人中心</span>
+          <router-link to="/profile">
+            <span>个人中心</span>
+          </router-link>
         </a-menu-item>
       </a-menu>
 
+      <!-- 右侧用户区域 -->
       <div class="navbar-user">
-        <template v-if="immersive">
-          <a-space :size="12">
-            <a-button class="immersive-action" @click="router.push('/home')">
-              返回首页
-            </a-button>
-          </a-space>
-        </template>
-
-        <template v-else-if="isLoggedIn">
+        <template v-if="isLoggedIn">
+          <!-- 用户信息下拉菜单 -->
           <a-dropdown>
             <a class="user-info" @click.prevent>
               <a-avatar :size="32" :src="userStore.avatar">
@@ -72,7 +90,7 @@
             </a>
             <template #overlay>
               <a-menu>
-                <!-- 我的订单 -->
+                <!-- 我的订单 → 绿色系 -->
                 <a-menu-item key="my-orders" class="menu-order">
                   <router-link to="/orders">
                     <i class="fas fa-shopping-cart"></i>
@@ -82,7 +100,7 @@
 
                 <a-menu-divider />
 
-                <!-- 退出登录 -->
+                <!-- 退出登录 → 红色系 -->
                 <a-menu-item key="logout" @click="openLogoutModal" class="menu-logout">
                   <LogoutOutlined />
                   <span>退出登录</span>
@@ -93,6 +111,7 @@
         </template>
 
         <template v-else>
+          <!-- 未登录状态 -->
           <a-space :size="16">
             <a-button type="default" @click="router.push('/auth/login')">
               登录
@@ -154,53 +173,15 @@ import {
   LogoutOutlined
 } from '@ant-design/icons-vue'
 
-defineProps({
-  immersive: {
-    type: Boolean,
-    default: false
-  },
-  immersiveLabel: {
-    type: String,
-    default: ''
-  },
-  immersiveDescription: {
-    type: String,
-    default: '沿着策展主线向前，像逛展一样理解三星堆。'
-  }
-})
-
 const router = useRouter()
 const route = useRoute()
 const userStore = useUserStore()
-
-const menuRouteMap = {
-  home: '/home',
-  tanmi: '/tanmi',
-  heritage: '/heritage',
-  inheritor: '/inheritor',
-  activity: '/activity',
-  course: '/course',
-  shop: '/shop',
-  '3dlist': '/3dlist',
-  quiz: '/quiz',
-  'ai-chat': '/ai-chat',
-  profile: '/profile'
-}
 
 // 当前选中的菜单项
 const selectedKeys = ref(['home'])
 
 // 是否登录
 const isLoggedIn = computed(() => userStore.isLoggedIn)
-
-const handleMenuClick = ({ key }) => {
-  const targetPath = menuRouteMap[key]
-  if (!targetPath || route.path === targetPath) {
-    return
-  }
-
-  router.push(targetPath)
-}
 
 // 全新弹窗控制
 const showLogoutModal = ref(false)
@@ -310,10 +291,6 @@ watch(() => route.path, (newPath) => {
   height: 100%;
 }
 
-.navbar-container--immersive {
-  gap: 18px;
-}
-
 .navbar-logo {
   flex-shrink: 0;
 }
@@ -345,70 +322,6 @@ watch(() => route.path, (newPath) => {
   margin: 0 24px;
 }
 
-.navbar-menu--immersive {
-  margin: 0 18px;
-  opacity: 0.88;
-}
-
-:deep(.navbar-menu--immersive .ant-menu-item) {
-  padding-inline: 14px !important;
-  font-size: 14px;
-}
-
-:deep(.navbar-menu--immersive .ant-menu-item a),
-:deep(.navbar-menu--immersive .ant-menu-title-content) {
-  color: rgba(40, 40, 40, 0.78);
-}
-
-:deep(.navbar-menu--immersive .ant-menu-item-selected .ant-menu-title-content),
-:deep(.navbar-menu--immersive .ant-menu-item:hover .ant-menu-title-content) {
-  color: #355240 !important;
-}
-
-.immersive-center {
-  display: flex;
-  flex: 1;
-  align-items: center;
-  gap: 14px;
-  min-width: 0;
-  padding: 10px 18px;
-  background: linear-gradient(135deg, rgba(255, 250, 242, 0.94), rgba(248, 243, 231, 0.92));
-  border: 1px solid rgba(184, 146, 67, 0.22);
-  border-radius: 18px;
-  box-shadow: 0 10px 24px rgba(66, 102, 79, 0.06);
-}
-
-.immersive-badge {
-  flex: 0 0 auto;
-  padding: 6px 10px;
-  color: #8f6c2d;
-  font-size: 11px;
-  font-weight: 800;
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
-  background: rgba(184, 146, 67, 0.14);
-  border-radius: 999px;
-}
-
-.immersive-copy {
-  display: grid;
-  min-width: 0;
-}
-
-.immersive-copy strong {
-  color: #1f332c;
-  font-size: 15px;
-  font-weight: 700;
-}
-
-.immersive-copy small {
-  color: #60756c;
-  font-size: 12px;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
 /* 白色底（navbar-user区域同样保持白底） */
 .navbar-user {
   flex-shrink: 0;
@@ -416,16 +329,6 @@ watch(() => route.path, (newPath) => {
   align-items: center;
   height: 64px;
   background: #fff;
-}
-
-.immersive-action {
-  height: 40px;
-  padding: 0 18px;
-  color: #355240;
-  font-weight: 600;
-  border-color: rgba(66, 102, 79, 0.18);
-  border-radius: 999px;
-  box-shadow: none;
 }
 
 /* 触发器按钮：更像“卡片/按钮” */
@@ -512,23 +415,6 @@ watch(() => route.path, (newPath) => {
 
 /* 响应式 */
 @media (max-width: 768px) {
-  .navbar-container--immersive {
-    gap: 10px;
-    padding: 0 14px;
-  }
-
-  .immersive-center {
-    padding: 8px 12px;
-  }
-
-  .immersive-badge {
-    display: none;
-  }
-
-  .immersive-copy small {
-    display: none;
-  }
-
   .user-info {
     padding: 6px 10px;
     gap: 8px;
@@ -737,4 +623,3 @@ watch(() => route.path, (newPath) => {
   }
 }
 </style>
-

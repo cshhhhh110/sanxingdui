@@ -1,286 +1,202 @@
 <template>
   <a-modal
-      v-model:open="visible"
-      title="古蜀瑰宝详情"
-      width="1000px"
-      @cancel="handleCancel"
+    v-model:open="visible"
+    width="880px"
+    wrap-class-name="minimal-modal"
+    :footer="null"
+    @cancel="handleCancel"
   >
     <template #title>
-      <div class="modal-header">
-        <span>古蜀瑰宝详情</span>
-        <a-space v-if="currentItem">
-          <a-button
-              v-if="canEdit"
-              type="primary"
-              size="small"
-              @click="handleEdit"
-          >
-            <i class="fas fa-edit"></i>
-            编辑
-          </a-button>
-          <a-button
-              v-if="canPublish"
-              type="primary"
-              size="small"
-              @click="handlePublish"
-          >
-            <i class="fas fa-upload"></i>
-            发布
-          </a-button>
-          <a-button
-              v-if="canOffline"
-              type="default"
-              size="small"
-              @click="handleOffline"
-          >
-            <i class="fas fa-download"></i>
-            下架
-          </a-button>
-          <a-button
-              v-if="canDelete"
-              danger
-              size="small"
-              @click="handleDelete"
-          >
-            <i class="fas fa-trash"></i>
-            删除
-          </a-button>
-        </a-space>
+      <div class="modal-top">
+        <span class="modal-top__title">瑰宝详情</span>
+        <div v-if="currentItem" class="modal-top__actions">
+          <a-button v-if="canEdit" size="small" class="btn-minimal-ghost" @click="handleEdit">编辑</a-button>
+          <a-button v-if="canPublish" size="small" class="btn-minimal-primary" @click="handlePublish">发布</a-button>
+          <a-button v-if="canOffline" size="small" class="btn-minimal-ghost" @click="handleOffline">下架</a-button>
+          <a-button v-if="canDelete" size="small" danger @click="handleDelete">删除</a-button>
+        </div>
       </div>
     </template>
 
-    <template #footer>
-      <a-button @click="handleCancel">关闭</a-button>
-    </template>
-
-    <!-- 加载状态 -->
-    <div v-if="itemLoading" class="loading-container">
-      <a-skeleton :rows="8" active />
+    <div v-if="itemLoading" class="state-block">
+      <a-skeleton :paragraph="{ rows: 8 }" active />
     </div>
 
-    <!-- 作品内容 -->
-    <div v-else-if="currentItem" class="content-container">
-      <!-- 标题区 -->
-      <div class="detail-header">
-        <div class="detail-header__left">
-          <div class="detail-header__cover" v-if="currentItem.coverImage">
-            <img :src="currentItem.coverImage" :alt="currentItem.title" />
-          </div>
-          <div class="detail-header__cover no-cover" v-else>
-            <i class="fas fa-image"></i>
-          </div>
-          <div class="detail-header__info">
-            <h3 class="detail-header__title">{{ currentItem.title }}</h3>
-            <div class="detail-header__meta">
-              <HeritageStatusTag
-                  :status="currentItem.status"
-                  :status-name="currentItem.statusName"
-                  show-icon
-              />
-              <span class="meta-divider">·</span>
-              <span class="meta-text">{{ currentItem.category }}</span>
-              <span class="meta-divider">·</span>
-              <span class="meta-text">{{ currentItem.region || '未知地区' }}</span>
-            </div>
+    <div v-else-if="currentItem" class="detail-body">
+      <header class="detail-hero">
+        <div class="detail-hero__cover">
+          <img v-if="currentItem.coverImage" :src="currentItem.coverImage" :alt="currentItem.title" />
+          <span v-else class="detail-hero__placeholder">无封面</span>
+        </div>
+        <div class="detail-hero__info">
+          <h2 class="detail-hero__name">{{ currentItem.title }}</h2>
+          <div class="detail-hero__meta">
+            <HeritageStatusTag
+              :status="currentItem.status"
+              :status-name="currentItem.statusName"
+              show-icon
+            />
+            <span class="meta-sep">/</span>
+            <span>{{ currentItem.category }}</span>
+            <span class="meta-sep">/</span>
+            <span>{{ currentItem.region || '未知地区' }}</span>
           </div>
         </div>
-      </div>
+      </header>
 
-      <!-- 信息网格 -->
-      <div class="info-grid">
-        <div class="info-cell">
-          <div class="info-cell__label">发布人</div>
-          <div class="info-cell__value">{{ currentItem.creatorName || '-' }}</div>
+      <dl class="meta-grid">
+        <div class="meta-grid__item">
+          <dt>发布人</dt>
+          <dd>{{ currentItem.creatorName || '—' }}</dd>
         </div>
+        <div class="meta-grid__item">
+          <dt>发布时间</dt>
+          <dd class="mono">{{ currentItem.publishTime ? formatDate(currentItem.publishTime) : '—' }}</dd>
+        </div>
+        <div class="meta-grid__item">
+          <dt>瑰宝类别</dt>
+          <dd>
+            <span class="cell-tag">{{ currentItem.category }}</span>
+          </dd>
+        </div>
+      </dl>
 
-        <div class="info-cell">
-          <div class="info-cell__label">发布时间</div>
-          <div class="info-cell__value">{{ currentItem.publishTime ? formatDate(currentItem.publishTime) : '-' }}</div>
-        </div>
-        <div class="info-cell">
-          <div class="info-cell__label">瑰宝类别</div>
-          <div class="info-cell__value">
-            <a-tag color="blue">{{ currentItem.category }}</a-tag>
-          </div>
-        </div>
-      </div>
+      <section v-if="currentItem.summary" class="detail-block">
+        <h3 class="detail-block__title">概要</h3>
+        <p class="detail-block__text detail-block__text--muted">{{ currentItem.summary }}</p>
+      </section>
 
-      <!-- 摘要区 -->
-      <div class="detail-section" v-if="currentItem.summary">
-        <div class="detail-section__title">瑰宝概要</div>
-        <div class="detail-section__content summary-text">
-          {{ currentItem.summary }}
-        </div>
-      </div>
+      <section v-if="currentItem.description" class="detail-block">
+        <h3 class="detail-block__title">详细描述</h3>
+        <div class="detail-block__text" v-html="formatDescription(currentItem.description)" />
+      </section>
 
-      <!-- 详细描述 -->
-      <div class="detail-section" v-if="currentItem.description">
-        <div class="detail-section__title">详细描述</div>
-        <div class="detail-section__content description-text">
-          <div v-html="formatDescription(currentItem.description)"></div>
-        </div>
-      </div>
-
-      <!-- 媒体文件 -->
-      <div class="detail-section">
-        <div class="detail-section__title">
-          媒体文件
-          <span class="file-count">{{ mediaList.length }} 个</span>
-          <a-button
-              v-if="canEdit"
-              type="primary"
-              size="small"
-              class="manage-btn"
-              @click="showMediaManager = true"
-          >
+      <section class="detail-block">
+        <div class="detail-block__head">
+          <h3 class="detail-block__title">
+            媒体文件
+            <span class="count-badge">{{ mediaList.length }}</span>
+          </h3>
+          <a-button v-if="canEdit" size="small" class="btn-minimal-ghost" @click="showMediaManager = true">
             管理媒体
           </a-button>
         </div>
 
         <div v-if="mediaList.length > 0" class="media-grid">
-          <div
-              v-for="media in mediaList"
-              :key="media.id"
-              class="media-item"
-              @click="handlePreviewMedia(media)"
+          <article
+            v-for="media in mediaList"
+            :key="media.id"
+            class="media-card"
+            @click="handlePreviewMedia(media)"
           >
-            <div v-if="media.type === 'IMG'" class="media-preview">
-              <img :src="media.filePath" :alt="media.originalName" />
+            <div class="media-card__preview">
+              <img
+                v-if="media.type === 'IMG'"
+                :src="media.filePath"
+                :alt="media.originalName"
+              />
+              <span v-else class="media-card__type">{{ getMediaTypeName(media.type) }}</span>
             </div>
-            <div v-else-if="media.type === 'VIDEO'" class="media-preview video">
-              <i class="fas fa-play-circle"></i>
-              <span>{{ media.originalName }}</span>
-            </div>
-            <div v-else-if="media.type === 'AUDIO'" class="media-preview audio">
-              <i class="fas fa-music"></i>
-              <span>{{ media.originalName }}</span>
-            </div>
-            <div v-else-if="media.type === 'PDF'" class="media-preview pdf">
-              <i class="fas fa-file-pdf"></i>
-              <span>{{ media.originalName }}</span>
-            </div>
-            <div v-else class="media-preview file">
-              <i class="fas fa-file"></i>
-              <span>{{ media.originalName }}</span>
-            </div>
-
-            <div class="media-info">
-              <div class="media-name" :title="media.originalName">
-                {{ media.originalName }}
-              </div>
-              <div class="media-meta">
-                <span class="media-type">{{ getMediaTypeName(media.type) }}</span>
-                <span class="media-size">{{ formatFileSize(media.fileSize) }}</span>
+            <div class="media-card__info">
+              <div class="media-card__name" :title="media.originalName">{{ media.originalName }}</div>
+              <div class="media-card__meta">
+                <span>{{ getMediaTypeName(media.type) }}</span>
+                <span>{{ formatFileSize(media.fileSize) }}</span>
               </div>
             </div>
-          </div>
+          </article>
         </div>
+        <div v-else class="state-empty">暂无媒体文件</div>
+      </section>
 
-        <div v-else class="no-media">
-          <i class="fas fa-image"></i>
-          <p>暂无媒体文件</p>
-        </div>
-      </div>
-
-      <!-- 传承人信息 -->
-      <div v-if="currentItem.inheritorList && currentItem.inheritorList.length > 0" class="detail-section">
-        <div class="detail-section__title">
+      <section
+        v-if="currentItem.inheritorList && currentItem.inheritorList.length > 0"
+        class="detail-block"
+      >
+        <h3 class="detail-block__title">
           关联传承人
-          <span class="file-count">{{ currentItem.inheritorList.length }} 位</span>
-        </div>
-
-        <div class="inheritor-list">
-          <div
-              v-for="inheritor in currentItem.inheritorList"
-              :key="inheritor.id"
-              class="inheritor-item"
+          <span class="count-badge">{{ currentItem.inheritorList.length }}</span>
+        </h3>
+        <div class="inheritor-grid">
+          <article
+            v-for="inheritor in currentItem.inheritorList"
+            :key="inheritor.id"
+            class="inheritor-card"
           >
-            <div class="inheritor-avatar">
+            <div class="inheritor-card__avatar">
               <img v-if="inheritor.avatarPath" :src="inheritor.avatarPath" :alt="inheritor.name" />
-              <i v-else class="fas fa-user"></i>
+              <span v-else>{{ inheritor.name?.charAt(0) || '?' }}</span>
             </div>
-            <div class="inheritor-info">
-              <div class="inheritor-name">{{ inheritor.name }}</div>
-              <div class="inheritor-title">{{ inheritor.title || '-' }}</div>
-              <div class="inheritor-region">{{ inheritor.region || '-' }}</div>
+            <div>
+              <div class="inheritor-card__name">{{ inheritor.name }}</div>
+              <div class="inheritor-card__sub">{{ inheritor.title || '—' }}</div>
+              <div class="inheritor-card__sub">{{ inheritor.region || '—' }}</div>
             </div>
-          </div>
+          </article>
         </div>
-      </div>
+      </section>
+
+      <footer class="detail-footer">
+        <a-button class="btn-minimal-ghost" @click="handleCancel">关闭</a-button>
+      </footer>
     </div>
 
-    <!-- 未找到内容 -->
-    <div v-else class="not-found">
+    <div v-else class="state-block">
       <a-empty description="未找到该作品信息" />
     </div>
 
-    <!-- 媒体管理对话框 -->
     <a-modal
-        v-model:open="showMediaManager"
-        title="媒体文件管理"
-        width="80%"
-        :mask-closable="false"
+      v-model:open="showMediaManager"
+      title="媒体文件管理"
+      width="80%"
+      wrap-class-name="minimal-modal"
+      :mask-closable="false"
+      ok-text="保存"
+      cancel-text="关闭"
+      @ok="handleSaveMedia"
+      @cancel="showMediaManager = false"
     >
       <HeritageMediaUpload
-          v-model="mediaList"
-          media-type="ALL"
-          :readonly="!canEdit"
-          @upload-success="handleMediaUploadSuccess"
-          @remove="handleMediaRemove"
+        v-model="mediaList"
+        media-type="ALL"
+        :readonly="!canEdit"
+        @upload-success="handleMediaUploadSuccess"
+        @remove="handleMediaRemove"
       />
-
-      <template #footer>
-        <a-space>
-          <a-button @click="showMediaManager = false">关闭</a-button>
-          <a-button v-if="canEdit" type="primary" @click="handleSaveMedia">
-            保存更改
-          </a-button>
-        </a-space>
-      </template>
     </a-modal>
 
-    <!-- 媒体预览对话框 -->
     <a-modal
-        v-model:open="previewVisible"
-        :title="previewMedia?.originalName"
-        width="80%"
-        centered
-        :footer="null"
+      v-model:open="previewVisible"
+      :title="previewMedia?.originalName"
+      width="80%"
+      centered
+      wrap-class-name="minimal-modal"
+      :footer="null"
     >
-      <div class="preview-content">
-        <!-- 图片预览 -->
+      <div class="preview-wrap">
         <img
-            v-if="previewMedia?.type === 'IMG'"
-            :src="previewMedia.filePath"
-            class="preview-image"
+          v-if="previewMedia?.type === 'IMG'"
+          :src="previewMedia.filePath"
+          class="preview-img"
+          alt=""
         />
-
-        <!-- 视频预览 -->
         <video
-            v-else-if="previewMedia?.type === 'VIDEO'"
-            :src="previewMedia.filePath"
-            controls
-            class="preview-video"
-        >
-          您的浏览器不支持视频播放
-        </video>
-
-        <!-- 音频预览 -->
+          v-else-if="previewMedia?.type === 'VIDEO'"
+          :src="previewMedia.filePath"
+          controls
+          class="preview-video"
+        />
         <audio
-            v-else-if="previewMedia?.type === 'AUDIO'"
-            :src="previewMedia.filePath"
-            controls
-            class="preview-audio"
-        >
-          您的浏览器不支持音频播放
-        </audio>
-
-        <!-- PDF预览 -->
+          v-else-if="previewMedia?.type === 'AUDIO'"
+          :src="previewMedia.filePath"
+          controls
+          class="preview-audio"
+        />
         <iframe
-            v-else-if="previewMedia?.type === 'PDF'"
-            :src="previewMedia.filePath"
-            class="preview-pdf"
-        ></iframe>
+          v-else-if="previewMedia?.type === 'PDF'"
+          :src="previewMedia.filePath"
+          class="preview-pdf"
+        />
       </div>
     </a-modal>
   </a-modal>
@@ -302,21 +218,13 @@ import { useUserStore } from '@/store/user'
 
 const userStore = useUserStore()
 
-// ========== 组件属性 ==========
 const props = defineProps({
-  open: {
-    type: Boolean,
-    default: false
-  },
-  itemId: {
-    type: [String, Number],
-    default: null
-  }
+  open: { type: Boolean, default: false },
+  itemId: { type: [String, Number], default: null }
 })
 
 const emit = defineEmits(['update:open', 'edit', 'success'])
 
-// ========== 响应式数据 ==========
 const visible = ref(false)
 const itemLoading = ref(false)
 const currentItem = ref(null)
@@ -325,111 +233,71 @@ const previewVisible = ref(false)
 const previewMedia = ref(null)
 const mediaList = ref([])
 
-// ========== 监听器 ==========
-watch(() => props.open, (newVal) => {
-  visible.value = newVal
-  if (newVal && props.itemId) {
-    fetchItemDetail()
+watch(
+  () => props.open,
+  (newVal) => {
+    visible.value = newVal
+    if (newVal && props.itemId) fetchItemDetail()
   }
-})
+)
 
 watch(visible, (newVal) => {
   emit('update:open', newVal)
 })
 
-// ========== 计算属性 ==========
-// 判断当前用户是否为管理员
-const isAdmin = computed(() => {
-  return userStore.userInfo?.userType === 'ADMIN'
-})
+const isAdmin = computed(() => userStore.userInfo?.userType === 'ADMIN')
 
-// 管理员可以编辑任何状态的作品，普通用户只能编辑草稿和待审
 const canEdit = computed(() => {
   if (!currentItem.value) return false
   if (isAdmin.value) return true
   return currentItem.value.status === 0 || currentItem.value.status === 1
 })
 
-// 管理员可以发布任何非发布状态的作品，普通用户只能发布草稿和待审
 const canPublish = computed(() => {
   if (!currentItem.value) return false
-  if (isAdmin.value) {
-    return currentItem.value.status !== 2 // 管理员可以发布除了已发布外的任何状态
-  }
+  if (isAdmin.value) return currentItem.value.status !== 2
   return currentItem.value.status === 0 || currentItem.value.status === 1
 })
 
-// 管理员可以下架已发布的作品
 const canOffline = computed(() => {
   if (!currentItem.value) return false
-  if (isAdmin.value) {
-    return currentItem.value.status === 2
-  }
-  return false // 普通用户不能下架
+  if (isAdmin.value) return currentItem.value.status === 2
+  return false
 })
 
-// 管理员可以删除草稿和下架状态的作品
 const canDelete = computed(() => {
   if (!currentItem.value) return false
-  if (isAdmin.value) {
-    return currentItem.value.status === 0 || currentItem.value.status === 3
-  }
-  return currentItem.value.status === 0 // 普通用户只能删除自己的草稿
+  if (isAdmin.value) return currentItem.value.status === 0 || currentItem.value.status === 3
+  return currentItem.value.status === 0
 })
 
-// ========== 方法 ==========
-
-/**
- * 格式化日期
- */
 function formatDate(dateStr) {
   if (!dateStr) return ''
   try {
     return formatLocalDate(new Date(dateStr))
-  } catch (error) {
+  } catch {
     return ''
   }
 }
 
-/**
- * 格式化描述内容
- */
 function formatDescription(description) {
   if (!description) return ''
-  // 简单的换行处理
   return description.replace(/\n/g, '<br>')
 }
 
-/**
- * 获取媒体类型名称
- */
 function getMediaTypeName(type) {
-  const typeMap = {
-    IMG: '图片',
-    VIDEO: '视频',
-    AUDIO: '音频',
-    PDF: 'PDF',
-    FILE: '文件'
-  }
+  const typeMap = { IMG: '图片', VIDEO: '视频', AUDIO: '音频', PDF: 'PDF', FILE: '文件' }
   return typeMap[type] || '文件'
 }
 
-/**
- * 格式化文件大小
- */
 function formatFileSize(bytes) {
   if (!bytes) return '0 B'
-
   const k = 1024
   const sizes = ['B', 'KB', 'MB', 'GB']
   const i = Math.floor(Math.log(bytes) / Math.log(k))
-
-  return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i]
+  return `${parseFloat((bytes / Math.pow(k, i)).toFixed(2))} ${sizes[i]}`
 }
 
-/**
- * 获取作品详情
- */
 function fetchItemDetail() {
   if (!props.itemId) {
     message.error('作品ID不能为空')
@@ -439,468 +307,409 @@ function fetchItemDetail() {
 
   itemLoading.value = true
 
-  getHeritageItemDetail({ itemId: props.itemId }, {
-    onSuccess: (res) => {
-      currentItem.value = res
-      itemLoading.value = false
-
-      // 直接从作品详情中获取媒体文件列表
-      if (res.mediaList && res.mediaList.length > 0) {
-        mediaList.value = res.mediaList
-        console.log(`成功加载 ${res.mediaList.length} 个媒体文件`)
-      } else {
-        mediaList.value = []
+  getHeritageItemDetail(
+    { itemId: props.itemId },
+    {
+      onSuccess: (res) => {
+        currentItem.value = res
+        itemLoading.value = false
+        mediaList.value = res.mediaList?.length ? res.mediaList : []
+      },
+      onError: () => {
+        message.error('获取作品详情失败')
+        itemLoading.value = false
       }
-    },
-    onError: (error) => {
-      message.error('获取作品详情失败')
-      itemLoading.value = false
     }
-  })
+  )
 }
 
-// fetchMediaList 函数已移除，直接从作品详情中获取媒体文件
-
-/**
- * 取消操作
- */
 function handleCancel() {
   visible.value = false
   currentItem.value = null
   mediaList.value = []
 }
 
-/**
- * 编辑
- */
 function handleEdit() {
   emit('edit', currentItem.value)
 }
 
-/**
- * 发布
- */
 function handlePublish() {
   Modal.confirm({
-    title: '提示',
-    content: `确定要发布作品"${currentItem.value.title}"吗？`,
+    title: '发布确认',
+    content: `确定要发布「${currentItem.value.title}」？`,
     onOk() {
-      publishHeritageItem({ itemId: currentItem.value.id }, {
-        successMsg: '发布成功',
-        onSuccess: () => {
-          // 更新当前项状态
-          currentItem.value.status = 2
-          currentItem.value.statusName = '已发布'
-          emit('success')
+      publishHeritageItem(
+        { itemId: currentItem.value.id },
+        {
+          successMsg: '发布成功',
+          onSuccess: () => {
+            currentItem.value.status = 2
+            currentItem.value.statusName = '已发布'
+            emit('success')
+          }
         }
-      })
+      )
     }
   })
 }
 
-/**
- * 下架
- */
 function handleOffline() {
   Modal.confirm({
-    title: '提示',
-    content: `确定要下架作品"${currentItem.value.title}"吗？`,
+    title: '下架确认',
+    content: `确定要下架「${currentItem.value.title}」？`,
     onOk() {
-      offlineHeritageItem({ itemId: currentItem.value.id }, {
-        successMsg: '下架成功',
-        onSuccess: () => {
-          // 更新当前项状态
-          currentItem.value.status = 3
-          currentItem.value.statusName = '下架'
-          emit('success')
+      offlineHeritageItem(
+        { itemId: currentItem.value.id },
+        {
+          successMsg: '下架成功',
+          onSuccess: () => {
+            currentItem.value.status = 3
+            currentItem.value.statusName = '下架'
+            emit('success')
+          }
         }
-      })
+      )
     }
   })
 }
 
-/**
- * 删除
- */
 function handleDelete() {
   Modal.confirm({
-    title: '危险操作',
-    content: `确定要删除作品"${currentItem.value.title}"吗？此操作不可恢复！`,
-    okText: '确定删除',
-    cancelText: '取消',
+    title: '删除确认',
+    content: `确定要删除「${currentItem.value.title}」？此操作不可恢复。`,
     okType: 'danger',
     onOk() {
-      deleteHeritageItem({ itemId: currentItem.value.id }, {
-        successMsg: '删除成功',
-        onSuccess: () => {
-          visible.value = false
-          emit('success')
+      deleteHeritageItem(
+        { itemId: currentItem.value.id },
+        {
+          successMsg: '删除成功',
+          onSuccess: () => {
+            visible.value = false
+            emit('success')
+          }
         }
-      })
+      )
     }
   })
 }
 
-/**
- * 预览媒体
- */
 function handlePreviewMedia(media) {
   previewMedia.value = media
   previewVisible.value = true
 }
 
-/**
- * 媒体上传成功
- */
-function handleMediaUploadSuccess(media) {
+function handleMediaUploadSuccess() {
   message.success('媒体上传成功')
 }
 
-/**
- * 媒体移除
- */
-function handleMediaRemove(media) {
+function handleMediaRemove() {
   message.success('媒体移除成功')
 }
 
-/**
- * 保存媒体更改
- */
 function handleSaveMedia() {
-  // 这里可以调用API保存媒体关联关系
   showMediaManager.value = false
   message.success('媒体更改已保存')
 }
-
 </script>
 
-<style scoped>
-/* 对话框头部样式 */
-.modal-header {
+<style lang="scss" scoped>
+$accent: #42664f;
+$black: #111111;
+$muted: #6b6b6b;
+$border: #e8e8e8;
+$bg: #fafafa;
+$white: #ffffff;
+
+.modal-top {
   display: flex;
-  justify-content: space-between;
   align-items: center;
+  justify-content: space-between;
   width: 100%;
+  gap: 12px;
+  padding-right: 24px;
 }
 
-/* 对话框内容样式 */
-:deep(.ant-modal-body) {
-  max-height: 70vh;
-  overflow-y: auto;
-  padding: 16px;
+.modal-top__title {
+  font-size: 15px;
+  font-weight: 600;
+  color: $black;
 }
 
-.loading-container {
-  padding: 20px;
+.modal-top__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
 }
 
-.content-container {
+.detail-body {
   display: flex;
   flex-direction: column;
-  gap: 24px;
+  gap: 20px;
 }
 
-.detail-header {
-  padding: 20px;
-  background: linear-gradient(135deg, #f0f9ff 0%, #e8f4fd 100%);
-  border-radius: 8px;
-  border: 1px solid #bae0ff;
-}
-
-.detail-header__left {
+.detail-hero {
   display: flex;
   gap: 16px;
-  align-items: center;
+  padding-bottom: 20px;
+  border-bottom: 1px solid $black;
 }
 
-.detail-header__cover {
-  width: 80px;
-  height: 80px;
-  border-radius: 8px;
-  overflow: hidden;
+.detail-hero__cover {
+  width: 88px;
+  height: 88px;
   flex-shrink: 0;
-  background: #f0f0f0;
+  border: 1px solid $border;
+  background: $bg;
+  overflow: hidden;
   display: flex;
   align-items: center;
   justify-content: center;
-  border: 2px solid #fff;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+
+  img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
 }
 
-.detail-header__cover img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
+.detail-hero__placeholder {
+  font-size: 11px;
+  color: $muted;
 }
 
-.detail-header__cover.no-cover {
-  color: #c0c4cc;
-  font-size: 24px;
-}
-
-.detail-header__info {
-  flex: 1;
-  min-width: 0;
-}
-
-.detail-header__title {
-  margin: 0 0 8px 0;
+.detail-hero__name {
+  margin: 0 0 8px;
   font-size: 20px;
   font-weight: 600;
-  color: #1a1a1a;
+  color: $black;
   line-height: 1.3;
 }
 
-.detail-header__meta {
+.detail-hero__meta {
   display: flex;
-  align-items: center;
-  gap: 8px;
   flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  color: $muted;
 }
 
-.meta-divider {
-  color: #c0c4cc;
+.meta-sep {
+  color: $border;
 }
 
-.meta-text {
-  color: #606266;
-  font-size: 14px;
-}
-
-.info-grid {
+.meta-grid {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 16px;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1px;
+  background: $border;
+  border: 1px solid $border;
+  margin: 0;
 }
 
-.info-cell {
-  padding: 16px;
-  background: #f8f9fa;
-  border-radius: 8px;
-  border: 1px solid #e9ecef;
+.meta-grid__item {
+  background: $white;
+  padding: 14px 16px;
+
+  dt {
+    margin: 0 0 6px;
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: $muted;
+  }
+
+  dd {
+    margin: 0;
+    font-size: 14px;
+    font-weight: 500;
+    color: $black;
+  }
 }
 
-.info-cell__label {
+.mono {
+  font-family: ui-monospace, monospace;
   font-size: 12px;
-  color: #6c757d;
-  margin-bottom: 8px;
-  font-weight: 500;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
 }
 
-.info-cell__value {
-  font-size: 14px;
-  color: #212529;
-  font-weight: 500;
+.cell-tag {
+  display: inline-block;
+  padding: 2px 8px;
+  font-size: 11px;
+  color: $accent;
+  border: 1px solid $accent;
+  background: rgba($accent, 0.08);
 }
 
-.detail-section {
-  background: #fff;
-  border-radius: 8px;
-  border: 1px solid #e9ecef;
-  padding: 20px;
+.detail-block {
+  border-top: 1px solid $border;
+  padding-top: 16px;
 }
 
-.detail-section__title {
-  font-size: 16px;
+.detail-block__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+
+.detail-block__title {
+  margin: 0 0 12px;
+  font-size: 12px;
   font-weight: 600;
-  color: #212529;
-  margin-bottom: 16px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: $black;
   display: flex;
   align-items: center;
   gap: 8px;
-  padding-bottom: 12px;
-  border-bottom: 1px solid #f0f0f0;
 }
 
-.file-count {
-  font-size: 12px;
-  color: #6c757d;
-  font-weight: normal;
-  background: #f0f0f0;
-  padding: 2px 8px;
-  border-radius: 10px;
+.count-badge {
+  font-size: 11px;
+  font-weight: 500;
+  color: $muted;
+  border: 1px solid $border;
+  padding: 1px 8px;
 }
 
-.manage-btn {
-  margin-left: auto;
-}
-
-.detail-section__content {
-  line-height: 1.8;
-  color: #495057;
-}
-
-.summary-text {
+.detail-block__text {
+  margin: 0;
   font-size: 14px;
-  color: #6c757d;
-  font-style: italic;
-  padding: 12px 16px;
-  background: #f8f9fa;
-  border-radius: 6px;
-  border-left: 3px solid #409eff;
-}
+  line-height: 1.75;
+  color: $black;
 
-.description-text {
-  font-size: 14px;
-}
-
-.no-media {
-  text-align: center;
-  padding: 40px;
-  color: #c0c4cc;
-}
-
-.no-media i {
-  font-size: 48px;
-  margin-bottom: 16px;
+  &--muted {
+    color: $muted;
+    padding: 12px 14px;
+    background: $bg;
+    border-left: 2px solid $accent;
+  }
 }
 
 .media-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-  gap: 16px;
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  gap: 10px;
 }
 
-.media-item {
-  border: 1px solid #e4e7ed;
-  border-radius: 8px;
-  overflow: hidden;
+.media-card {
+  border: 1px solid $border;
   cursor: pointer;
-  transition: all 0.3s ease;
+  transition: border-color 0.15s;
+
+  &:hover {
+    border-color: $accent;
+  }
 }
 
-.media-item:hover {
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-}
-
-.media-preview {
-  height: 120px;
+.media-card__preview {
+  height: 100px;
+  background: $bg;
   display: flex;
   align-items: center;
   justify-content: center;
-  background: #f5f7fa;
-  flex-direction: column;
-  gap: 8px;
+  overflow: hidden;
+
+  img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
 }
 
-.media-preview img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
+.media-card__type {
+  font-size: 12px;
+  color: $muted;
 }
 
-.media-preview.video,
-.media-preview.audio,
-.media-preview.pdf,
-.media-preview.file {
-  color: #606266;
+.media-card__info {
+  padding: 10px;
+  border-top: 1px solid $border;
 }
 
-.media-preview i {
-  font-size: 32px;
-}
-
-.media-info {
-  padding: 12px;
-}
-
-.media-name {
-  font-size: 14px;
-  font-weight: 500;
-  color: #303133;
-  margin-bottom: 4px;
+.media-card__name {
+  font-size: 12px;
+  font-weight: 600;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-}
-
-.media-meta {
-  display: flex;
-  justify-content: space-between;
-  font-size: 12px;
-  color: #909399;
-}
-
-.no-media {
-  text-align: center;
-  padding: 40px;
-  color: #c0c4cc;
-}
-
-.no-media i {
-  font-size: 48px;
-  margin-bottom: 16px;
-}
-
-.inheritor-list {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-  gap: 16px;
-}
-
-.inheritor-item {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 16px;
-  border: 1px solid #e4e7ed;
-  border-radius: 8px;
-}
-
-.inheritor-avatar {
-  width: 60px;
-  height: 60px;
-  border-radius: 50%;
-  overflow: hidden;
-  background: #f5f7fa;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-}
-
-.inheritor-avatar img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-}
-
-.inheritor-avatar i {
-  font-size: 24px;
-  color: #c0c4cc;
-}
-
-.inheritor-info {
-  flex: 1;
-}
-
-.inheritor-name {
-  font-size: 16px;
-  font-weight: 600;
-  color: #303133;
   margin-bottom: 4px;
 }
 
-.inheritor-title,
-.inheritor-region {
+.media-card__meta {
+  display: flex;
+  justify-content: space-between;
+  font-size: 11px;
+  color: $muted;
+}
+
+.inheritor-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 10px;
+}
+
+.inheritor-card {
+  display: flex;
+  gap: 12px;
+  padding: 12px;
+  border: 1px solid $border;
+}
+
+.inheritor-card__avatar {
+  width: 48px;
+  height: 48px;
+  flex-shrink: 0;
+  border: 1px solid $border;
+  background: $bg;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   font-size: 14px;
-  color: #606266;
+  font-weight: 600;
+  color: $accent;
+  overflow: hidden;
+
+  img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+}
+
+.inheritor-card__name {
+  font-size: 14px;
+  font-weight: 600;
   margin-bottom: 2px;
 }
 
-.not-found {
-  text-align: center;
-  padding: 40px 20px;
+.inheritor-card__sub {
+  font-size: 12px;
+  color: $muted;
 }
 
-/* 预览样式 */
-.preview-content {
+.detail-footer {
+  padding-top: 8px;
+  border-top: 1px solid $border;
+  display: flex;
+  justify-content: flex-end;
+}
+
+.state-block,
+.state-empty {
+  padding: 24px;
+  text-align: center;
+  color: $muted;
+  font-size: 13px;
+}
+
+.preview-wrap {
   text-align: center;
 }
 
-.preview-image {
+.preview-img {
   max-width: 100%;
   max-height: 60vh;
   object-fit: contain;
@@ -921,37 +730,32 @@ function handleSaveMedia() {
   border: none;
 }
 
-/* 响应式设计 */
 @media (max-width: 768px) {
-  :deep(.ant-modal) {
-    margin: 0;
-    max-width: 100vw;
-    top: 0;
-  }
-
-  :deep(.ant-modal-content) {
-    border-radius: 0;
-  }
-
-  .modal-header {
+  .modal-top {
     flex-direction: column;
     align-items: flex-start;
-    gap: 12px;
+    padding-right: 0;
   }
 
-  .media-grid,
-  .inheritor-list {
-    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  .meta-grid {
+    grid-template-columns: 1fr;
   }
 
-  .info-item {
+  .detail-hero {
     flex-direction: column;
-    align-items: flex-start;
-  }
-
-  .info-item label {
-    min-width: auto;
   }
 }
 </style>
 
+<style lang="scss">
+@import '@/styles/backend-minimal.scss';
+
+.detail-body {
+  .btn-minimal-primary,
+  .btn-minimal-ghost {
+    height: 28px;
+    padding: 0 12px;
+    font-size: 12px;
+  }
+}
+</style>

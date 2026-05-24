@@ -9,9 +9,6 @@ export * from './user'
 // 非遗作品相关API
 export * from './HeritageApi'
 
-// 绔炶禌鏃剁┖閾捐矾 API
-export * from './SpacetimeApi'
-
 // 文件管理相关API
 export * from './FileApi'
 

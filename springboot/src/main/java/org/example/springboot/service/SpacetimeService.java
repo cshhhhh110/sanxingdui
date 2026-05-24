@@ -18,6 +18,7 @@ import org.example.springboot.entity.HeritageItem;
 import org.example.springboot.entity.SysFileInfo;
 import org.example.springboot.mapper.HeritageItemMapper;
 import org.example.springboot.mapper.SysFileInfoMapper;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 
@@ -81,6 +82,9 @@ public class SpacetimeService {
     @Resource
     private SysFileInfoMapper sysFileInfoMapper;
 
+    @Autowired(required = false)
+    private Neo4jGraphService neo4jGraphService;
+
     public SpacetimeSearchResponseDTO searchArtifacts(SpacetimeSearchRequestDTO requestDTO) {
         SpacetimeSearchRequestDTO safeRequest = requestDTO == null ? new SpacetimeSearchRequestDTO() : requestDTO;
         List<HeritageItem> items = heritageItemMapper.selectSpacetimeItems(
@@ -126,6 +130,11 @@ public class SpacetimeService {
             return null;
         }
 
+        ArtifactGraphResponseDTO neo4jGraph = tryBuildNeo4jArtifactGraph(entityId);
+        if (neo4jGraph != null) {
+            return neo4jGraph;
+        }
+
         HeritageItem item = loadPublishedItem(entityId);
         if (item == null) {
             return null;
@@ -153,6 +162,11 @@ public class SpacetimeService {
     public ArtifactGraphResponseDTO buildNodeNeighbors(String entityId, String nodeId, Integer depth) {
         if (!StringUtils.hasText(entityId) || !StringUtils.hasText(nodeId)) {
             return null;
+        }
+
+        ArtifactGraphResponseDTO neo4jGraph = tryBuildNeo4jNodeNeighbors(entityId, nodeId, depth);
+        if (neo4jGraph != null) {
+            return neo4jGraph;
         }
 
         HeritageItem centerItem = loadPublishedItem(entityId);
@@ -190,6 +204,20 @@ public class SpacetimeService {
 
         finalizeGraph(responseDTO);
         return responseDTO;
+    }
+
+    private ArtifactGraphResponseDTO tryBuildNeo4jArtifactGraph(String entityId) {
+        if (neo4jGraphService == null) {
+            return null;
+        }
+        return neo4jGraphService.buildArtifactGraph(entityId);
+    }
+
+    private ArtifactGraphResponseDTO tryBuildNeo4jNodeNeighbors(String entityId, String nodeId, Integer depth) {
+        if (neo4jGraphService == null) {
+            return null;
+        }
+        return neo4jGraphService.buildNodeNeighbors(entityId, nodeId, depth);
     }
 
     private ArtifactGraphResponseDTO createEmptyGraph() {

@@ -4,7 +4,7 @@
  * @author system
  */
 
-import { ref, computed, onUnmounted, readonly, watch } from 'vue';
+import { ref, computed, getCurrentInstance, onUnmounted, readonly, watch } from 'vue';
 import { 
   generateBusinessUUID, 
   isValidUUID, 
@@ -121,10 +121,12 @@ export function useBusinessUUID(businessType, options = {}) {
     return uuid.value;
   }
 
-  // 组件卸载时清理
-  onUnmounted(() => {
-    manager.reset();
-  });
+  // 只有在组件 setup 上下文中才注册生命周期钩子，避免在路由守卫/普通工具函数中调用时报 Vue 警告。
+  if (getCurrentInstance()) {
+    onUnmounted(() => {
+      manager.reset();
+    });
+  }
 
   return {
     // 响应式数据

@@ -247,11 +247,10 @@ AI 对话链路：
 十、前后端启动命令
 ================================================================
 
-  MySQL:   本地 localhost:3306 / heritage_db / root / chenshihao.00
+  MySQL:   本地 localhost:3306 / heritage_db / YOUR_MYSQL_USERNAME / YOUR_MYSQL_PASSWORD
   主后端:  cd G:\终版\springboot   →  .\mvnw.cmd spring-boot:run    (端口 8889)
   AI中继:  cd G:\终版\XunFeiTest   →  .\mvnw.cmd spring-boot:run    (端口 8089，即将废弃)
   前端:    cd G:\终版\vue3          →  npm run dev                   (端口 8800)
 
   前端 /api → Vite proxy → localhost:8889
-
 

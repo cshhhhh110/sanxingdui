@@ -1,772 +1,668 @@
 <template>
-  <div class="shop-category-page">
-    <!-- 页面标题 -->
-    <div class="page-header">
-      <div class="title-wrapper">
-        <span class="title-indicator"></span>
-        <h2>商品分类管理</h2>
-        <span class="sub-badge">类目层级与状态控制</span>
+  <div class="category-page">
+    <header class="page-top">
+      <div class="page-top__main">
+        <h1 class="page-top__title">商品分类管理</h1>
       </div>
-      <a-button type="primary" class="btn-create" @click="showCreateModal">
-        <template #icon>
-          <PlusOutlined />
-        </template>
+      <a-button type="primary" class="btn-primary" @click="showCreateModal">
         新增分类
       </a-button>
-    </div>
+    </header>
 
-    <!-- 搜索筛选区域（无边框轻量卡片） -->
-    <div class="search-section">
-      <a-form layout="inline" :model="searchForm" class="museum-search-form">
-        <a-form-item label="分类名称">
-          <a-input
-              v-model:value="searchForm.name"
-              placeholder="请输入分类名称"
-              allow-clear
-              style="width: 200px"
-          />
-        </a-form-item>
-        <a-form-item label="状态">
-          <a-select
-              v-model:value="searchForm.status"
-              placeholder="请选择状态"
-              allow-clear
-              style="width: 140px"
-              class="museum-select"
-          >
-            <a-select-option :value="1">启用</a-select-option>
-            <a-select-option :value="0">禁用</a-select-option>
-          </a-select>
-        </a-form-item>
-        <a-form-item class="search-actions">
-          <a-space :size="12">
-            <a-button type="primary" class="btn-search" @click="handleSearch">
-              <template #icon>
-                <SearchOutlined />
-              </template>
-              查询
-            </a-button>
-            <a-button class="btn-reset" @click="handleReset">
-              <template #icon>
-                <ReloadOutlined />
-              </template>
-              重置
-            </a-button>
-          </a-space>
-        </a-form-item>
-      </a-form>
-    </div>
-
-    <!-- 分类列表表格区域 -->
-    <div class="table-section">
-      <a-table
-          :columns="columns"
-          :data-source="tableData"
-          :pagination="pagination"
-          :loading="loading"
-          row-key="id"
-          @change="handleTableChange"
-          class="museum-theme-table"
+    <section class="filter-bar">
+      <a-input
+        v-model:value="searchForm.name"
+        placeholder="分类名称"
+        allow-clear
+        class="filter-input filter-input--wide"
+        @pressEnter="handleSearch"
+      />
+      <a-select
+        v-model:value="searchForm.status"
+        placeholder="状态"
+        allow-clear
+        class="filter-select"
       >
-        <!-- 状态列定制渲染 -->
-        <template #status="{ record }">
-          <div class="status-cell-wrapper">
-            <a-switch
-                :checked="record.status === 1"
-                @change="(checked) => handleStatusChange(record.id, checked ? 1 : 0)"
-                :loading="record.statusLoading"
-                class="museum-switch"
-            />
-            <span class="status-text" :class="record.status === 1 ? 'status-active' : 'status-disabled'">
-              {{ record.statusDesc }}
-            </span>
-          </div>
-        </template>
+        <a-select-option :value="1">启用</a-select-option>
+        <a-select-option :value="0">禁用</a-select-option>
+      </a-select>
+      <div class="filter-bar__btns">
+        <a-button type="primary" class="btn-primary" @click="handleSearch">查询</a-button>
+        <a-button class="btn-ghost" @click="handleReset">重置</a-button>
+      </div>
+    </section>
 
-        <!-- 操作列定制渲染 -->
-        <template #action="{ record }">
-          <div class="action-cell">
-            <a-button
-                type="link"
-                size="small"
-                class="link-btn edit-link"
-                @click="showEditModal(record)"
-            >
-              编辑
-            </a-button>
-            <a-divider type="vertical" class="action-divider" />
-            <a-popconfirm
+    <section class="column-bar">
+      <span class="column-bar__label">列顺序</span>
+      <span class="column-bar__hint">拖拽标签可调换位置</span>
+      <div class="column-chips">
+        <span
+          v-for="(key, index) in draggableColumnKeys"
+          :key="key"
+          class="column-chip"
+          :class="{
+            'column-chip--dragging': dragState.dragKey === key,
+            'column-chip--over': dragState.overKey === key && dragState.dragKey !== key
+          }"
+          draggable="true"
+          @dragstart="onColumnDragStart($event, key, index)"
+          @dragend="onColumnDragEnd"
+          @dragover.prevent="onColumnDragOver(key)"
+          @dragleave="onColumnDragLeave(key)"
+          @drop.prevent="onColumnDrop(key)"
+        >
+          <span class="column-chip__grip">⋮⋮</span>
+          {{ getColumnTitle(key) }}
+        </span>
+        <span class="column-chip column-chip--fixed">操作</span>
+      </div>
+      <button type="button" class="column-reset" @click="resetColumnOrder">恢复默认</button>
+    </section>
+
+    <section class="table-wrap">
+      <a-table
+        :columns="orderedColumns"
+        :data-source="tableData"
+        :loading="loading"
+        :pagination="pagination"
+        @change="handleTableChange"
+        :scroll="{ x: tableScrollX }"
+        row-key="id"
+        size="middle"
+        class="minimal-table"
+      >
+        <template #bodyCell="{ column, record }">
+          <template v-if="column.key === 'name'">
+            <button type="button" class="cell-link cell-link--title" @click="showEditModal(record)">
+              {{ record.name }}
+            </button>
+          </template>
+
+          <template v-else-if="column.key === 'status'">
+            <span :class="['cell-status', `cell-status--${record.status}`]">
+              {{ record.status === 1 ? '启用' : '禁用' }}
+            </span>
+          </template>
+
+          <template v-else-if="column.key === 'createTime'">
+            <span class="cell-mono">{{ formatDate(record.createTime) }}</span>
+          </template>
+
+          <template v-else-if="column.key === 'updateTime'">
+            <span class="cell-mono">{{ formatDate(record.updateTime) }}</span>
+          </template>
+
+          <template v-else-if="column.key === 'action'">
+            <div class="action-group">
+              <button type="button" class="cell-link" @click="showEditModal(record)">编辑</button>
+              <span class="action-sep">|</span>
+              <a-popconfirm
                 title="确定要删除这个分类吗？"
-                @confirm="handleDelete(record.id)"
                 ok-text="确定"
                 cancel-text="取消"
-                overlayClassName="museum-popconfirm"
-            >
-              <a-button
-                  type="link"
-                  size="small"
-                  danger
-                  class="link-btn delete-link"
+                @confirm="handleDelete(record.id)"
               >
-                删除
-              </a-button>
-            </a-popconfirm>
-          </div>
+                <button type="button" class="cell-link cell-link--danger">删除</button>
+              </a-popconfirm>
+            </div>
+          </template>
         </template>
       </a-table>
-    </div>
+    </section>
 
-    <!-- 新增/编辑分类弹窗 -->
     <a-modal
-        :title="modalTitle"
-        :open="modalVisible"
-        @ok="handleSubmit"
-        @cancel="handleCancel"
-        :confirm-loading="submitLoading"
-        width="540px"
-        wrapClassName="museum-custom-modal"
+      v-model:open="modalVisible"
+      :title="modalTitle"
+      width="540px"
+      class="minimal-modal"
+      @ok="handleSubmit"
+      @cancel="handleCancel"
     >
-      <div class="edit-form-container">
-        <!-- 顶部温润提示状态条 -->
-        <div class="status-bar" :class="isEdit ? 'status-edit' : 'status-create'">
-          <div class="status-bar__left">
-            <span class="status-dot"></span>
-            <span class="status-bar__text">
-              {{ isEdit ? '您正在编辑当前类目资产的属性配置' : '正在创建全新的一级/二级商品分类映射' }}
-            </span>
-          </div>
-        </div>
-
+      <div class="modal-body">
         <a-form
-            ref="formRef"
-            :model="formData"
-            :rules="formRules"
-            :label-col="{ span: 5 }"
-            :wrapper-col="{ span: 19 }"
-            class="edit-form"
+          ref="formRef"
+          :model="formData"
+          :rules="formRules"
+          :label-col="{ span: 5 }"
+          :wrapper-col="{ span: 19 }"
+          class="minimal-form"
         >
-          <div class="form-card-box">
-            <a-form-item label="分类名称" name="name">
-              <a-input
-                  v-model:value="formData.name"
-                  placeholder="请输入精致合规的分类名称"
-                  :maxlength="100"
-                  class="museum-input"
-              />
-            </a-form-item>
+          <a-form-item label="分类名称" name="name">
+            <a-input v-model:value="formData.name" placeholder="请输入分类名称" :maxlength="100" />
+          </a-form-item>
 
-            <a-form-item label="状态" name="status">
-              <a-radio-group v-model:value="formData.status" class="museum-radio-group">
-                <a-radio :value="1" class="museum-radio">
-                  <span class="radio-label-txt">启用</span>
-                </a-radio>
-                <a-radio :value="0" class="museum-radio">
-                  <span class="radio-label-txt text-danger">禁用</span>
-                </a-radio>
-              </a-radio-group>
-            </a-form-item>
-          </div>
+          <a-form-item label="状态" name="status">
+            <a-radio-group v-model:value="formData.status">
+              <a-radio :value="1">启用</a-radio>
+              <a-radio :value="0">禁用</a-radio>
+            </a-radio-group>
+          </a-form-item>
         </a-form>
       </div>
-
-      <!-- 固化底部按钮外观 -->
-      <template #footer>
-        <div class="edit-footer">
-          <a-button @click="handleCancel" class="cancel-btn">取消</a-button>
-          <a-button type="primary" :loading="submitLoading" @click="handleSubmit" class="submit-btn">
-            确定
-          </a-button>
-        </div>
-      </template>
     </a-modal>
   </div>
 </template>
 
 <script setup>
-import { ref, reactive, onMounted, computed, nextTick } from 'vue';
-import { message } from 'ant-design-vue';
-import { PlusOutlined, SearchOutlined, ReloadOutlined } from '@ant-design/icons-vue';
-import {
-  getCategoryPage,
-  createCategory,
-  updateCategory,
-  deleteCategory,
-  updateCategoryStatus
-} from '@/api/ShopCategoryApi';
+import { ref, reactive, onMounted, computed, nextTick } from 'vue'
+import { message } from 'ant-design-vue'
+import { getCategoryPage, createCategory, updateCategory, deleteCategory } from '@/api/ShopCategoryApi'
 
-// 响应式数据
-const loading = ref(false);
-const tableData = ref([]);
-const modalVisible = ref(false);
-const submitLoading = ref(false);
-const formRef = ref();
-const isEdit = ref(false);
-const currentEditId = ref(null);
+const COLUMN_STORAGE_KEY = 'backend-category-column-order'
 
-// 搜索表单
+const loading = ref(false)
+const tableData = ref([])
+const modalVisible = ref(false)
+const submitLoading = ref(false)
+const formRef = ref()
+const currentEditId = ref(null)
+
+const isEdit = computed(() => !!currentEditId.value)
+
 const searchForm = reactive({
   name: '',
   status: null
-});
+})
 
-// 分页配置
 const pagination = reactive({
   current: 1,
   pageSize: 10,
   total: 0,
   showSizeChanger: true,
   showQuickJumper: true,
-  showTotal: (total) => `共 ${total} 条记录`
-});
+  showTotal: total => `共 ${total} 条`
+})
 
-// 表单数据
 const formData = reactive({
   name: '',
   status: 1
-});
+})
 
-// 表单验证规则
 const formRules = {
   name: [
     { required: true, message: '请输入分类名称', trigger: 'blur' },
     { max: 100, message: '分类名称长度不能超过100个字符', trigger: 'blur' }
   ]
-};
+}
 
-// 表格列定义
-const columns = [
-  {
-    title: '分类ID',
-    dataIndex: 'id',
-    key: 'id',
-    width: 100
-  },
-  {
-    title: '分类名称',
-    dataIndex: 'name',
-    key: 'name',
-    width: 240
-  },
-  {
-    title: '状态',
-    dataIndex: 'status',
-    key: 'status',
-    slots: { customRender: 'status' },
-    width: 140
-  },
-  {
-    title: '创建时间',
-    dataIndex: 'createTime',
-    key: 'createTime',
-    width: 200
-  },
-  {
-    title: '更新时间',
-    dataIndex: 'updateTime',
-    key: 'updateTime',
-    width: 200
-  },
-  {
-    title: '操作',
-    key: 'action',
-    slots: { customRender: 'action' },
-    width: 160,
-    fixed: 'right'
+const COLUMN_DEF_MAP = {
+  id: { title: '分类ID', dataIndex: 'id', key: 'id', width: 200 },
+  name: { title: '分类名称', dataIndex: 'name', key: 'name', ellipsis: true },
+  status: { title: '状态', key: 'status', width: 90, align: 'center' },
+  createTime: { title: '创建时间', key: 'createTime', width: 168 },
+  updateTime: { title: '更新时间', key: 'updateTime', width: 168 }
+}
+
+const DEFAULT_COLUMN_ORDER = ['id', 'name', 'status', 'createTime', 'updateTime']
+
+const ACTION_COLUMN = {
+  title: '操作',
+  key: 'action',
+  width: 140,
+  fixed: 'right',
+  align: 'center'
+}
+
+function loadColumnOrder() {
+  try {
+    const saved = localStorage.getItem(COLUMN_STORAGE_KEY)
+    if (!saved) return [...DEFAULT_COLUMN_ORDER]
+    const parsed = JSON.parse(saved)
+    const valid = parsed.filter((k) => DEFAULT_COLUMN_ORDER.includes(k))
+    const missing = DEFAULT_COLUMN_ORDER.filter((k) => !valid.includes(k))
+    return valid.length ? [...valid, ...missing] : [...DEFAULT_COLUMN_ORDER]
+  } catch {
+    return [...DEFAULT_COLUMN_ORDER]
   }
-];
+}
 
-// 计算属性
-const modalTitle = computed(() => {
-  return isEdit.value ? '编辑分类' : '新增分类';
-});
+const columnOrder = ref(loadColumnOrder())
+const draggableColumnKeys = computed(() => columnOrder.value)
 
-// 生命周期
-onMounted(() => {
-  fetchCategoryList();
-});
+const orderedColumns = computed(() => {
+  const cols = columnOrder.value.map((key) => COLUMN_DEF_MAP[key]).filter(Boolean)
+  return [...cols, ACTION_COLUMN]
+})
 
-// 方法
+const tableScrollX = computed(() =>
+  orderedColumns.value.reduce((sum, col) => sum + (col.width || 120), 0)
+)
+
+function getColumnTitle(key) {
+  return COLUMN_DEF_MAP[key]?.title || key
+}
+
+function saveColumnOrder() {
+  localStorage.setItem(COLUMN_STORAGE_KEY, JSON.stringify(columnOrder.value))
+}
+
+function resetColumnOrder() {
+  columnOrder.value = [...DEFAULT_COLUMN_ORDER]
+  localStorage.removeItem(COLUMN_STORAGE_KEY)
+  message.success('列顺序已恢复默认')
+}
+
+const dragState = reactive({
+  dragKey: null,
+  dragIndex: -1,
+  overKey: null
+})
+
+function onColumnDragStart(e, key, index) {
+  dragState.dragKey = key
+  dragState.dragIndex = index
+  e.dataTransfer.effectAllowed = 'move'
+  e.dataTransfer.setData('text/plain', key)
+}
+
+function onColumnDragEnd() {
+  dragState.dragKey = null
+  dragState.dragIndex = -1
+  dragState.overKey = null
+}
+
+function onColumnDragOver(key) {
+  dragState.overKey = key
+}
+
+function onColumnDragLeave(key) {
+  if (dragState.overKey === key) dragState.overKey = null
+}
+
+function onColumnDrop(targetKey) {
+  const fromKey = dragState.dragKey
+  if (!fromKey || fromKey === targetKey) return
+  const list = [...columnOrder.value]
+  const fromIdx = list.indexOf(fromKey)
+  const toIdx = list.indexOf(targetKey)
+  if (fromIdx < 0 || toIdx < 0) return
+  list.splice(fromIdx, 1)
+  list.splice(toIdx, 0, fromKey)
+  columnOrder.value = list
+  saveColumnOrder()
+  dragState.overKey = null
+}
+
+const modalTitle = computed(() => isEdit.value ? '编辑分类' : '新增分类')
+
+const formatDate = (d) => {
+  if (!d) return '—'
+  try {
+    return new Date(d).toLocaleString('zh-CN', {
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit'
+    })
+  } catch {
+    return d
+  }
+}
+
 const fetchCategoryList = () => {
-  loading.value = true;
-
+  loading.value = true
   const params = {
     current: pagination.current,
     size: pagination.pageSize,
     name: searchForm.name || null,
     status: searchForm.status
-  };
-
+  }
   getCategoryPage(params, {
     onSuccess: (res) => {
-      tableData.value = res.records || [];
-      pagination.total = res.total || 0;
-      pagination.current = res.current || 1;
-      loading.value = false;
+      tableData.value = res.records || []
+      pagination.total = res.total || 0
+      pagination.current = res.current || 1
+      loading.value = false
     },
-    onError: (error) => {
-      message.error('获取分类列表失败：' + error.message);
-      loading.value = false;
-    }
-  });
-};
+    onError: () => { loading.value = false }
+  })
+}
 
 const handleSearch = () => {
-  pagination.current = 1;
-  fetchCategoryList();
-};
+  pagination.current = 1
+  fetchCategoryList()
+}
 
 const handleReset = () => {
-  searchForm.name = '';
-  searchForm.status = null;
-  pagination.current = 1;
-  fetchCategoryList();
-};
+  searchForm.name = ''
+  searchForm.status = null
+  pagination.current = 1
+  fetchCategoryList()
+}
 
 const handleTableChange = (pag) => {
-  pagination.current = pag.current;
-  pagination.pageSize = pag.pageSize;
-  fetchCategoryList();
-};
+  pagination.current = pag.current
+  pagination.pageSize = pag.pageSize
+  fetchCategoryList()
+}
 
 const showCreateModal = () => {
-  isEdit.value = false;
-  currentEditId.value = null;
-  modalVisible.value = true;
-  // 使用 nextTick 确保 DOM 更新后再重置表单
-  nextTick(() => {
-    resetForm();
-  });
-};
+  currentEditId.value = null
+  modalVisible.value = true
+  nextTick(() => resetForm())
+}
 
 const showEditModal = (record) => {
-  isEdit.value = true;
-  currentEditId.value = record.id;
-  modalVisible.value = true;
-  // 使用 nextTick 确保 DOM 更新后再设置表单数据
+  currentEditId.value = record.id
+  modalVisible.value = true
   nextTick(() => {
-    Object.assign(formData, {
-      name: record.name,
-      status: record.status
-    });
-    // 清除表单验证状态
-    if (formRef.value) {
-      formRef.value.clearValidate();
-    }
-  });
-};
+    Object.assign(formData, { name: record.name, status: record.status })
+    formRef.value?.clearValidate()
+  })
+}
 
 const resetForm = () => {
-  Object.assign(formData, {
-    name: '',
-    status: 1
-  });
-  // 清除表单验证状态
-  if (formRef.value) {
-    formRef.value.resetFields();
-    formRef.value.clearValidate();
-  }
-};
+  formData.name = ''
+  formData.status = 1
+  formRef.value?.resetFields()
+  formRef.value?.clearValidate()
+}
 
 const handleSubmit = () => {
-  formRef.value.validate().then(() => {
-    submitLoading.value = true;
-
-    const params = isEdit.value ?
-        { ...formData, id: currentEditId.value } :
-        formData;
-
-    const apiCall = isEdit.value ? updateCategory : createCategory;
-
+  formRef.value?.validate().then(() => {
+    submitLoading.value = true
+    const params = isEdit.value ? { ...formData, id: currentEditId.value } : formData
+    const apiCall = isEdit.value ? updateCategory : createCategory
     apiCall(params, {
       successMsg: isEdit.value ? '更新分类成功' : '创建分类成功',
       onSuccess: () => {
-        submitLoading.value = false;
-        modalVisible.value = false;
-        fetchCategoryList();
-        // 成功后重置表单
-        nextTick(() => {
-          resetForm();
-        });
+        submitLoading.value = false
+        modalVisible.value = false
+        fetchCategoryList()
+        nextTick(() => resetForm())
       },
-      onError: (error) => {
-        message.error((isEdit.value ? '更新' : '创建') + '分类失败：' + error.message);
-        submitLoading.value = false;
-      }
-    });
-  });
-};
+      onError: () => { submitLoading.value = false }
+    })
+  })
+}
 
 const handleCancel = () => {
-  modalVisible.value = false;
-  // 延迟重置表单，确保模态框完全关闭后再重置
-  nextTick(() => {
-    resetForm();
-  });
-};
-
-const handleStatusChange = (id, status) => {
-  const record = tableData.value.find(item => item.id === id);
-  if (record) {
-    record.statusLoading = true;
-  }
-
-  updateCategoryStatus(id, status, {
-    successMsg: status === 1 ? '启用分类成功' : '禁用分类成功',
-    onSuccess: () => {
-      if (record) {
-        record.status = status;
-        record.statusDesc = status === 1 ? '启用' : '禁用';
-        record.statusLoading = false;
-      }
-    },
-    onError: (error) => {
-      message.error('更新状态失败：' + error.message);
-      if (record) {
-        record.statusLoading = false;
-      }
-    }
-  });
-};
+  modalVisible.value = false
+  nextTick(() => resetForm())
+}
 
 const handleDelete = (id) => {
   deleteCategory(id, {
     successMsg: '删除分类成功',
-    onSuccess: () => {
-      fetchCategoryList();
-    },
-    onError: (error) => {
-      message.error('删除分类失败：' + error.message);
-    }
-  });
-};
+    onSuccess: () => fetchCategoryList(),
+    onError: () => {}
+  })
+}
+
+onMounted(() => fetchCategoryList())
 </script>
 
-<style scoped>
-/* ==========================================================================
-   全局环境：轻卡片流式青葱绿底色
-   ========================================================================== */
-.shop-category-page {
-  padding: 32px 36px 48px;
-  background: #fafafa;
-  min-height: 100vh;
-  color: #1f2937;
-  font-family: var(--font-body, -apple-system, BlinkMacSystemFont, sans-serif);
-}
-.page-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; padding-bottom: 16px; border-bottom: 1px solid rgba(66,102,79,0.1); }
-.title-wrapper { display: flex; align-items: baseline; gap: 14px; }
-.title-indicator { width: 3px; height: 20px; background: #42664f; border-radius: 0; flex-shrink: 0; }
-.page-header h2 { margin: 0; font-size: 22px; font-weight: 700; color: #1f2937; letter-spacing: 1px; }
-.sub-badge { font-size: 12px; color: #657b6f; background: rgba(66,102,79,0.06); padding: 3px 12px; border-radius: 2px; font-weight: 500; }
-.btn-create {
-  background: #111 !important; border-color: #111 !important; color: #fff !important;
-  border-radius: 6px !important; height: 36px !important; padding: 0 18px !important; font-weight: 500;
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  transition: all 0.2s ease;
+<style lang="scss" scoped>
+$accent: #42664f;
+$black: #111111;
+$muted: #6b6b6b;
+$border: #e8e8e8;
+$bg: #fafafa;
+$white: #ffffff;
+
+.category-page {
+  min-height: 100%;
+  padding: 28px 32px 40px;
+  background: $white;
+  color: $black;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
 }
 
-.btn-create:hover {
-  background: #33503d !important;
-  transform: translateY(-1px);
-  box-shadow: 0 6px 16px rgba(66, 102, 79, 0.25) !important;
-}
-
-/* ==========================================================================
-   无边框轻量卡片化搜索区
-   ========================================================================== */
-.search-section { background: #fff; padding: 18px 22px; border-radius: 8px; margin-bottom: 20px; border: 1px solid #e5e5e5; }
-
-.museum-search-form :deep(.ant-form-item) {
-  margin-right: 24px !important;
-  margin-bottom: 0 !important;
-  display: inline-flex;
-  align-items: center;
-}
-
-.museum-search-form :deep(.ant-form-item-label > label) {
-  color: #4e5e54 !important;
-  font-weight: 500;
-}
-
-.museum-search-form :deep(.ant-input),
-.museum-search-form :deep(.ant-select-selector) {
-  border-radius: 8px !important;
-  border-color: #ced6d1 !important;
-  height: 36px !important;
-}
-
-.museum-search-form :deep(.ant-select-selector) {
+.page-top {
   display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 28px;
+  padding-bottom: 20px;
+  border-bottom: 1px solid $black;
+}
+
+.page-top__title {
+  margin: 0;
+  font-size: 22px;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+}
+
+.filter-bar {
+  display: flex;
+  flex-wrap: wrap;
   align-items: center;
+  gap: 10px;
+  margin-bottom: 16px;
+  padding: 14px 16px;
+  background: $bg;
+  border: 1px solid $border;
 }
 
-.museum-search-form :deep(.ant-input:hover),
-.museum-search-form :deep(.ant-input:focus),
-.museum-search-form :deep(.ant-select-focused .ant-select-selector),
-.museum-search-form :deep(.ant-select-selector:hover) {
-  border-color: #42664f !important;
-  box-shadow: 0 0 0 2px rgba(66, 102, 79, 0.1) !important;
-}
+.filter-input { width: 140px; &--wide { width: 180px; } }
+.filter-select { width: 120px; }
 
-.search-actions {
-  margin-right: 0 !important;
+.filter-bar__btns {
+  display: flex;
+  gap: 8px;
   margin-left: auto;
 }
 
-.btn-search {
-  background: #42664f !important;
-  border-color: #42664f !important;
-  border-radius: 8px !important;
-  height: 36px !important;
-  padding: 0 16px !important;
-}
-
-.btn-search:hover {
-  background: #33503d !important;
-}
-
-.btn-reset {
-  background: #edf1ee !important;
-  border-color: transparent !important;
-  color: #42664f !important;
-  border-radius: 8px !important;
-  height: 36px !important;
-}
-
-.btn-reset:hover {
-  background: #dee5e1 !important;
-  color: #263d2f !important;
-}
-
-/* ==========================================================================
-   古蜀墨绿质感数据表格
-   ========================================================================== */
-.table-section { background: #fff; padding: 24px; border-radius: 8px; border: 1px solid #e5e5e5; }
-.museum-theme-table :deep(.ant-table-thead > tr > th) {
-  background: #fafafa !important; color: #3e5246 !important; font-weight: 600;
-  font-size: 12px; letter-spacing: 0.5px; text-transform: uppercase;
-  border-bottom: 2px solid #e9eee9; padding: 12px 16px;
-}
-.museum-theme-table :deep(.ant-table-tbody > tr > td) { border-bottom: 1px solid #f2f4f2; padding: 12px 16px; font-size: 13px; }
-.museum-theme-table :deep(.ant-table-tbody > tr:hover > td) { background: #fafafa !important; }
-
-/* 状态单元格定制外观 */
-.status-cell-wrapper {
+.column-bar {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
-  gap: 10px;
-}
-
-.museum-switch :deep(.ant-switch-checked) {
-  background-color: #42664f !important;
-}
-
-.status-text {
-  font-size: 13px;
-  font-weight: 500;
-}
-.status-active {
-  color: #42664f;
-}
-.status-disabled {
-  color: #929e96;
-}
-
-/* 操作区域样式 */
-.action-cell {
-  display: flex;
-  align-items: center;
-}
-
-.link-btn {
-  font-weight: 600;
-  padding: 0 !important;
-}
-
-.edit-link {
-  color: #42664f !important;
-}
-.edit-link:hover {
-  color: #283f31 !important;
-}
-
-.delete-link {
-  color: #d9534f !important;
-}
-
-.action-divider {
-  border-color: #d1dad4 !important;
-  margin: 0 10px;
-}
-
-/* ==========================================================================
-   内置表单及弹窗内部卡片美化
-   ========================================================================== */
-.edit-form-container {
-  padding: 24px 24px 8px;
-}
-
-.status-bar {
-  display: flex;
-  align-items: center;
+  gap: 10px 12px;
   padding: 12px 16px;
-  border-radius: 8px;
-  margin-bottom: 24px;
-  border-left: 4px solid;
+  border: 1px solid $border;
+  border-bottom: none;
+  background: $white;
 }
 
-.status-dot {
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  display: inline-block;
+.column-bar__label {
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
 }
 
-.status-bar__left {
+.column-bar__hint {
+  font-size: 11px;
+  color: $muted;
+}
+
+.column-chips {
   display: flex;
-  align-items: center;
-  gap: 10px;
+  flex-wrap: wrap;
+  gap: 6px;
+  flex: 1;
 }
 
-.status-bar__text {
-  font-size: 13px;
-  font-weight: 500;
-}
-
-.status-create {
-  background: #f0f6f2;
-  border-color: #d2e4d8;
-  color: #42664f;
-  .status-dot { background: #42664f; }
-}
-
-.status-edit {
-  background: #fdfaf5;
-  border-color: #faebd7;
-  color: #c29147;
-  .status-dot { background: #c29147; }
-}
-
-.form-card-box {
-  background: #fafbfc;
-  border: 1px solid #e9ecea;
-  border-radius: 10px;
-  padding: 24px 16px 4px;
-}
-
-.edit-form :deep(.ant-form-item-label > label) {
-  font-weight: 500;
-  color: #3b4a40;
-}
-
-.museum-input {
-  border-radius: 6px !important;
-  border-color: #ced6d1 !important;
-  height: 38px !important;
-}
-.museum-input:hover, .museum-input:focus {
-  border-color: #42664f !important;
-  box-shadow: 0 0 0 2px rgba(66, 102, 79, 0.1) !important;
-}
-
-/* 单选框美化 */
-.museum-radio-group {
+.column-chip {
   display: inline-flex;
-  gap: 16px;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 10px;
+  font-size: 12px;
+  background: $white;
+  border: 1px solid $black;
+  cursor: grab;
+  user-select: none;
+
+  &--dragging { opacity: 0.45; border-style: dashed; }
+  &--over { background: rgba($accent, 0.12); border-color: $accent; }
+  &--fixed { cursor: default; color: $muted; border-color: $border; background: $bg; }
 }
 
-.museum-radio :deep(.ant-radio-checked .ant-radio-inner) {
-  border-color: #42664f !important;
-  background-color: #42664f !important;
-}
-.museum-radio :deep(.ant-radio:hover .ant-radio-inner) {
-  border-color: #42664f !important;
+.column-chip__grip {
+  font-size: 10px;
+  color: $muted;
+  letter-spacing: -2px;
 }
 
-.radio-label-txt {
+.column-reset {
+  margin-left: auto;
+  padding: 0;
+  font-size: 12px;
+  color: $muted;
+  background: none;
+  border: none;
+  cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  &:hover { color: $accent; }
+}
+
+.table-wrap {
+  border: 1px solid $border;
+  border-top: none;
+}
+
+.minimal-table {
+  :deep(.ant-table) {
+    background: $white;
+    color: $black;
+  }
+
+  :deep(.ant-table-thead > tr > th) {
+    background: $black !important;
+    color: $white !important;
+    font-weight: 500;
+    font-size: 12px;
+    border-bottom: none !important;
+    padding: 12px 14px !important;
+  }
+
+  :deep(.ant-table-tbody > tr > td) {
+    border-bottom: 1px solid $border !important;
+    padding: 12px 14px !important;
+    font-size: 13px;
+  }
+
+  :deep(.ant-table-tbody > tr:hover > td) {
+    background: $bg !important;
+  }
+
+  :deep(.ant-pagination-item-active) {
+    border-color: $accent !important;
+    a { color: $accent !important; }
+  }
+
+  :deep(.ant-pagination-item:hover),
+  :deep(.ant-pagination-prev:hover .ant-pagination-item-link),
+  :deep(.ant-pagination-next:hover .ant-pagination-item-link) {
+    border-color: $accent !important;
+    color: $accent !important;
+  }
+}
+
+.cell-link {
+  padding: 0;
+  font-size: 12px;
   font-weight: 500;
-  color: #42664f;
-}
-.text-danger {
-  color: #929e96;
-}
-
-/* 弹出框底部按钮区 */
-.edit-footer {
-  display: flex;
-  justify-content: flex-end;
-  gap: 10px;
-  width: 100%;
+  color: $accent;
+  background: none;
+  border: none;
+  cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  &:hover { color: $black; }
+  &--title { font-weight: 600; font-size: 13px; }
+  &--danger { color: $black; }
 }
 
-.cancel-btn {
-  border-radius: 6px !important;
-  border-color: #ced6d1 !important;
-  color: #55635a !important;
+.action-group {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
 }
 
-.submit-btn {
-  background: #42664f !important;
-  border-color: #42664f !important;
-  border-radius: 6px !important;
+.action-sep {
+  color: $border;
+  font-size: 11px;
+  user-select: none;
 }
-.submit-btn:hover {
-  background: #33503d !important;
+
+.cell-mono {
+  font-size: 12px;
+  font-family: 'SF Mono', 'Fira Code', monospace;
+  color: $muted;
+}
+
+.cell-status {
+  font-size: 12px;
+  font-weight: 500;
+  &--1 { color: $accent; }
+  &--0 { color: $muted; }
+}
+
+.btn-primary {
+  background: $accent !important;
+  border-color: $accent !important;
+  color: $white !important;
+  border-radius: 0 !important;
+  height: 34px !important;
+  font-size: 13px !important;
+  box-shadow: none !important;
+  &:hover { background: darken($accent, 6%) !important; border-color: darken($accent, 6%) !important; }
+}
+
+.btn-ghost {
+  background: $white !important;
+  border: 1px solid $black !important;
+  color: $black !important;
+  border-radius: 0 !important;
+  height: 34px !important;
+  font-size: 13px !important;
+  box-shadow: none !important;
+  &:hover { border-color: $accent !important; color: $accent !important; }
+}
+
+.filter-input :deep(.ant-input),
+.filter-select :deep(.ant-select-selector) {
+  border-radius: 0 !important;
+  border-color: $border !important;
+  font-size: 13px !important;
+}
+
+.filter-input :deep(.ant-input:focus),
+.filter-input :deep(.ant-input-affix-wrapper-focused),
+.filter-select :deep(.ant-select-focused .ant-select-selector) {
+  border-color: $accent !important;
+  box-shadow: none !important;
+}
+
+.modal-body { padding: 8px 0; }
+
+.minimal-form :deep(.ant-form-item-label > label) {
+  font-size: 12px;
+  color: $muted !important;
+}
+
+.minimal-form :deep(.ant-input),
+.minimal-form :deep(.ant-select-selector),
+.minimal-form :deep(.ant-radio-wrapper) {
+  border-radius: 0 !important;
 }
 </style>
 
-<!-- 全局层级深层样式穿透处理：覆盖独立图层渲染的 AntD 模态框头尾及分页系统 -->
 <style lang="scss">
-.museum-custom-modal {
-  .ant-modal-content { border-radius: 8px !important; overflow: hidden; box-shadow: 0 12px 40px rgba(0,0,0,0.12) !important; }
-  .ant-modal-header {
-    background: #f5f8f6 !important;
-    padding: 16px 24px !important;
-    border-bottom: 1px solid #e1e8e4 !important;
+$accent: #42664f;
+$black: #111111;
+$muted: #6b6b6b;
+$border: #e8e8e8;
+$white: #ffffff;
 
-    .ant-modal-title {
-      color: #1a2620 !important;
-      font-weight: 600 !important;
-      font-size: 16px;
-    }
-  }
-  .ant-modal-body {
-    padding: 0 !important;
-  }
-  .ant-modal-footer {
-    padding: 14px 24px !important;
-    background: #fafbfc !important;
-    border-top: 1px solid #edf1ee !important;
-  }
+.minimal-modal {
+  .ant-modal-content { border-radius: 0 !important; box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12) !important; }
+  .ant-modal-header { border-bottom: 1px solid $border !important; padding: 16px 20px !important; }
+  .ant-modal-title { font-size: 15px !important; font-weight: 600 !important; color: $black !important; }
+  .ant-modal-body { padding: 20px !important; }
+  .ant-modal-footer { padding: 14px 20px !important; border-top: 1px solid $border !important; }
 }
 
-/* 全局弹窗二次确认气泡美化 */
-.museum-popconfirm {
-  .ant-popover-inner-content {
-    padding: 14px 16px !important;
-  }
-  .ant-btn-primary {
-    background: #42664f !important;
-    border-color: #42664f !important;
-  }
-}
-
-/* 分页组件注入主色 */
-.museum-theme-table {
-  .ant-pagination-item-active {
-    border-color: #42664f !important;
-    background: #42664f !important;
-    a { color: #ffffff !important; }
-  }
-  .ant-pagination-item:hover, .ant-pagination-next:hover, .ant-pagination-prev:hover {
-    border-color: #42664f !important;
-    a { color: #42664f !important; }
-  }
-}
-
-/* Switch 开关底色深层覆盖 */
-.museum-switch.ant-switch-checked {
-  background-color: #42664f !important;
+.minimal-modal .ant-btn-primary {
+  background: $accent !important;
+  border-color: $accent !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
 }
 </style>

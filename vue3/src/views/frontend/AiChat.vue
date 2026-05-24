@@ -119,7 +119,7 @@
             </div>
           </article>
 
-          <article v-if="isThinking" class="message-row message-row--assistant message-row--thinking">
+          <article v-if="isThinking && showThinkingBubble" class="message-row message-row--assistant message-row--thinking">
             <div class="message-stack">
               <div class="message-bubble thinking-bubble">
                 <span></span>
@@ -204,6 +204,7 @@ const suggestionRow = ref(null)
 const suggestionLimit = ref(4)
 const draft = ref('')
 const isThinking = ref(false)
+const showThinkingBubble = ref(false)
 const isListening = ref(false)
 const currentSessionId = ref(null)
 const activeQuickCard = ref('hot')
@@ -515,6 +516,18 @@ function updateAssistantMessageById(messageId, content, fallbackTime = '') {
   scrollToBottom()
 }
 
+function appendAssistantPlaceholder(content = '...') {
+  const id = Date.now() + Math.random()
+  messages.value.push({
+    id,
+    role: 'assistant',
+    content: [content],
+    time: getCurrentTime()
+  })
+  scrollToBottom()
+  return id
+}
+
 function buildAutoGuideQuestion() {
   return '请你以三星堆数字展馆讲解员“玄喵”的口吻，围绕当前文物先做一段开场讲解。按“这是什么、为什么重要、它和什么有关、下一步还可以看什么”的顺序来讲，控制在四句以内，语言自然、适合答辩演示。'
 }
@@ -542,6 +555,7 @@ async function requestAutoGuide(expectedEntityId) {
     time: getCurrentTime()
   })
   scrollToBottom()
+  updateAssistantMessageById(placeholderId, '...')
 
   try {
     docs = await searchKnowledge(question, 1)
@@ -560,6 +574,7 @@ async function requestAutoGuide(expectedEntityId) {
   }
 
   isThinking.value = true
+  showThinkingBubble.value = false
   chatAbortController?.abort?.()
   const controller = new AbortController()
   chatAbortController = controller
@@ -586,6 +601,9 @@ async function requestAutoGuide(expectedEntityId) {
       onmessage(event) {
         if (event.data === '[DONE]') {
           isThinking.value = false
+          if (!aiResponse) {
+            updateAssistantMessageById(placeholderId, getMockReply(question, docs))
+          }
           return
         }
 
@@ -815,9 +833,10 @@ async function sendMessage(presetQuestion = '') {
   })
   draft.value = ''
   scrollToBottom()
+  const assistantPlaceholderId = appendAssistantPlaceholder()
 
   if (fixedAnswer) {
-    appendAssistantMessage(fixedAnswer)
+    updateAssistantMessageById(assistantPlaceholderId, fixedAnswer)
     return
   }
 
@@ -836,11 +855,12 @@ async function sendMessage(presetQuestion = '') {
   }
 
   if (!currentSessionId.value) {
-    appendAssistantMessage(getMockReply(question, docs))
+    updateAssistantMessageById(assistantPlaceholderId, getMockReply(question, docs))
     return
   }
 
   isThinking.value = true
+  showThinkingBubble.value = false
   chatAbortController?.abort?.()
   chatAbortController = new AbortController()
 
@@ -867,36 +887,26 @@ async function sendMessage(presetQuestion = '') {
       onmessage(event) {
         if (event.data === '[DONE]') {
           isThinking.value = false
+          if (!aiResponse) {
+            updateAssistantMessageById(assistantPlaceholderId, getMockReply(question, docs))
+          }
           return
         }
 
         if (event.data.startsWith('[ERROR]')) {
           isThinking.value = false
           message.warning('AI 响应暂不可用，已切换为本地知识讲解')
-          appendAssistantMessage(getMockReply(question, docs))
+          updateAssistantMessageById(assistantPlaceholderId, getMockReply(question, docs))
           return
         }
 
         aiResponse += event.data
-
-        const lastMessage = messages.value[messages.value.length - 1]
-        if (lastMessage && lastMessage.role === 'assistant') {
-          lastMessage.content = [aiResponse]
-        } else {
-          messages.value.push({
-            id: Date.now() + 1,
-            role: 'assistant',
-            content: [aiResponse],
-            time: getCurrentTime()
-          })
-        }
-
-        scrollToBottom()
+        updateAssistantMessageById(assistantPlaceholderId, aiResponse)
       },
       onerror(error) {
         console.error('AI SSE 连接失败:', error)
         isThinking.value = false
-        appendAssistantMessage(getMockReply(question, docs))
+        updateAssistantMessageById(assistantPlaceholderId, getMockReply(question, docs))
         return 999999999
       },
       onclose() {
@@ -906,7 +916,7 @@ async function sendMessage(presetQuestion = '') {
   } catch (error) {
     console.error('发送 AI 消息失败:', error)
     isThinking.value = false
-    appendAssistantMessage(getMockReply(question, docs))
+    updateAssistantMessageById(assistantPlaceholderId, getMockReply(question, docs))
   } finally {
     chatAbortController = null
   }
@@ -1237,9 +1247,9 @@ function getCurrentTime() {
 
 .chat-shell {
   display: grid;
-  grid-template-columns: 210px minmax(0, 1fr);
+  grid-template-columns: 276px minmax(0, 1fr);
   grid-template-areas: 'quick chat';
-  gap: 30px;
+  gap: 20px;
   height: clamp(560px, calc(100vh - 236px), 680px);
   min-height: 0;
   padding: 24px 28px;
@@ -1256,11 +1266,11 @@ function getCurrentTime() {
   display: grid;
   grid-template-columns: 1fr;
   align-content: start;
-  gap: 14px;
+  gap: 12px;
   min-width: 0;
   height: 100%;
   min-height: 0;
-  padding: 18px;
+  padding: 14px;
   background: linear-gradient(180deg, rgba(255, 253, 248, 0.96), rgba(248, 243, 232, 0.72));
   border: 1px solid rgba(214, 189, 130, 0.4);
   border-radius: 22px;
@@ -1268,11 +1278,11 @@ function getCurrentTime() {
 
 .quick-card {
   display: grid;
-  grid-template-columns: 48px minmax(0, 1fr);
-  gap: 13px;
+  grid-template-columns: 38px minmax(0, 1fr);
+  gap: 11px;
   align-items: center;
-  min-height: 78px;
-  padding: 14px;
+  min-height: 70px;
+  padding: 11px 12px;
   color: var(--primary);
   text-align: left;
   cursor: pointer;
@@ -1291,11 +1301,11 @@ function getCurrentTime() {
 
 .quick-icon {
   display: grid;
-  width: 46px;
-  height: 46px;
+  width: 38px;
+  height: 38px;
   place-items: center;
   color: currentColor;
-  font-size: 24px;
+  font-size: 19px;
   background: rgba(66, 102, 79, 0.1);
   border-radius: 50%;
 }
@@ -1308,16 +1318,23 @@ function getCurrentTime() {
 .quick-text {
   display: grid;
   gap: 4px;
+  min-width: 0;
 }
 
 .quick-text strong {
-  font-size: 16px;
+  display: block;
+  font-size: 15px;
   line-height: 1.25;
+  white-space: nowrap;
 }
 
 .quick-text small {
+  display: block;
   color: rgba(31, 51, 44, 0.68);
-  font-size: 13px;
+  font-size: 12.5px;
+  line-height: 1.35;
+  white-space: normal;
+  overflow-wrap: anywhere;
 }
 
 .quick-card--active .quick-text small,
@@ -1665,8 +1682,8 @@ function getCurrentTime() {
   }
 
   .chat-shell {
-    grid-template-columns: 184px minmax(0, 1fr);
-    gap: 22px;
+    grid-template-columns: 260px minmax(0, 1fr);
+    gap: 18px;
     height: clamp(520px, calc(100vh - 210px), 640px);
     padding: 22px;
   }

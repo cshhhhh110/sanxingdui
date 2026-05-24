@@ -312,7 +312,7 @@ ${question}
 
 const MIMO_CONFIG = {
   baseUrl: 'https://token-plan-cn.xiaomimimo.com/v1',
-  apiKey: 'tp-cw5krxeylfm24io4jrivrnxw6seswmf75lmymun04e80mk6w',
+  apiKey: 'YOUR_MIMO_API_KEY',
   model: 'mimo-v2.5-pro',
   maxTokens: 512,
   temperature: 0.7

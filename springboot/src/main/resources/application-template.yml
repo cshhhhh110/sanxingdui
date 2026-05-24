@@ -6,20 +6,20 @@ spring:
   datasource:
     driver-class-name: com.mysql.cj.jdbc.Driver
     url: jdbc:mysql://localhost:3306/heritage_db?useUnicode=true&characterEncoding=utf-8&allowMultiQueries=true&useSSL=false&serverTimezone=GMT%2b8&allowPublicKeyRetrieval=true
-    username: root
+    username: YOUR_MYSQL_USERNAME
     password: YOUR_MYSQL_PASSWORD
   
   # 安全配置
   security:
     user:
-      name: admin
-      password: admin
+      name: YOUR_ADMIN_USERNAME
+      password: YOUR_ADMIN_PASSWORD
   main:
     allow-bean-definition-overriding: true
   # 邮件配置
   mail:
     host: smtp.qq.com
-    username: 32596652@qq.com
+    username: YOUR_EMAIL_USERNAME
     password: YOUR_EMAIL_PASSWORD
     default-encoding: utf-8
     port: 587
@@ -83,6 +83,8 @@ deepseek:
     model: deepseek-v4-flash
 
 # ========== TTS Provider 切换 ==========
+tts:
+  provider: mimo
 
 # 服务器配置
 server:
@@ -118,8 +120,8 @@ knife4j:
     language: zh_cn
   basic:
     enable: true
-    username: admin
-    password: admin
+    username: YOUR_KNIFE4J_USERNAME
+    password: YOUR_KNIFE4J_PASSWORD
 
 # JWT配置
 jwt:
@@ -135,3 +137,12 @@ file:
   upload:
     path: ./files
     maxSize: 524288000  # 500MB (500 * 1024 * 1024)
+
+# ========== Neo4j 图谱读模型（默认关闭） ==========
+graph:
+  neo4j:
+    enabled: false
+    uri: bolt://localhost:7687
+    username: neo4j
+    password: YOUR_NEO4J_PASSWORD
+    database:

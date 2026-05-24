@@ -1,121 +1,84 @@
 <template>
-  <a-tag 
-    :color="tagColor" 
-    :class="['heritage-status-tag', customClass]"
-  >
-    <i v-if="showIcon" :class="iconClass"></i>
+  <span class="status-pill" :class="[`status-pill--${status}`, customClass]">
+    <span v-if="showIcon" class="status-pill__dot" aria-hidden="true" />
     {{ statusText }}
-  </a-tag>
+  </span>
 </template>
 
 <script setup>
 import { computed } from 'vue'
 
-// ========== 组件属性 ==========
 const props = defineProps({
-  // 状态码
-  status: {
-    type: Number,
-    required: true
-  },
-  // 状态名称（可选，优先使用）
-  statusName: {
-    type: String,
-    default: ''
-  },
-  // 标签大小（Ant Design Vue 不需要这个属性，但保留兼容性）
+  status: { type: Number, required: true },
+  statusName: { type: String, default: '' },
   size: {
     type: String,
     default: 'default',
-    validator: (value) => ['large', 'default', 'small'].includes(value)
+    validator: (v) => ['large', 'default', 'small'].includes(v)
   },
-  // 是否显示图标
-  showIcon: {
-    type: Boolean,
-    default: false
-  },
-  // 自定义样式类
-  customClass: {
-    type: String,
-    default: ''
-  }
+  showIcon: { type: Boolean, default: false },
+  customClass: { type: String, default: '' }
 })
 
-// ========== 计算属性 ==========
-
-// 状态配置映射
 const statusConfig = computed(() => {
-  const configMap = {
-    0: {
-      color: 'default',
-      text: '草稿',
-      icon: 'fas fa-edit'
-    },
-    1: {
-      color: 'orange',
-      text: '待审',
-      icon: 'fas fa-clock'
-    },
-    2: {
-      color: 'green',
-      text: '已发布',
-      icon: 'fas fa-check-circle'
-    },
-    3: {
-      color: 'red',
-      text: '下架',
-      icon: 'fas fa-times-circle'
-    }
+  const map = {
+    0: { text: '草稿' },
+    1: { text: '待审' },
+    2: { text: '已发布' },
+    3: { text: '下架' }
   }
-  return configMap[props.status] || configMap[0]
+  return map[props.status] || map[0]
 })
 
-// 标签颜色
-const tagColor = computed(() => {
-  return statusConfig.value.color
-})
-
-// 状态文本
-const statusText = computed(() => {
-  return props.statusName || statusConfig.value.text
-})
-
-// 图标类名
-const iconClass = computed(() => {
-  return statusConfig.value.icon
-})
+const statusText = computed(() => props.statusName || statusConfig.value.text)
 </script>
 
-<style scoped>
-.heritage-status-tag {
-  font-weight: 500;
+<style lang="scss" scoped>
+$accent: #42664f;
+$black: #111;
+$muted: #6b6b6b;
+$border: #e8e8e8;
+
+.status-pill {
   display: inline-flex;
   align-items: center;
-}
-
-.heritage-status-tag i {
-  margin-right: 4px;
-  font-size: 12px;
-}
-
-/* 自定义样式增强 */
-:deep(.ant-tag) {
-  border-radius: 4px;
+  gap: 5px;
   padding: 2px 8px;
-  font-size: 12px;
-  line-height: 1.5;
-}
-
-/* 大尺寸样式 */
-.heritage-status-tag.large :deep(.ant-tag) {
-  padding: 4px 12px;
-  font-size: 14px;
-}
-
-/* 小尺寸样式 */
-.heritage-status-tag.small :deep(.ant-tag) {
-  padding: 1px 6px;
   font-size: 11px;
+  font-weight: 600;
+  border: 1px solid $border;
+  line-height: 1.4;
+
+  &__dot {
+    width: 5px;
+    height: 5px;
+    border-radius: 50%;
+    background: currentColor;
+  }
+
+  &--0 {
+    color: $muted;
+    border-color: $border;
+    background: #fafafa;
+  }
+
+  &--1 {
+    color: $black;
+    border-color: $black;
+    background: #fff;
+  }
+
+  &--2 {
+    color: $accent;
+    border-color: $accent;
+    background: rgba($accent, 0.08);
+  }
+
+  &--3 {
+    color: $muted;
+    border-color: $border;
+    text-decoration: line-through;
+    background: #fafafa;
+  }
 }
 </style>
-

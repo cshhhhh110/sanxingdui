@@ -96,6 +96,7 @@ const router = useRouter()
 const prompt = ref('')
 const loading = ref(false)
 const resultImage = ref('')
+const imageApiBase = (import.meta.env.VITE_IMAGE_API_BASE || 'http://127.0.0.1:8001').replace(/\/$/, '')
 
 const quickTags = ['三星堆青铜面具', '古风少女', '金沙遗址', '非遗风格', '高清唯美', '水墨古蜀']
 
@@ -126,16 +127,25 @@ async function generate() {
   resultImage.value = ''
 
   try {
-    const res = await fetch('http://127.0.0.1:8001/api/generate-image', {
+    const res = await fetch(`${imageApiBase}/api/generate-image`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ prompt: prompt.value })
     })
 
+    if (!res.ok) {
+      throw new Error(`HTTP ${res.status}`)
+    }
+
     const data = await res.json()
-    resultImage.value = data.image_url
+    const imageUrl = data.image_url || data.imageUrl
+    if (!imageUrl) {
+      throw new Error('EMPTY_IMAGE_URL')
+    }
+    resultImage.value = imageUrl
   } catch (err) {
-    alert('生成失败，请稍后重试')
+    console.error('图片生成失败:', err)
+    alert(`生成失败，请确认图片生成服务已启动：${imageApiBase}`)
   } finally {
     loading.value = false
   }

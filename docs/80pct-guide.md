@@ -8,7 +8,7 @@ Target: real data + graph API + narrative glue. Completion ~80%.
 ## Steps (execute in order)
 
 ### Step 1: Database — ALTER + UPDATE
-- Connect MySQL: `localhost:3306 / heritage_db / root / chenshihao.00`
+- Connect MySQL: `localhost:3306 / heritage_db / YOUR_MYSQL_USERNAME / YOUR_MYSQL_PASSWORD`
 - Run SQL:
 
 ```sql

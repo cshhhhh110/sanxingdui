@@ -334,9 +334,25 @@
                 <span class="meta-chip meta-chip--highlight">{{ hasModel ? '3D 已就绪' : '档案模式' }}</span>
               </div>
 
-              <div ref="viewerRef" class="viewer-shell">
+              <div
+                ref="viewerRef"
+                class="viewer-shell"
+                :class="{ 'viewer-shell--fullscreen': isViewerFullscreen }"
+              >
                 <div class="viewer-glow viewer-glow--left" aria-hidden="true"></div>
                 <div class="viewer-glow viewer-glow--right" aria-hidden="true"></div>
+                <button
+                  class="viewer-fullscreen-button"
+                  type="button"
+                  :aria-pressed="isViewerFullscreen"
+                  @click="toggleViewerFullscreen"
+                >
+                  {{ isViewerFullscreen ? '退出全屏' : '全屏展示' }}
+                </button>
+                <div v-if="isViewerFullscreen" class="fullscreen-return-hint" aria-live="polite">
+                  <span>Esc</span>
+                  返回展线
+                </div>
 
                 <img
                   v-if="!hasModel && selectedArtifactDetail?.cardImage"
@@ -383,7 +399,11 @@
                 </dl>
               </section>
 
-              <section class="panel-card">
+              <section class="panel-card graph-panel" :class="{ 'graph-panel--fullscreen': isGraphFullscreen }">
+                <div v-if="isGraphFullscreen" class="fullscreen-return-hint fullscreen-return-hint--graph" aria-live="polite">
+                  <span>Esc</span>
+                  返回展线
+                </div>
                 <div class="section-head">
                   <div>
                     <p class="panel-label">关系网络</p>
@@ -391,6 +411,9 @@
                   </div>
                   <div class="section-actions">
                     <span class="section-tag">{{ graphLoading ? '图谱刷新中' : '关系已联动' }}</span>
+                    <button class="mini-action" type="button" @click="toggleGraphFullscreen">
+                      {{ isGraphFullscreen ? '退出全屏' : '全屏展示' }}
+                    </button>
                     <button class="mini-action" type="button" @click="focusCenterNode">回到中心</button>
                     <button class="mini-action" type="button" @click="resetGraphViewport">重置视图</button>
                   </div>
@@ -405,6 +428,7 @@
                     class="type-filter"
                     :class="{ active: activeTypeFilters.includes(item.type) }"
                     type="button"
+                    :title="item.description"
                     @click="toggleTypeFilter(item.type)"
                   >
                     <span>{{ item.label }}</span>
@@ -420,7 +444,7 @@
                 <div class="graph-legend">
                   <span class="legend-item"><i class="legend-dot legend-dot--core"></i>中心文物</span>
                   <span class="legend-item"><i class="legend-dot legend-dot--site"></i>时空坐标</span>
-                  <span class="legend-item"><i class="legend-dot legend-dot--craft"></i>工艺与寓意</span>
+                  <span class="legend-item"><i class="legend-dot legend-dot--craft"></i>工艺 / 材质 / 象征</span>
                   <span class="legend-item"><i class="legend-dot legend-dot--artifact"></i>相关文物</span>
                 </div>
               </section>
@@ -561,9 +585,13 @@
                     </div>
                     <time>{{ item.time }}</time>
                   </div>
+                  <div v-if="item.role === 'user'" class="message-avatar message-avatar--user" :title="userDisplayName">
+                    <img v-if="userAvatarUrl" :src="userAvatarUrl" :alt="userDisplayName" />
+                    <span v-else>{{ userInitial }}</span>
+                  </div>
                 </article>
 
-                <article v-if="isThinking" class="message-row message-row--assistant">
+                <article v-if="isThinking && showThinkingBubble" class="message-row message-row--assistant">
                   <div class="message-avatar">
                     <img :src="aiAvatar" alt="玄喵" />
                   </div>
@@ -577,6 +605,27 @@
                 </article>
               </div>
 
+              <article v-if="showQuizPromo" class="quiz-promo-card showcase-enter" aria-label="答题赢证书推荐">
+                <button class="quiz-promo-close" type="button" aria-label="关闭答题推荐" @click="dismissQuizPromo">×</button>
+                <div class="quiz-promo-mark">
+                  <i class="fas fa-award"></i>
+                </div>
+                <div class="quiz-promo-copy">
+                  <p class="quiz-promo-kicker">玄喵小挑战</p>
+                  <h4>听懂了这件文物？来试试答题赢证书</h4>
+                  <p>完成挑战模式，80 分及以上可查看专属证书。</p>
+                  <span>题目围绕三星堆文化与展线知识，不会打断当前讲解。</span>
+                </div>
+                <div class="quiz-promo-actions">
+                  <button class="quiz-promo-primary showcase-button-hover" type="button" @click="goQuizChallenge">
+                    去答题赢证书
+                  </button>
+                  <button class="quiz-promo-secondary" type="button" @click="dismissQuizPromo">
+                    继续听玄喵讲
+                  </button>
+                </div>
+              </article>
+
               <form class="composer" @submit.prevent="sendMessage()">
                 <textarea
                   v-model="draft"
@@ -586,7 +635,7 @@
                   @keydown.enter.exact.prevent="sendMessage()"
                 />
                 <button
-                  class="hero-button hero-button--primary showcase-button-hover"
+                  class="composer-send showcase-button-hover"
                   type="submit"
                   :disabled="!draft.trim() || isThinking"
                 >
@@ -624,15 +673,34 @@ const TYPE_LABELS = {
   site: '遗址',
   era: '时代',
   craft: '工艺',
-  meaning: '寓意'
+  material: '材质',
+  meaning: '象征',
+  motif: '母题',
+  ritual: '仪式'
 }
+
+const TYPE_DESCRIPTIONS = {
+  artifact: '当前文物或相关文物',
+  site: '文物关联的出土地或遗址',
+  era: '文物所属的历史阶段',
+  craft: '制作技法和加工方式',
+  material: '青铜、黄金、玉石等材料',
+  meaning: '神权、王权、太阳崇拜等含义',
+  motif: '神鸟、纵目、鱼鸟箭纹等视觉纹样',
+  ritual: '通神祭祀、王权礼仪等使用语境'
+}
+
+const DEFAULT_TYPE_FILTERS = ['artifact', 'site', 'era', 'craft', 'material', 'meaning']
 
 const TYPE_COLORS = {
   artifact: { fill: '#d2ac54', stroke: '#f3dfb4', label: '#142117' },
   site: { fill: '#2f5c4f', stroke: '#8ed8be', label: '#eff9f3' },
   era: { fill: '#395f74', stroke: '#8eb7d8', label: '#eff5fa' },
   craft: { fill: '#213329', stroke: '#78bda2', label: '#ecf7f1' },
-  meaning: { fill: '#4e4432', stroke: '#d4bd7f', label: '#f8f2df' }
+  material: { fill: '#625744', stroke: '#cfba86', label: '#f2ead4' },
+  meaning: { fill: '#4e4432', stroke: '#d4bd7f', label: '#f8f2df' },
+  motif: { fill: '#744b37', stroke: '#d68a5e', label: '#f4d4c1' },
+  ritual: { fill: '#3e665f', stroke: '#8bd0c1', label: '#dcf6f1' }
 }
 
 const route = useRoute()
@@ -646,6 +714,13 @@ const viewerRef = ref(null)
 const canvasRef = ref(null)
 const graphRef = ref(null)
 const messagesRef = ref(null)
+
+const userDisplayName = computed(() => userStore.displayName || '用户')
+const userAvatarUrl = computed(() => userStore.avatar || '')
+const userInitial = computed(() => {
+  const name = userDisplayName.value.trim()
+  return name ? name.slice(0, 1).toUpperCase() : '我'
+})
 
 const activeEra = ref(String(route.query.eraCode || ''))
 const activeSite = ref(String(route.query.siteCode || ''))
@@ -674,6 +749,8 @@ const graphReadyEntityId = ref('')
 const isModelLoading = ref(false)
 const modelProgress = ref(0)
 const modelError = ref('')
+const isViewerFullscreen = ref(false)
+const isGraphFullscreen = ref(false)
 
 const graphPayload = ref({
   centerNodeId: '',
@@ -692,8 +769,14 @@ const expandedNodeIds = ref(new Set())
 const draft = ref('')
 const messages = ref([])
 const isThinking = ref(false)
+const showThinkingBubble = ref(false)
 const currentSessionId = ref(null)
 const lastAutoAskedEntityId = ref('')
+const guideUserQuestionCount = ref(0)
+const showQuizPromo = ref(false)
+
+const QUIZ_PROMO_SESSION_KEY = 'sanxingdui.trail.quizPromo.seen'
+const QUIZ_PROMO_TRIGGER_ROUNDS = 2
 
 let scene = null
 let camera = null
@@ -708,6 +791,7 @@ let environmentTexture = null
 let pmremGenerator = null
 let filterTimer = null
 let chatAbortController = null
+let previousBodyOverflow = ''
 
 const visibleArtifacts = computed(() => {
   if (!meaningFocus.value) {
@@ -902,7 +986,10 @@ const selectedNodeActionTitle = computed(() => {
   if (node.type === 'site') return '把视角切到这个遗址'
   if (node.type === 'era') return '回到这个时代'
   if (node.type === 'craft') return '查看同工艺文物'
+  if (node.type === 'material') return '追踪同材质线索'
   if (node.type === 'meaning') return '继续追踪这一寓意'
+  if (node.type === 'motif') return '继续追踪这一母题'
+  if (node.type === 'ritual') return '进入这类仪式语境'
   return '顺着这条关系往下走'
 })
 
@@ -914,7 +1001,10 @@ const selectedNodeActionHint = computed(() => {
   if (node.type === 'site') return '重新整理遗址筛选，让展线回到这个空间坐标。'
   if (node.type === 'era') return '重新整理时代筛选，看看同一阶段还有哪些文物。'
   if (node.type === 'craft') return '聚焦采用同类工艺的文物，让工艺线索继续展开。'
+  if (node.type === 'material') return '把同材质文物聚到一起，观察材料选择背后的礼制与工艺差异。'
   if (node.type === 'meaning') return '以寓意为线索继续浏览命中文物。'
+  if (node.type === 'motif') return '围绕这一视觉纹样继续查找相关文物。'
+  if (node.type === 'ritual') return '从使用场景切入，看它如何连接祭祀、通神或王权礼仪。'
   return '继续沿着这条关系往下探索。'
 })
 
@@ -926,7 +1016,10 @@ const selectedNodeActionButton = computed(() => {
   if (node.type === 'site') return '应用这个遗址'
   if (node.type === 'era') return '应用这个时代'
   if (node.type === 'craft') return '应用这项工艺'
+  if (node.type === 'material') return '追踪同材质'
   if (node.type === 'meaning') return '追踪这一寓意'
+  if (node.type === 'motif') return '追踪这一母题'
+  if (node.type === 'ritual') return '追踪仪式语境'
   return '继续探索'
 })
 
@@ -938,11 +1031,14 @@ const graphTypeFilters = computed(() => {
   return graphPayload.value.availableTypes.map((type) => ({
     type,
     label: TYPE_LABELS[type] || type,
+    description: TYPE_DESCRIPTIONS[type] || '图谱节点类型',
     count: counts[type] || 0
   }))
 })
 
 onMounted(async () => {
+  window.addEventListener('keydown', handleViewerKeydown)
+  hydrateQuizPromoState()
   await loadArtifacts()
   mountResizeObserver()
 })
@@ -950,6 +1046,9 @@ onMounted(async () => {
 onBeforeUnmount(() => {
   if (filterTimer) window.clearTimeout(filterTimer)
   if (graphClickTimer) window.clearTimeout(graphClickTimer)
+  window.removeEventListener('keydown', handleViewerKeydown)
+  restoreViewerPageState()
+  restoreGraphPageState()
   resizeObserver?.disconnect()
   destroyThreeStage()
   destroyGraph()
@@ -1230,10 +1329,14 @@ function scrollToGuide() {
   stageVisible.value = true
   guideExpanded.value = true
   activeScene.value = 4
+  scrollMessagesToBottom()
 }
 
 function toggleGuideExpanded(expanded) {
   guideExpanded.value = expanded
+  if (expanded) {
+    scrollMessagesToBottom()
+  }
 }
 
 function openGuideAndAsk(question) {
@@ -1283,7 +1386,7 @@ function initThreeStage() {
 
   renderer = new THREE.WebGLRenderer({ canvas: canvasRef.value, antialias: true, alpha: true })
   renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2))
-  renderer.setSize(clientWidth, clientHeight)
+  renderer.setSize(clientWidth, clientHeight, false)
   renderer.outputColorSpace = THREE.SRGBColorSpace
   renderer.toneMapping = THREE.ACESFilmicToneMapping
   renderer.toneMappingExposure = 1.12
@@ -1304,10 +1407,15 @@ function initThreeStage() {
 
   const floor = new THREE.Mesh(
     new THREE.CircleGeometry(6, 96),
-    new THREE.MeshBasicMaterial({ color: '#0f1914', transparent: true, opacity: 0.74 })
+    new THREE.MeshBasicMaterial({
+      color: '#172b22',
+      transparent: true,
+      opacity: 0.22,
+      depthWrite: false
+    })
   )
   floor.rotation.x = -Math.PI / 2
-  floor.position.y = -1.35
+  floor.position.y = -2.6
   scene.add(floor)
 
   controls = new OrbitControls(camera, renderer.domElement)
@@ -1331,6 +1439,9 @@ function initThreeStage() {
       glbModel.scale.setScalar(scale)
       glbModel.position.sub(center.multiplyScalar(scale))
       glbModel.position.y -= 0.9
+      const fittedBox = new THREE.Box3().setFromObject(glbModel)
+      const fittedSize = fittedBox.getSize(new THREE.Vector3())
+      floor.position.y = fittedBox.min.y - Math.max(0.12, fittedSize.y * 0.06)
 
       glbModel.traverse((child) => {
         if (!child.isMesh || !child.material) return
@@ -1394,7 +1505,7 @@ async function loadGraph() {
   try {
     const response = await getArtifactGraph({ entityId: selectedArtifactDetail.value.entityId }, { showDefaultMsg: false })
     graphPayload.value = normalizeGraphPayload(response)
-    activeTypeFilters.value = [...graphPayload.value.availableTypes]
+    activeTypeFilters.value = getDefaultTypeFilters(graphPayload.value.availableTypes)
     selectedNodeId.value = graphPayload.value.centerNodeId
     expandedNodeIds.value = new Set()
     await nextTick()
@@ -1481,10 +1592,16 @@ function mergeGraphPayload(currentPayload, incomingPayload) {
 
 function preserveTypeFilters() {
   if (!activeTypeFilters.value.length) {
-    activeTypeFilters.value = [...graphPayload.value.availableTypes]
+    activeTypeFilters.value = getDefaultTypeFilters(graphPayload.value.availableTypes)
     return
   }
   activeTypeFilters.value = graphPayload.value.availableTypes.filter((type) => activeTypeFilters.value.includes(type))
+}
+
+function getDefaultTypeFilters(availableTypes) {
+  const availableSet = new Set(availableTypes || [])
+  const defaults = DEFAULT_TYPE_FILTERS.filter((type) => availableSet.has(type))
+  return defaults.length ? defaults : [...availableSet]
 }
 
 function getVisibleGraphPayload() {
@@ -1524,9 +1641,9 @@ function computeRadialLayout(nodes, centerNodeId) {
 
   positions.set(centerId, { x: 0, y: 0 })
   const ringBuckets = {
-    ring1: nodes.filter((node) => node.id !== centerId && (node.type === 'site' || node.type === 'era')),
-    ring2: nodes.filter((node) => node.id !== centerId && (node.type === 'craft' || node.type === 'meaning')),
-    ring3: nodes.filter((node) => node.id !== centerId && node.type === 'artifact')
+    ring1: nodes.filter((node) => node.id !== centerId && (node.type === 'site' || node.type === 'era' || node.type === 'material')),
+    ring2: nodes.filter((node) => node.id !== centerId && (node.type === 'craft' || node.type === 'meaning' || node.type === 'motif')),
+    ring3: nodes.filter((node) => node.id !== centerId && (node.type === 'ritual' || node.type === 'artifact'))
   }
 
   layoutRing(ringBuckets.ring1, 170, positions, -Math.PI / 2)
@@ -1575,20 +1692,22 @@ function buildNodeStyle(node) {
 }
 
 function buildEdgeStyle(edge) {
-  const stroke =
-    edge.category === 'origin'
-      ? '#86ceb2'
-      : edge.category === 'time'
-        ? '#8aaed4'
-        : edge.category === 'craft'
-          ? '#d8c07b'
-          : '#b9a985'
+  const edgeColors = {
+    origin: '#86ceb2',
+    time: '#8aaed4',
+    craft: '#d8c07b',
+    material: '#cfba86',
+    meaning: '#d4bd7f',
+    motif: '#d68a5e',
+    ritual: '#8bd0c1'
+  }
+  const stroke = edgeColors[edge.category] || '#b9a985'
 
   return {
     stroke,
     lineWidth: edge.weight === 2 ? 2.4 : 1.4,
     opacity: 0.7,
-    lineDash: edge.category === 'meaning' ? [8, 6] : undefined,
+    lineDash: edge.category === 'meaning' || edge.category === 'ritual' ? [8, 6] : undefined,
     endArrow: true,
     cursor: 'pointer'
   }
@@ -1740,6 +1859,15 @@ async function resetGraphViewport() {
   await applyFocusState(selectedNodeId.value || graphPayload.value.centerNodeId, false)
 }
 
+async function resizeGraphStage(fit = false) {
+  if (!graphInstance || !graphRef.value) return
+  graphInstance.setSize(graphRef.value.clientWidth || 320, graphRef.value.clientHeight || 420)
+  if (fit) {
+    await graphInstance.fitView()
+    await applyFocusState(selectedNodeId.value || graphPayload.value.centerNodeId, false)
+  }
+}
+
 function jumpByNode(node) {
   if (!node) return
 
@@ -1787,6 +1915,12 @@ function jumpByNode(node) {
   if (node.type === 'meaning') {
     meaningFocus.value = node.routeTarget || node.label || ''
     scrollToArtifacts()
+    return
+  }
+
+  if (node.type === 'material' || node.type === 'motif' || node.type === 'ritual') {
+    meaningFocus.value = node.routeTarget || node.label || ''
+    scrollToArtifacts()
   }
 }
 
@@ -1799,10 +1933,7 @@ function mountResizeObserver() {
   resizeObserver?.disconnect()
   resizeObserver = new ResizeObserver(async () => {
     resizeThreeStage()
-    if (graphInstance && graphRef.value) {
-      graphInstance.setSize(graphRef.value.clientWidth || 320, graphRef.value.clientHeight || 420)
-      await graphInstance.fitView()
-    }
+    await resizeGraphStage(true)
   })
 
   if (viewerRef.value) resizeObserver.observe(viewerRef.value)
@@ -1813,9 +1944,113 @@ function resizeThreeStage() {
   if (!viewerRef.value || !camera || !renderer) return
   const width = viewerRef.value.clientWidth
   const height = viewerRef.value.clientHeight
+  if (!width || !height) return
   camera.aspect = width / height
   camera.updateProjectionMatrix()
-  renderer.setSize(width, height)
+  renderer.setSize(width, height, false)
+}
+
+function afterFullscreenLayout(callback) {
+  nextTick(() => {
+    window.requestAnimationFrame(() => {
+      window.requestAnimationFrame(callback)
+    })
+  })
+}
+
+function syncViewerLayoutAfterFullscreen(recheck = false) {
+  afterFullscreenLayout(() => {
+    resizeThreeStage()
+    controls?.update()
+    if (recheck) {
+      window.setTimeout(() => {
+        resizeThreeStage()
+        controls?.update()
+      }, 140)
+    }
+  })
+}
+
+function syncGraphLayoutAfterFullscreen(recheck = false) {
+  afterFullscreenLayout(() => {
+    void resizeGraphStage(true)
+    if (recheck) {
+      window.setTimeout(() => {
+        void resizeGraphStage(true)
+      }, 140)
+    }
+  })
+}
+
+function toggleViewerFullscreen() {
+  setViewerFullscreen(!isViewerFullscreen.value)
+}
+
+function setViewerFullscreen(value) {
+  if (isViewerFullscreen.value === value) return
+  if (value && isGraphFullscreen.value) {
+    setGraphFullscreen(false)
+  }
+  isViewerFullscreen.value = value
+
+  if (value) {
+    previousBodyOverflow = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+  } else {
+    document.body.style.overflow = previousBodyOverflow
+    previousBodyOverflow = ''
+  }
+
+  syncViewerLayoutAfterFullscreen(!value)
+}
+
+function restoreViewerPageState() {
+  if (!isViewerFullscreen.value) return
+  document.body.style.overflow = previousBodyOverflow
+  previousBodyOverflow = ''
+  isViewerFullscreen.value = false
+}
+
+function handleViewerKeydown(event) {
+  if (event.key !== 'Escape') return
+  const shouldExitFullscreen = isViewerFullscreen.value || isGraphFullscreen.value
+  if (!shouldExitFullscreen) return
+  event.preventDefault()
+  if (isViewerFullscreen.value) {
+    setViewerFullscreen(false)
+  }
+  if (isGraphFullscreen.value) {
+    setGraphFullscreen(false)
+  }
+}
+
+function toggleGraphFullscreen() {
+  setGraphFullscreen(!isGraphFullscreen.value)
+}
+
+function setGraphFullscreen(value) {
+  if (isGraphFullscreen.value === value) return
+  if (value && isViewerFullscreen.value) {
+    setViewerFullscreen(false)
+  }
+  isGraphFullscreen.value = value
+
+  if (value) {
+    previousBodyOverflow = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+  } else {
+    document.body.style.overflow = previousBodyOverflow
+    previousBodyOverflow = ''
+  }
+
+  syncGraphLayoutAfterFullscreen(!value)
+}
+
+function restoreGraphPageState() {
+  if (!isGraphFullscreen.value) return
+  document.body.style.overflow = previousBodyOverflow
+  previousBodyOverflow = ''
+  isGraphFullscreen.value = false
 }
 
 async function initializeGuide() {
@@ -1872,6 +2107,18 @@ function updateAssistantMessageById(messageId, content) {
   scrollMessagesToBottom()
 }
 
+function appendAssistantPlaceholder(content = '...') {
+  const id = Date.now() + Math.random()
+  messages.value.push({
+    id,
+    role: 'assistant',
+    content: [content],
+    time: getCurrentTime()
+  })
+  scrollMessagesToBottom()
+  return id
+}
+
 function buildAutoGuideQuestion() {
   return '请你以三星堆数字展线讲解员“玄喵”的口吻，围绕当前文物先做一段开场讲解。按“这是什么、为什么重要、它和什么有关、下一步还可以看什么”的顺序来讲，控制在四句以内，语言自然、适合展馆导览。'
 }
@@ -1888,7 +2135,8 @@ async function requestAutoGuide(expectedEntityId) {
   let docs = []
   let userMessage = question
 
-  const placeholderId = Date.now() + Math.random()
+  const placeholderId = appendAssistantPlaceholder()
+  /*
   messages.value.push({
     id: placeholderId,
     role: 'assistant',
@@ -1896,6 +2144,7 @@ async function requestAutoGuide(expectedEntityId) {
     time: getCurrentTime()
   })
   scrollMessagesToBottom()
+  */
 
   try {
     docs = await searchKnowledge(question, 1)
@@ -2021,11 +2270,14 @@ async function sendMessage(presetQuestion = '') {
     content: [question],
     time: getCurrentTime()
   })
+  const quizPromoRound = registerGuideUserQuestion()
   draft.value = ''
   scrollMessagesToBottom()
+  const assistantPlaceholderId = appendAssistantPlaceholder()
 
   if (fixedAnswer) {
-    appendAssistantMessage(fixedAnswer)
+    updateAssistantMessageById(assistantPlaceholderId, fixedAnswer)
+    maybeRevealQuizPromo(quizPromoRound)
     return
   }
 
@@ -2043,11 +2295,13 @@ async function sendMessage(presetQuestion = '') {
   }
 
   if (!currentSessionId.value) {
-    appendAssistantMessage(getMockReply(question, docs))
+    updateAssistantMessageById(assistantPlaceholderId, getMockReply(question, docs))
+    maybeRevealQuizPromo(quizPromoRound)
     return
   }
 
   isThinking.value = true
+  showThinkingBubble.value = false
   chatAbortController?.abort?.()
   chatAbortController = new AbortController()
 
@@ -2070,31 +2324,26 @@ async function sendMessage(presetQuestion = '') {
       onmessage(event) {
         if (event.data === '[DONE]') {
           isThinking.value = false
+          if (!aiResponse) {
+            updateAssistantMessageById(assistantPlaceholderId, getMockReply(question, docs))
+          }
+          maybeRevealQuizPromo(quizPromoRound)
           return
         }
         if (event.data.startsWith('[ERROR]')) {
           isThinking.value = false
-          appendAssistantMessage(getMockReply(question, docs))
+          updateAssistantMessageById(assistantPlaceholderId, getMockReply(question, docs))
+          maybeRevealQuizPromo(quizPromoRound)
           return
         }
         aiResponse += event.data
-        const lastMessage = messages.value[messages.value.length - 1]
-        if (lastMessage && lastMessage.role === 'assistant') {
-          lastMessage.content = [aiResponse]
-        } else {
-          messages.value.push({
-            id: Date.now() + 1,
-            role: 'assistant',
-            content: [aiResponse],
-            time: getCurrentTime()
-          })
-        }
-        scrollMessagesToBottom()
+        updateAssistantMessageById(assistantPlaceholderId, aiResponse)
       },
       onerror(error) {
         console.error('AI SSE 连接失败:', error)
         isThinking.value = false
-        appendAssistantMessage(getMockReply(question, docs))
+        updateAssistantMessageById(assistantPlaceholderId, getMockReply(question, docs))
+        maybeRevealQuizPromo(quizPromoRound)
         return 999999999
       },
       onclose() {
@@ -2104,7 +2353,8 @@ async function sendMessage(presetQuestion = '') {
   } catch (error) {
     console.error('发送 AI 消息失败:', error)
     isThinking.value = false
-    appendAssistantMessage(getMockReply(question, docs))
+    updateAssistantMessageById(assistantPlaceholderId, getMockReply(question, docs))
+    maybeRevealQuizPromo(quizPromoRound)
   } finally {
     chatAbortController = null
   }
@@ -2132,6 +2382,51 @@ function scrollMessagesToBottom() {
 function getCurrentTime() {
   const date = new Date()
   return `${date.getHours().toString().padStart(2, '0')}:${date.getMinutes().toString().padStart(2, '0')}`
+}
+
+function hydrateQuizPromoState() {
+  showQuizPromo.value = false
+}
+
+function hasSeenQuizPromo() {
+  try {
+    return sessionStorage.getItem(QUIZ_PROMO_SESSION_KEY) === '1'
+  } catch (error) {
+    return false
+  }
+}
+
+function markQuizPromoSeen() {
+  try {
+    sessionStorage.setItem(QUIZ_PROMO_SESSION_KEY, '1')
+  } catch (error) {
+    // sessionStorage may be blocked; the in-memory flag still prevents immediate repeats.
+  }
+}
+
+function registerGuideUserQuestion() {
+  guideUserQuestionCount.value += 1
+  return guideUserQuestionCount.value
+}
+
+function maybeRevealQuizPromo(roundCount) {
+  if (showQuizPromo.value || hasSeenQuizPromo()) return
+  if (roundCount < QUIZ_PROMO_TRIGGER_ROUNDS) return
+
+  showQuizPromo.value = true
+  markQuizPromoSeen()
+  scrollMessagesToBottom()
+}
+
+function dismissQuizPromo() {
+  showQuizPromo.value = false
+  markQuizPromoSeen()
+}
+
+function goQuizChallenge() {
+  markQuizPromoSeen()
+  showQuizPromo.value = false
+  router.push('/quiz')
 }
 </script>
 
@@ -2238,12 +2533,32 @@ function getCurrentTime() {
 }
 
 .trail-hero {
+  position: relative;
   display: grid;
-  grid-template-columns: minmax(0, 1.55fr) minmax(260px, 0.6fr);
-  gap: 18px;
+  grid-template-columns: minmax(560px, 1fr) minmax(280px, 320px);
+  gap: 24px;
+  align-items: stretch;
   margin-bottom: 20px;
+  padding: 22px 24px;
   min-height: 0;
   scroll-snap-align: start;
+  overflow: hidden;
+  border: 1px solid rgba(184, 146, 67, 0.16);
+  border-radius: 30px;
+  background:
+    radial-gradient(circle at 44% 40%, rgba(66, 102, 79, 0.08), transparent 22%),
+    radial-gradient(circle at 100% 0%, rgba(184, 146, 67, 0.12), transparent 26%),
+    var(--paper-soft);
+  box-shadow: 0 20px 42px rgba(78, 62, 31, 0.08);
+}
+
+.trail-hero::before {
+  content: '';
+  position: absolute;
+  inset: 18px 340px 18px 48%;
+  pointer-events: none;
+  border-radius: 999px;
+  background: linear-gradient(90deg, rgba(66, 102, 79, 0.08), transparent);
 }
 
 .hero-copy,
@@ -2258,7 +2573,14 @@ function getCurrentTime() {
 }
 
 .hero-copy {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  min-width: 0;
   padding: 28px 32px;
+  border: 0;
+  background: transparent;
+  box-shadow: none;
 }
 
 .trail-stagebar {
@@ -2374,9 +2696,17 @@ function getCurrentTime() {
 }
 
 .hero-board {
-  padding: 22px 20px;
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  min-width: 0;
+  padding: 0;
   display: grid;
   gap: 12px;
+  align-content: center;
+  border: 0;
+  background: transparent;
+  box-shadow: none;
 }
 
 .board-card {
@@ -2918,32 +3248,56 @@ function getCurrentTime() {
 }
 
 .stage-overview__card {
+  position: relative;
+  overflow: hidden;
   padding: 18px 20px;
   border-radius: 22px;
-  background: rgba(255, 255, 255, 0.78);
-  border: 1px solid rgba(66, 102, 79, 0.08);
+  background:
+    linear-gradient(135deg, rgba(29, 48, 38, 0.96), rgba(10, 20, 15, 0.94)),
+    radial-gradient(circle at 100% 0%, rgba(211, 171, 88, 0.16), transparent 34%);
+  border: 1px solid rgba(206, 176, 102, 0.22);
+  color: #f8f1dc;
+  box-shadow:
+    0 18px 38px rgba(0, 0, 0, 0.24),
+    inset 0 1px 0 rgba(255, 255, 255, 0.05);
+}
+
+.stage-overview__card::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background:
+    linear-gradient(90deg, rgba(211, 171, 88, 0.14), transparent 34%),
+    radial-gradient(circle at 8% 12%, rgba(121, 196, 167, 0.12), transparent 28%);
 }
 
 .stage-overview__card span {
+  position: relative;
   display: block;
   margin-bottom: 10px;
-  color: var(--gold);
+  color: #f2d68c;
   font-size: 12px;
   font-weight: 700;
   letter-spacing: 0.12em;
 }
 
 .stage-overview__card strong {
+  position: relative;
   display: block;
   margin-bottom: 8px;
   font-family: 'STZhongsong', 'Noto Serif SC', serif;
   font-size: 28px;
   line-height: 1.16;
+  color: #fff7df;
+  text-shadow: 0 2px 12px rgba(0, 0, 0, 0.28);
 }
 
 .stage-overview__card p {
+  position: relative;
   margin: 0;
-  color: var(--ink-soft);
+  color: rgba(244, 237, 220, 0.9);
+  font-size: 15px;
   line-height: 1.75;
 }
 
@@ -3148,6 +3502,46 @@ function getCurrentTime() {
   border-radius: 28px;
 }
 
+.graph-panel {
+  position: relative;
+}
+
+.graph-panel--fullscreen {
+  position: fixed;
+  inset: 18px;
+  z-index: 1190;
+  display: grid;
+  grid-template-rows: auto auto auto minmax(0, 1fr) auto;
+  gap: 14px;
+  padding-top: 72px;
+  width: auto;
+  height: auto;
+  max-height: none;
+  overflow: hidden;
+  border: 1px solid rgba(216, 184, 109, 0.34);
+  border-radius: 28px;
+  background:
+    radial-gradient(circle at 80% 10%, rgba(216, 184, 109, 0.12), transparent 32%),
+    linear-gradient(180deg, rgba(12, 22, 18, 0.98), rgba(8, 15, 12, 0.98));
+  box-shadow:
+    0 36px 90px rgba(0, 0, 0, 0.58),
+    0 0 0 9999px rgba(2, 8, 6, 0.72);
+}
+
+.graph-panel--fullscreen .section-head {
+  align-items: center;
+}
+
+.graph-panel--fullscreen .graph-stage {
+  min-height: 0;
+  height: 100%;
+}
+
+.graph-panel--fullscreen .graph-canvas {
+  min-height: 0;
+  height: 100%;
+}
+
 .panel-card--hero {
   background:
     radial-gradient(circle at top right, rgba(217, 177, 90, 0.1), transparent 34%),
@@ -3263,12 +3657,102 @@ function getCurrentTime() {
     linear-gradient(180deg, #08110d 0%, #0a140f 100%);
 }
 
+.viewer-shell--fullscreen {
+  position: fixed;
+  inset: 18px;
+  z-index: 1200;
+  width: auto;
+  height: auto;
+  min-height: 0;
+  border: 1px solid rgba(216, 184, 109, 0.34);
+  border-radius: 28px;
+  box-shadow:
+    0 36px 90px rgba(0, 0, 0, 0.58),
+    0 0 0 9999px rgba(2, 8, 6, 0.72);
+}
+
 .viewer-shell canvas,
 .artifact-fallback {
   display: block;
   width: 100%;
   height: 100%;
   min-height: 0;
+}
+
+.viewer-fullscreen-button {
+  position: absolute;
+  top: 18px;
+  right: 18px;
+  z-index: 5;
+  min-height: 40px;
+  padding: 0 16px;
+  border: 1px solid rgba(216, 184, 109, 0.28);
+  border-radius: 999px;
+  color: #f7f2e4;
+  background: rgba(12, 22, 18, 0.72);
+  box-shadow: 0 14px 28px rgba(0, 0, 0, 0.24);
+  cursor: pointer;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  backdrop-filter: blur(12px);
+  transition:
+    transform 0.18s ease,
+    background 0.18s ease,
+    border-color 0.18s ease;
+}
+
+.viewer-fullscreen-button:hover {
+  transform: translateY(-1px);
+  border-color: rgba(216, 184, 109, 0.52);
+  background: rgba(37, 62, 49, 0.86);
+}
+
+.viewer-shell--fullscreen .viewer-fullscreen-button {
+  top: 24px;
+  right: 24px;
+}
+
+.fullscreen-return-hint {
+  position: absolute;
+  top: 24px;
+  left: 24px;
+  z-index: 6;
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  min-height: 40px;
+  padding: 0 15px;
+  border: 1px solid rgba(216, 184, 109, 0.3);
+  border-radius: 999px;
+  color: #f7f2e4;
+  background: rgba(12, 22, 18, 0.76);
+  box-shadow: 0 14px 28px rgba(0, 0, 0, 0.24);
+  font-size: 13px;
+  font-weight: 800;
+  backdrop-filter: blur(12px);
+  pointer-events: none;
+}
+
+.fullscreen-return-hint span {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 34px;
+  height: 24px;
+  padding: 0 8px;
+  border: 1px solid rgba(247, 242, 228, 0.28);
+  border-radius: 8px;
+  background: rgba(247, 242, 228, 0.12);
+  color: #ffe5a3;
+  font-size: 12px;
+  line-height: 1;
+}
+
+.fullscreen-return-hint--graph {
+  left: 50%;
+  transform: translateX(-50%);
 }
 
 .viewer-caption {
@@ -3372,20 +3856,26 @@ function getCurrentTime() {
 .type-filter-row {
   display: flex;
   flex-wrap: wrap;
-  gap: 10px;
-  margin-bottom: 14px;
+  align-items: center;
+  align-content: flex-start;
+  gap: 8px;
+  margin-bottom: 12px;
 }
 
 .type-filter {
   display: inline-flex;
   align-items: center;
-  gap: 10px;
-  padding: 10px 14px;
+  justify-content: center;
+  gap: 7px;
+  min-height: 32px;
+  padding: 0 11px;
   border: 1px solid rgba(66, 102, 79, 0.12);
   border-radius: 999px;
   background: rgba(255, 255, 255, 0.82);
   color: var(--green);
-  font-size: 13px;
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1;
   cursor: pointer;
 }
 
@@ -3396,7 +3886,26 @@ function getCurrentTime() {
 }
 
 .type-filter strong {
-  font-size: 13px;
+  font-size: 12px;
+  line-height: 1;
+}
+
+.graph-panel--fullscreen .type-filter-row {
+  max-height: 72px;
+  margin: 0 0 8px;
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(216, 184, 109, 0.28) transparent;
+}
+
+.graph-panel--fullscreen .type-filter {
+  min-height: 28px;
+  padding: 0 10px;
+  font-size: 12px;
+}
+
+.graph-panel--fullscreen .type-filter strong {
+  font-size: 12px;
 }
 
 .graph-stage {
@@ -3624,26 +4133,40 @@ function getCurrentTime() {
 
 .guide-chat {
   display: grid;
-  grid-template-rows: minmax(0, 1fr) auto;
+  grid-template-rows: minmax(0, 1fr) auto auto;
   gap: 16px;
-  min-height: 620px;
+  height: min(620px, calc(100vh - 260px));
+  min-height: 460px;
+  max-height: calc(100vh - 180px);
+  overflow: hidden;
 }
 
 .message-scroll {
+  min-height: 0;
   overflow: auto;
   display: flex;
   flex-direction: column;
+  align-items: stretch;
   gap: 14px;
-  padding-right: 6px;
+  padding-right: 8px;
+  scrollbar-gutter: stable;
 }
 
 .message-row {
   display: flex;
+  justify-content: flex-start;
+  align-items: flex-start;
   gap: 12px;
+  width: 100%;
 }
 
 .message-row--user {
   justify-content: flex-end;
+}
+
+.message-row--user .message-stack {
+  margin-left: 0;
+  align-items: flex-end;
 }
 
 .message-avatar {
@@ -3660,8 +4183,21 @@ function getCurrentTime() {
   object-fit: cover;
 }
 
+.message-avatar--user {
+  display: grid;
+  place-items: center;
+  color: #f7f2e4;
+  font-size: 16px;
+  font-weight: 800;
+  background: linear-gradient(135deg, #caa35c, #42664f);
+  box-shadow: 0 10px 24px rgba(41, 72, 58, 0.16);
+}
+
 .message-stack {
-  max-width: min(700px, 78%);
+  display: flex;
+  flex-direction: column;
+  max-width: min(700px, calc(100% - 56px));
+  text-align: left;
 }
 
 .message-bubble {
@@ -3675,11 +4211,131 @@ function getCurrentTime() {
   color: #f7f2e4;
 }
 
+.message-row--user .message-stack time {
+  text-align: right;
+}
+
 .message-stack time {
   display: block;
   margin-top: 6px;
   color: var(--ink-soft);
   font-size: 12px;
+}
+
+.quiz-promo-card {
+  position: relative;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  gap: 14px;
+  align-items: center;
+  padding: 16px 18px;
+  border: 1px solid rgba(184, 146, 67, 0.32);
+  border-radius: 22px;
+  background:
+    radial-gradient(circle at 0% 0%, rgba(216, 184, 109, 0.24), transparent 32%),
+    linear-gradient(135deg, rgba(255, 251, 239, 0.98), rgba(235, 244, 238, 0.94));
+  box-shadow: 0 18px 38px rgba(43, 59, 46, 0.12);
+}
+
+.quiz-promo-mark {
+  display: grid;
+  width: 48px;
+  height: 48px;
+  place-items: center;
+  color: #f8f2df;
+  background: linear-gradient(135deg, #d4a84c, #4e765d);
+  border-radius: 16px;
+  box-shadow: 0 12px 24px rgba(184, 146, 67, 0.18);
+}
+
+.quiz-promo-copy {
+  min-width: 0;
+}
+
+.quiz-promo-kicker,
+.quiz-promo-copy h4,
+.quiz-promo-copy p,
+.quiz-promo-copy span {
+  margin: 0;
+}
+
+.quiz-promo-kicker {
+  color: var(--gold);
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+}
+
+.quiz-promo-copy h4 {
+  margin-top: 3px;
+  color: var(--ink);
+  font-family: 'STZhongsong', 'Noto Serif SC', serif;
+  font-size: 20px;
+  line-height: 1.25;
+}
+
+.quiz-promo-copy p {
+  margin-top: 6px;
+  color: var(--green-deep);
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.quiz-promo-copy span {
+  display: block;
+  margin-top: 4px;
+  color: rgba(29, 52, 43, 0.64);
+  font-size: 12px;
+}
+
+.quiz-promo-actions {
+  display: grid;
+  gap: 8px;
+  min-width: 134px;
+}
+
+.quiz-promo-primary,
+.quiz-promo-secondary,
+.quiz-promo-close {
+  border: 0;
+  cursor: pointer;
+  font: inherit;
+}
+
+.quiz-promo-primary {
+  min-height: 40px;
+  padding: 0 14px;
+  border-radius: 999px;
+  color: #f8f2df;
+  background: linear-gradient(135deg, #4e765d, #29483a);
+  font-size: 13px;
+  font-weight: 800;
+  box-shadow: 0 12px 22px rgba(41, 72, 58, 0.16);
+}
+
+.quiz-promo-secondary {
+  color: var(--green);
+  background: transparent;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.quiz-promo-close {
+  position: absolute;
+  top: 10px;
+  right: 12px;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  color: rgba(29, 52, 43, 0.62);
+  background: rgba(255, 255, 255, 0.64);
+  font-size: 18px;
+  line-height: 1;
+}
+
+.quiz-promo-close:hover {
+  color: var(--ink);
+  background: rgba(255, 255, 255, 0.92);
 }
 
 .thinking-bubble {
@@ -3705,24 +4361,71 @@ function getCurrentTime() {
 
 .composer {
   display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: stretch;
   gap: 12px;
+  padding: 12px;
+  border: 1px solid rgba(184, 146, 67, 0.22);
+  border-radius: 24px;
+  background:
+    linear-gradient(180deg, rgba(255, 253, 248, 0.94), rgba(247, 243, 233, 0.88));
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.72),
+    0 14px 34px rgba(43, 59, 46, 0.08);
 }
 
 .composer textarea {
   width: 100%;
-  min-height: 96px;
-  padding: 16px 18px;
+  min-height: 72px;
+  max-height: 150px;
+  padding: 14px 16px;
   border: 1px solid rgba(66, 102, 79, 0.14);
   border-radius: 18px;
-  resize: vertical;
+  resize: none;
   font: inherit;
   color: var(--ink);
-  background: rgba(255, 255, 255, 0.9);
+  line-height: 1.65;
+  background: rgba(255, 255, 255, 0.82);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.78);
 }
 
 .composer textarea:focus {
   outline: none;
   border-color: rgba(66, 102, 79, 0.34);
+  background: rgba(255, 255, 255, 0.96);
+}
+
+.composer-send {
+  width: 112px;
+  min-height: 72px;
+  border: 0;
+  border-radius: 20px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: #f8f2df;
+  background: linear-gradient(135deg, #4e765d 0%, #29483a 100%);
+  box-shadow: 0 12px 24px rgba(41, 72, 58, 0.18);
+  cursor: pointer;
+  font: inherit;
+  font-size: 15px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  transition:
+    transform 0.2s ease,
+    box-shadow 0.2s ease,
+    opacity 0.2s ease;
+}
+
+.composer-send:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 16px 30px rgba(41, 72, 58, 0.22);
+}
+
+.composer-send:disabled {
+  cursor: not-allowed;
+  opacity: 0.48;
+  box-shadow: none;
 }
 
 @keyframes pulse {
@@ -3761,6 +4464,10 @@ function getCurrentTime() {
     align-items: start;
   }
 
+  .trail-hero::before {
+    display: none;
+  }
+
   .trail-stagebar__stats {
     justify-content: flex-start;
   }
@@ -3789,8 +4496,35 @@ function getCurrentTime() {
     width: 100%;
   }
 
+  .trail-hero {
+    padding: 16px;
+    gap: 10px;
+  }
+
   .trail-nav {
     grid-template-columns: 1fr 1fr;
+  }
+
+  .composer {
+    grid-template-columns: 1fr;
+  }
+
+  .composer-send {
+    width: 100%;
+    min-height: 50px;
+  }
+
+  .quiz-promo-card {
+    grid-template-columns: 1fr;
+    padding: 16px;
+  }
+
+  .quiz-promo-mark {
+    display: none;
+  }
+
+  .quiz-promo-actions {
+    min-width: 0;
   }
 
   .scene-context-row {
@@ -3857,6 +4591,25 @@ function getCurrentTime() {
   .graph-canvas {
     min-height: 360px;
     height: 360px;
+  }
+
+  .viewer-shell--fullscreen {
+    inset: 10px;
+    height: auto;
+    min-height: 0;
+    border-radius: 22px;
+  }
+
+  .viewer-shell--fullscreen canvas,
+  .viewer-shell--fullscreen .artifact-fallback {
+    height: 100%;
+    min-height: 0;
+  }
+
+  .graph-panel--fullscreen {
+    inset: 10px;
+    border-radius: 22px;
+    padding: 64px 16px 16px;
   }
 
   .insight-panel {

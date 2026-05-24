@@ -1,0 +1,160 @@
+# Sanxingdui 非遗传承系统
+
+这是一个前后端分离项目：
+
+- 后端：Spring Boot 3，默认端口 `8889`
+- 前端：Vue 3 + Vite，默认端口 `8800`
+- 数据库：MySQL，默认库名 `heritage_db`
+- 可选图谱：Neo4j，默认 `bolt://localhost:7687`
+- 可选图片生成服务：默认 `http://127.0.0.1:8001`
+
+## 环境要求
+
+- JDK 17
+- Node.js 18 或更高版本
+- MySQL 8.x
+- Git
+- Neo4j 5.x（可选，用于知识图谱增强）
+
+## 克隆项目
+
+```powershell
+git clone https://github.com/cshhhhh110/sanxingdui.git
+cd sanxingdui
+```
+
+如果已经克隆过：
+
+```powershell
+git pull origin master
+```
+
+## 初始化数据库
+
+先创建数据库，再导入根目录的 `heritage_db.sql`：
+
+```powershell
+mysql -u root -p -e "CREATE DATABASE IF NOT EXISTS heritage_db DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;"
+mysql -u root -p heritage_db < heritage_db.sql
+```
+
+## 配置后端
+
+真实配置文件不提交到 GitHub。每个开发者在本机复制模板：
+
+```powershell
+copy springboot\src\main\resources\application-template.yml springboot\src\main\resources\application.yml
+```
+
+然后编辑 `springboot/src/main/resources/application.yml`，至少填写：
+
+- `spring.datasource.username`
+- `spring.datasource.password`
+- `jwt.secret`
+- `spring.ai.openai.api-key`（需要 AI 对话时）
+- `mimo.api-key` 或 `deepseek.api-key`（需要对应能力时）
+- `graph.neo4j.password`（启用 Neo4j 时）
+
+`application.yml` 已被 `.gitignore` 忽略，不要提交真实密码、邮箱授权码或 API Key。
+
+## 启动后端
+
+```powershell
+cd springboot
+.\mvnw.cmd spring-boot:run
+```
+
+后端地址：
+
+```text
+http://localhost:8889
+```
+
+## 启动前端
+
+```powershell
+cd vue3
+npm ci
+npm run dev
+```
+
+前端地址：
+
+```text
+http://localhost:8800
+```
+
+Vite 已配置代理：
+
+- `/api` -> `http://localhost:8889`
+- `/files` -> `http://localhost:8889`
+
+## 可选：Neo4j 图谱
+
+默认模板中 Neo4j 关闭：
+
+```yaml
+graph:
+  neo4j:
+    enabled: false
+```
+
+如果要启用：
+
+1. 启动本机 Neo4j。
+2. 在 `application.yml` 中设置 `graph.neo4j.enabled: true`。
+3. 填写 `graph.neo4j.password`。
+4. 在 Neo4j Browser 或 cypher-shell 中执行：
+
+```text
+docs/neo4j-graph-seed.cypher
+```
+
+即使 Neo4j 未启用，后端仍会回退到 MySQL 图谱数据。
+
+## 可选：AI 图片生成
+
+`/ai-image-generator` 默认请求：
+
+```text
+http://127.0.0.1:8001/api/generate-image
+```
+
+这个图片生成服务是可选外部服务，不属于主后端 `8889`。如果没有启动它，页面会提示服务未连接，但不影响其他页面运行。
+
+前端可通过 `vue3/.env.development` 调整：
+
+```env
+VITE_IMAGE_API_BASE = http://127.0.0.1:8001
+```
+
+## 常用验证
+
+前端打包：
+
+```powershell
+cd vue3
+npm run build
+```
+
+后端编译：
+
+```powershell
+cd springboot
+.\mvnw.cmd -DskipTests package
+```
+
+启动后建议访问：
+
+- `http://localhost:8800/tanmi`
+- `http://localhost:8800/trail`
+- `http://localhost:8800/3dlist`
+- `http://localhost:8800/ai-image-generator`
+
+## 协作约定
+
+- 两人默认从 `master` 拉取和推送。
+- 开始开发前先执行 `git pull origin master`。
+- 提交前检查 `git status`，确认没有真实配置和临时文件。
+- 不提交 `node_modules`、`dist`、`target`、日志、上传文件和本地 `application.yml`。
+- 如果真实密钥曾经进入 GitHub，请立刻在对应平台重置密钥。

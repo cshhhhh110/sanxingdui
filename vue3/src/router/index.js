@@ -2,6 +2,7 @@ import { createRouter, createWebHistory } from 'vue-router'
 import { useUserStore } from '@/store/user'
 import BackendLayout from '@/layouts/BackendLayout.vue'
 
+// 后台路由
 export const backendRoutes = [
   {
     path: '/back',
@@ -78,104 +79,105 @@ export const backendRoutes = [
   }
 ]
 
+// 前台路由配置
 const frontendRoutes = [
   {
     path: '/',
-    component: () => import('@/layouts/FrontendLayout.vue'),
     redirect: '/home',
+    component: () => import('@/layouts/FrontendLayout.vue'),
     children: [
       {
-        path: 'home',
+        path: '/home',
         name: 'Home',
         component: () => import('@/views/frontend/Home.vue'),
         meta: { title: '首页' }
       },
       {
-        path: 'heritage',
+        path: '/heritage',
         name: 'HeritageList',
         component: () => import('@/views/frontend/heritage/index.vue'),
-        meta: { title: '古蜀瑰宝' }
+        meta: { title: '非遗作品' }
       },
       {
-        path: 'heritage/:id',
+        path: '/heritage/:id',
         name: 'HeritageItemDetail',
         component: () => import('@/views/frontend/heritage/detail.vue'),
         meta: { title: '作品详情' }
       },
       {
-        path: 'inheritor',
+        path: '/inheritor',
         name: 'InheritorList',
         component: () => import('@/views/frontend/inheritor/index.vue'),
-        meta: { title: '文博专家' }
+        meta: { title: '非遗传承人' }
       },
       {
-        path: 'inheritor/:id',
+        path: '/inheritor/:id',
         name: 'InheritorDetail',
         component: () => import('@/views/frontend/inheritor/detail.vue'),
-        meta: { title: '专家详情' }
+        meta: { title: '传承人详情' }
       },
       {
-        path: 'activity',
+        path: '/activity',
         name: 'ActivityList',
         component: () => import('@/views/frontend/activity/index.vue'),
-        meta: { title: '文化活动' }
+        meta: { title: '活动中心' }
       },
       {
-        path: 'activity/:id',
+        path: '/activity/:id',
         name: 'ActivityDetail',
         component: () => import('@/views/frontend/activity/detail.vue'),
         meta: { title: '活动详情' }
       },
       {
-        path: 'course',
+        path: '/course',
         name: 'CourseList',
         component: () => import('@/views/frontend/course/index.vue'),
-        meta: { title: '研学课堂' }
+        meta: { title: '在线课程' }
       },
       {
-        path: 'course/:id/study/:chapterId',
+        path: '/course/:id/study/:chapterId',
         name: 'CourseStudy',
         component: () => import('@/views/frontend/course/study.vue'),
         meta: { title: '课程学习' }
       },
       {
-        path: 'course/:id',
+        path: '/course/:id',
         name: 'CourseDetail',
         component: () => import('@/views/frontend/course/detail.vue'),
         meta: { title: '课程详情' }
       },
       {
-        path: 'shop',
+        path: '/shop',
         name: 'ShopList',
         component: () => import('@/views/frontend/shop/index.vue'),
-        meta: { title: '文创商城' }
+        meta: { title: '非遗手办商城' }
       },
       {
-        path: 'shop/:id',
+        path: '/ai-chat',
+        name: 'AiChat',
+        component: () => import('@/views/frontend/AiChat.vue'),
+        meta: { title: 'AI智能助手', requiresAuth: true }
+      },
+      {
+        path: '/shop/:id',
         name: 'ShopProductDetail',
         component: () => import('@/views/frontend/shop/detail.vue'),
         meta: { title: '商品详情' }
       },
       {
-        path: 'ai-chat',
-        name: 'AiChat',
-        component: () => import('@/views/frontend/AiChat.vue'),
-        meta: { title: 'AI 文博助手', requiresAuth: false }
-      },
-      {
-        path: 'order/confirm',
+        path: '/order/confirm',
         name: 'OrderConfirm',
         component: () => import('@/views/frontend/OrderConfirm.vue'),
         meta: { title: '确认订单', requiresAuth: true }
       },
       {
-        path: 'orders',
+        path: '/orders',
         name: 'UserOrders',
         component: () => import('@/views/frontend/UserOrders.vue'),
         meta: { title: '我的订单', requiresAuth: true }
       },
       {
-        path: 'orders/:id',
+        path: '/orders/:id',
         name: 'OrderDetail',
         component: () => import('@/views/frontend/OrderDetail.vue'),
         meta: { title: '订单详情', requiresAuth: true }
@@ -190,58 +192,59 @@ const frontendRoutes = [
         path: '3dlist',
         name: '3dlist',
         component: () => import('@/views/3ddemo.vue'),
-        meta: { title: '3D 数字馆', requiresAuth: false }
+        meta: { title: '3d藏品列表', requiresAuth: false }
       },
       {
         path: '3d',
         name: '3d',
         component: () => import('@/views/Three3dDemo.vue'),
-        meta: { title: '3D 展示', requiresAuth: false }
+        meta: { title: '3d藏品', requiresAuth: false }
       },
       {
         path: 'tanmi',
         name: 'tanmi',
         component: () => import('@/views/frontend/tanmi.vue'),
-        meta: { title: '三星堆探秘', requiresAuth: false }
+        meta: { title: '三星堆探秘', requiresAuth: true }
       },
       {
         path: 'trail',
         name: 'TimeSpaceTrail',
         component: () => import('@/views/frontend/TimeSpaceTrail.vue'),
-        meta: { title: '姝ュ叆鏃剁┖灞曠嚎', requiresAuth: false }
+        meta: { title: '步入时空展线', requiresAuth: false }
       },
       {
         path: 'quiz',
         name: 'quiz',
         component: () => import('@/views/frontend/quiz/index.vue'),
-        meta: { title: '知识问答', requiresAuth: false }
+        meta: { title: '知识问答', requiresAuth: true }
       },
       {
         path: 'info1',
         name: 'info1',
         component: () => import('@/views/frontend/taninfo1.vue'),
-        meta: { title: '宝墩文化遗址', requiresAuth: false }
+        meta: { title: '宝墩文化遗址', requiresAuth: true }
       },
       {
         path: 'info2',
         name: 'info2',
         component: () => import('@/views/frontend/taninfo2.vue'),
-        meta: { title: '三星堆祭祀坑遗址', requiresAuth: false }
+        meta: { title: '三星堆祭祀坑遗址', requiresAuth: true }
       },
       {
         path: 'info3',
         name: 'info3',
         component: () => import('@/views/frontend/taninfo3.vue'),
-        meta: { title: '金沙祭祀坑遗址', requiresAuth: false }
+        meta: { title: '金沙祭祀坑遗址', requiresAuth: true }
       },
       {
         path: 'ai-image-generator',
         name: 'ai-image-generator',
         component: () => import('@/views/frontend/ai-image-generator.vue'),
-        meta: { title: 'AI 图像生成', requiresAuth: false }
+        meta: { title: '三星堆祭祀坑遗址', requiresAuth: true }
       }
-    ]
+]
   },
+  // 认证相关路由使用专门的认证布局
   {
     path: '/auth',
     component: () => import('@/layouts/AuthLayout.vue'),
@@ -266,6 +269,7 @@ const frontendRoutes = [
       }
     ]
   },
+  // 兼容旧路由
   {
     path: '/login',
     redirect: '/auth/login'
@@ -276,6 +280,7 @@ const frontendRoutes = [
   }
 ]
 
+// 错误页面路由
 const errorRoutes = [
   {
     path: '/404',
@@ -289,6 +294,7 @@ const errorRoutes = [
   }
 ]
 
+// 路由配置
 const router = createRouter({
   history: createWebHistory(),
   routes: [
@@ -298,43 +304,55 @@ const router = createRouter({
   ]
 })
 
+// 路由守卫
 router.beforeEach((to, from, next) => {
+  // 设置页面标题
   if (to.meta.title) {
     document.title = `${to.meta.title} - 非遗传承系统`
   }
 
   const userStore = useUserStore()
 
-  if (to.matched.some((record) => record.meta.requiresAuth) && !userStore.isLoggedIn) {
+  // 检查是否需要登录权限
+  if (to.matched.some(record => record.meta.requiresAuth) && !userStore.isLoggedIn) {
     next({
-      path: '/auth/login',
+      path: '/login',
       query: { redirect: to.fullPath }
     })
     return
   }
 
+  // 已登录用户的路由控制
   if (userStore.isLoggedIn) {
-    if (to.path === '/login' || to.path === '/auth/login') {
+    // 处理登录页面访问
+    if (to.path === '/login') {
       next(userStore.isUser ? '/home' : '/back/dashboard')
       return
     }
 
     if (!userStore.isUser) {
+      // 非普通用户只能访问后台路由
       if (to.path.startsWith('/back')) {
         next()
       } else {
         next('/back/dashboard')
       }
       return
-    }
-
-    if (to.path.startsWith('/back')) {
-      next('/home')
+    } else {
+      // 普通用户只能访问前台路由
+      if (to.path.startsWith('/back')) {
+        next('/home')
+      } else {
+        next()
+      }
       return
     }
-  } else if (to.path.startsWith('/back')) {
-    next('/auth/login')
-    return
+  } else {
+    // 未登录用户
+    if (to.path.startsWith('/back')) {
+      next('/login')
+      return
+    }
   }
 
   next()
