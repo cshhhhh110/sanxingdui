@@ -4,7 +4,7 @@
 
 - 后端：Spring Boot 3，默认端口 `8889`
 - 前端：Vue 3 + Vite，默认端口 `8800`
-- 数据库：MySQL，默认库名 `heritage_db`
+- 数据库：MySQL，复现建议库名 `sanxingdui_repro`
 - 可选图谱：Neo4j，默认 `bolt://localhost:7687`
 - 可选图片生成服务：默认 `http://127.0.0.1:8001`
 
@@ -31,12 +31,14 @@ git pull origin master
 
 ## 初始化数据库
 
-先创建数据库，再导入根目录的 `heritage_db.sql`：
+先创建一个独立复现库，避免覆盖你本机原项目的 `heritage_db`：
 
 ```powershell
-mysql -u root -p -e "CREATE DATABASE IF NOT EXISTS heritage_db DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;"
-mysql -u root -p heritage_db < heritage_db.sql
+mysql -u root -p -e "CREATE DATABASE IF NOT EXISTS sanxingdui_repro DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;"
+cmd /c "mysql -u root -p sanxingdui_repro < heritage_db.sql"
 ```
+
+PowerShell 不支持 `mysql ... < heritage_db.sql` 这种输入重定向，所以导入 SQL 时要用 `cmd /c "..."`。
 
 ## 配置后端
 
