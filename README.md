@@ -11,7 +11,7 @@
 ## 环境要求
 
 - JDK 17
-- Node.js 18 或更高版本
+- Node.js 20/22 LTS 推荐；Node.js 24 也可运行当前前端依赖
 - MySQL 8.x
 - Git
 - Neo4j 5.x（可选，用于知识图谱增强）
