@@ -371,6 +371,87 @@ INSERT INTO `heritage_item` VALUES ('HI-2025-004', '金杖', '金器', '四川�
 INSERT INTO `heritage_item` VALUES ('HI-2025-005', '青铜大立人像', '青铜器', '四川广汉', '世界同时期最大青铜立人像，集王权、神权于一体的领袖造像。', '通高 2.62 米（人像高 180cm），重约 180 公斤。头戴高冠，身着多层龙纹礼衣，双手环握中空（原应持法器），赤足立于神兽台座。采用分段浇铸法嵌铸而成，是古蜀国蜀王兼大祭司的象征，代表神权与王权合一的最高权威。', 2, 1, '2024-07-12 08:45:00', '2024-07-12 08:45:00', '2025-10-16 15:33:08');
 INSERT INTO `heritage_item` VALUES ('HI-2025-006', '青铜神树（一号神树）', '青铜器', '四川广汉', '中国现存最大单件青铜文物，象征古蜀宇宙观与通天神树，修复耗时近 10 年。', '通高 3.96 米，由底座、树身、神龙三部分组成。底座为三山相连，树身分三层九枝，每枝立一神鸟（共九鸟），一条巨龙沿树干蜿蜒而下。采用分段铸造、铆接、嵌铸复合工艺，出土时破碎为数百片，1986—1996 年修复完成。代表古蜀人 “天地相通、人神共居” 的宇宙观，对应神话中的扶桑、建木。', 2, 1, '2025-10-16 15:33:25', '2024-08-20 10:30:00', '2025-10-16 15:33:09');
 
+ALTER TABLE `heritage_item` ADD COLUMN `site_code` varchar(50) NULL COMMENT '竞赛遗址编码';
+ALTER TABLE `heritage_item` ADD COLUMN `site_name` varchar(50) NULL COMMENT '竞赛遗址名称';
+ALTER TABLE `heritage_item` ADD COLUMN `era_code` varchar(50) NULL COMMENT '竞赛时代编码';
+ALTER TABLE `heritage_item` ADD COLUMN `era_name` varchar(50) NULL COMMENT '竞赛时代名称';
+ALTER TABLE `heritage_item` ADD COLUMN `time_start_year` int NULL COMMENT '开始年份';
+ALTER TABLE `heritage_item` ADD COLUMN `time_end_year` int NULL COMMENT '结束年份';
+ALTER TABLE `heritage_item` ADD COLUMN `craft_codes` varchar(255) NULL COMMENT '工艺编码列表';
+ALTER TABLE `heritage_item` ADD COLUMN `craft_names` varchar(255) NULL COMMENT '工艺名称列表';
+ALTER TABLE `heritage_item` ADD COLUMN `glb_url` varchar(500) NULL COMMENT 'GLB 模型地址';
+ALTER TABLE `heritage_item` ADD COLUMN `symbolic_meaning` varchar(500) NULL COMMENT '象征寓意';
+
+UPDATE `heritage_item`
+SET
+  `site_code` = 'SANXINGDUI',
+  `site_name` = '三星堆遗址',
+  `era_code` = 'LATE_SHU',
+  `era_name` = '古蜀晚期',
+  `time_start_year` = -1200,
+  `time_end_year` = -1000,
+  `craft_codes` = 'GOLD_HAMMERING,MASK_FORMING',
+  `craft_names` = '锤揲成型,面具塑形',
+  `glb_url` = '/glbs/黄金面具残片.glb',
+  `symbolic_meaning` = '神性,高等级身份,黄金崇拜,不朽象征'
+WHERE `id` = 'HI-2025-002';
+
+UPDATE `heritage_item`
+SET
+  `site_code` = 'SANXINGDUI',
+  `site_name` = '三星堆遗址',
+  `era_code` = 'LATE_SHU',
+  `era_name` = '古蜀晚期',
+  `time_start_year` = -1200,
+  `time_end_year` = -1000,
+  `craft_codes` = 'BRONZE_CASTING,SURFACE_DECORATION',
+  `craft_names` = '青铜铸造,表面纹饰处理',
+  `glb_url` = '/glbs/纵目面具.glb',
+  `symbolic_meaning` = '祖先神崇拜,纵目神像,神权威慑,祭祀重器'
+WHERE `id` = 'HI-2025-003';
+
+UPDATE `heritage_item`
+SET
+  `site_code` = 'SANXINGDUI',
+  `site_name` = '三星堆遗址',
+  `era_code` = 'LATE_SHU',
+  `era_name` = '古蜀晚期',
+  `time_start_year` = -1200,
+  `time_end_year` = -1000,
+  `craft_codes` = 'GOLD_HAMMERING,PATTERN_ENGRAVING',
+  `craft_names` = '金箔锤揲,纹饰刻画',
+  `glb_url` = '/glbs/三星堆金杖.glb',
+  `symbolic_meaning` = '王权权杖,通神法器,鱼凫王朝象征'
+WHERE `id` = 'HI-2025-004';
+
+UPDATE `heritage_item`
+SET
+  `site_code` = 'SANXINGDUI',
+  `site_name` = '三星堆遗址',
+  `era_code` = 'LATE_SHU',
+  `era_name` = '古蜀晚期',
+  `time_start_year` = -1200,
+  `time_end_year` = -1000,
+  `craft_codes` = 'SEGMENT_CASTING,ASSEMBLY_CASTING',
+  `craft_names` = '分段浇铸,嵌铸工艺',
+  `glb_url` = '/glbs/青铜大立人像.glb',
+  `symbolic_meaning` = '王权与神权合一,大祭司形象,最高权威象征'
+WHERE `id` = 'HI-2025-005';
+
+UPDATE `heritage_item`
+SET
+  `site_code` = 'SANXINGDUI',
+  `site_name` = '三星堆遗址',
+  `era_code` = 'LATE_SHU',
+  `era_name` = '古蜀晚期',
+  `time_start_year` = -1200,
+  `time_end_year` = -1000,
+  `craft_codes` = 'SEGMENT_CASTING,ASSEMBLY_CASTING,RIVETING',
+  `craft_names` = '分段铸造,嵌铸工艺,铆接工艺',
+  `glb_url` = '/glbs/青铜神树.glb',
+  `symbolic_meaning` = '通天神树,天地相通,神权祭祀,宇宙观象征'
+WHERE `id` = 'HI-2025-006';
+
 -- ----------------------------
 -- Table structure for inheritor
 -- ----------------------------

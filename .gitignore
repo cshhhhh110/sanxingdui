@@ -14,8 +14,19 @@ vue3/node_modules/
 *.log
 vite-*.log
 
-# === 上传文件（本地测试数据不提交） ===
-springboot/files/
+# === 上传文件 ===
+# 只提交演示复现需要的公开图片素材；本地上传、视频、大文件继续忽略
+springboot/files/*
+!springboot/files/bussiness/
+!springboot/files/bussiness/**/
+!springboot/files/bussiness/**/*.jpg
+!springboot/files/bussiness/**/*.jpeg
+!springboot/files/bussiness/**/*.png
+!springboot/files/bussiness/**/*.webp
+springboot/files/bussiness/**/*.mp4
+springboot/files/bussiness/**/*.mov
+springboot/files/bussiness/**/*.avi
+springboot/files/bussiness/**/*.pdf
 
 # === 本地私有配置（不要提交真实密码/API Key） ===
 springboot/src/main/resources/application.yml

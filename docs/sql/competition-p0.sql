@@ -19,7 +19,7 @@ SET
     time_end_year = -1000,
     craft_codes = 'SEGMENT_CASTING,ASSEMBLY_CASTING,RIVETING',
     craft_names = '分段铸造,嵌铸工艺,铆接工艺',
-    glb_url = '/glbs/纵目面具.glb',
+    glb_url = '/glbs/青铜神树.glb',
     symbolic_meaning = '通天神树,天地相通,神权祭祀,宇宙观象征'
 WHERE id = 'HI-2025-006';
 
@@ -33,7 +33,7 @@ SET
     time_end_year = -1000,
     craft_codes = 'BRONZE_CASTING,SURFACE_DECORATION',
     craft_names = '青铜铸造,表面纹饰处理',
-    glb_url = '/glbs/青铜大立人像.glb',
+    glb_url = '/glbs/纵目面具.glb',
     symbolic_meaning = '祖先神崇拜,纵目神像,神权威慑,祭祀重器'
 WHERE id = 'HI-2025-003';
 
@@ -47,7 +47,7 @@ SET
     time_end_year = -1000,
     craft_codes = 'SEGMENT_CASTING,ASSEMBLY_CASTING',
     craft_names = '分段浇铸,嵌铸工艺',
-    glb_url = '/glbs/青铜神树.glb',
+    glb_url = '/glbs/青铜大立人像.glb',
     symbolic_meaning = '王权与神权合一,大祭司形象,最高权威象征'
 WHERE id = 'HI-2025-005';
 

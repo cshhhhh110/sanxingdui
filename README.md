@@ -40,6 +40,12 @@ cmd /c "mysql -u root -p sanxingdui_repro < heritage_db.sql"
 
 PowerShell 不支持 `mysql ... < heritage_db.sql` 这种输入重定向，所以导入 SQL 时要用 `cmd /c "..."`。
 
+`heritage_db.sql` 已包含时空探索需要的竞赛增量字段和 5 件核心文物数据。如果你是在旧版本仓库下已经导入过数据库，再拉取新版代码后只需要补跑一次：
+
+```powershell
+cmd /c "mysql -u root -p sanxingdui_repro < docs\sql\competition-p0.sql"
+```
+
 ## 配置后端
 
 真实配置文件不提交到 GitHub。每个开发者在本机复制模板：
@@ -90,6 +96,8 @@ Vite 已配置代理：
 
 - `/api` -> `http://localhost:8889`
 - `/files` -> `http://localhost:8889`
+
+仓库内已保留首页、课程、活动、文物、商城展示需要的图片素材；课程视频属于大文件，未纳入 Git，缺失时不影响主要页面复现。
 
 ## 可选：Neo4j 图谱
 

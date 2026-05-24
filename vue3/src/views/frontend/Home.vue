@@ -203,6 +203,7 @@ const inheritors = ref([])
 const activities = ref([])
 const courses = ref([])
 const timelineRef = ref(null)
+let cleanupTimelineDrag = () => {}
 
 onMounted(async () => {
   try {
@@ -288,12 +289,17 @@ onMounted(async () => {
   el.addEventListener('mouseup', mouseUp)
   el.addEventListener('mousemove', mouseMove)
 
-  onUnmounted(() => {
+  cleanupTimelineDrag = () => {
     el.removeEventListener('mousedown', mouseDown)
     el.removeEventListener('mouseleave', mouseLeave)
     el.removeEventListener('mouseup', mouseUp)
     el.removeEventListener('mousemove', mouseMove)
-  })
+    cleanupTimelineDrag = () => {}
+  }
+})
+
+onUnmounted(() => {
+  cleanupTimelineDrag()
 })
 
 const sortedActivities = computed(() => {
