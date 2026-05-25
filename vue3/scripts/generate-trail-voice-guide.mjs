@@ -16,6 +16,7 @@ const SPEED = Number(process.env.TRAIL_TTS_SPEED || 1.0)
 const TTS_DELAY_MS = Number(process.env.TRAIL_TTS_DELAY_MS || 5000)
 const BATCH_LIMIT = Number(process.env.TRAIL_TTS_BATCH_LIMIT || 8)
 const DRY_RUN = ['1', 'true', 'yes'].includes(String(process.env.TRAIL_TTS_DRY_RUN || '').toLowerCase())
+const SKIP_MISSING = ['1', 'true', 'yes'].includes(String(process.env.TRAIL_TTS_SKIP_MISSING || '').toLowerCase())
 
 const TYPE_LABELS = {
   artifact: '相关文物',
@@ -341,6 +342,11 @@ async function main() {
         continue
       }
 
+      if (SKIP_MISSING) {
+        process.stdout.write(`Skip missing ${entry.key} [${voice}]\n`)
+        continue
+      }
+
       if (generatedCount >= BATCH_LIMIT) {
         process.stdout.write(`Pending ${entry.key} [${voice}]\n`)
         continue
@@ -362,8 +368,17 @@ async function main() {
       }
     }
 
+    const readySources = Object.fromEntries(
+      readyVoices
+        .map((voice) => [voice, entry.sources?.[voice]])
+        .filter(([, source]) => Boolean(source?.wav))
+    )
+    const defaultVoice = readySources.default ? 'default' : readyVoices[0]
+
     manifestEntries.push({
       ...entry,
+      audioUrl: defaultVoice ? readySources[defaultVoice]?.wav || '' : '',
+      sources: readySources,
       ready: readyVoices.length > 0,
       readyVoices
     })

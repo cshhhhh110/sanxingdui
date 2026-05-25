@@ -1,28 +1,45 @@
 <template>
   <main class="time-space-trail" :class="{ 'time-space-trail--compact': activeScene > 1, 'time-space-trail--immersive': activeScene === 3 }">
-    <section class="voice-guide-panel" :class="{ 'voice-guide-panel--active': voiceGuideEnabled, 'voice-guide-panel--loading': voiceGuideLoading }" aria-label="玄喵语音向导">
+    <section class="voice-guide-panel" :class="{ 'voice-guide-panel--active': voiceGuideEnabled, 'voice-guide-panel--loading': voiceGuideLoading }" aria-label="玄喵陪游">
       <div class="voice-guide-panel__mark" aria-hidden="true">
         <i :class="voiceGuideLoading ? 'fas fa-spinner fa-spin' : voiceGuidePlaying ? 'fas fa-volume-high' : 'fas fa-headphones'"></i>
       </div>
       <div class="voice-guide-panel__copy">
         <div class="voice-guide-panel__head">
-          <strong>玄喵语音向导</strong>
-          <span>{{ voiceGuideStatusText }}</span>
+          <strong>玄喵陪游</strong>
+          <span>{{ xuanmiaoTrailMode }}</span>
         </div>
-        <p>{{ currentNarrationText || '开启后，玄喵会根据你所在的展线阶段进行克制讲解。' }}</p>
+        <p>{{ xuanmiaoCompanionLine }}</p>
       </div>
       <div class="voice-guide-panel__actions">
-        <button
-          v-if="!voiceGuideEnabled"
-          class="voice-guide-button voice-guide-button--primary showcase-button-hover"
-          type="button"
-          @click="enableVoiceGuide"
-        >
-          开启语音向导
-        </button>
+        <template v-if="!voiceGuideEnabled">
+          <button
+            class="voice-guide-button voice-guide-button--primary showcase-button-hover"
+            type="button"
+            @click="enableVoiceGuide"
+          >
+            开启陪游
+          </button>
+          <button
+            class="voice-guide-button voice-guide-button--ghost showcase-button-hover"
+            type="button"
+            :disabled="!selectedArtifact"
+            @click="askXuanmiaoFromCompanion"
+          >
+            问玄喵
+          </button>
+        </template>
         <template v-else>
           <button class="voice-guide-button showcase-button-hover" type="button" @click="toggleVoiceGuidePause">
             {{ voiceGuidePaused ? '继续' : '暂停' }}
+          </button>
+          <button
+            class="voice-guide-button showcase-button-hover"
+            type="button"
+            :disabled="!selectedArtifact"
+            @click="askXuanmiaoFromCompanion"
+          >
+            问玄喵
           </button>
           <button class="voice-guide-button voice-guide-button--ghost showcase-button-hover" type="button" @click="closeVoiceGuide">
             关闭
@@ -30,6 +47,34 @@
         </template>
       </div>
     </section>
+
+    <Transition name="trail-command">
+      <section v-if="trailCommandTransition.visible" class="trail-command-overlay" aria-live="polite">
+        <div class="trail-command-overlay__panel">
+          <div class="trail-command-overlay__mark" aria-hidden="true">
+            <i class="fas fa-route"></i>
+          </div>
+          <div class="trail-command-overlay__copy">
+            <span>玄喵带路</span>
+            <h2>{{ trailCommandTransition.title }}</h2>
+            <p>{{ trailCommandTransition.line }}</p>
+          </div>
+          <div class="trail-command-overlay__steps" aria-hidden="true">
+            <span
+              v-for="(step, index) in trailCommandTransition.steps"
+              :key="step.key"
+              :class="{
+                'is-active': index === trailCommandTransition.activeIndex,
+                'is-done': index < trailCommandTransition.activeIndex
+              }"
+            >
+              <i>{{ index + 1 }}</i>
+              <small>{{ step.label }}</small>
+            </span>
+          </div>
+        </div>
+      </section>
+    </Transition>
 
     <section v-if="activeScene === 1" class="trail-hero">
       <div class="hero-copy showcase-enter" style="--delay: 0s">
@@ -82,6 +127,30 @@
       </button>
     </nav>
 
+    <section class="trail-progress-card showcase-enter" style="--delay: 0.12s" aria-label="展线进度">
+      <div class="trail-progress-card__head">
+        <span>展线进度</span>
+        <strong>{{ activeScene }}/{{ sceneSteps.length }}</strong>
+      </div>
+      <div class="trail-progress-card__bar" aria-hidden="true">
+        <i :style="{ width: `${trailSceneProgressPercent}%` }"></i>
+      </div>
+      <div class="trail-progress-card__steps">
+        <span
+          v-for="item in trailProgressItems"
+          :key="item.id"
+          :class="{
+            'is-done': item.id < activeScene,
+            'is-active': item.id === activeScene
+          }"
+        >
+          <em>{{ item.index }}</em>
+          <small>{{ item.label }}</small>
+        </span>
+      </div>
+      <p>{{ trailProgressHint }}</p>
+    </section>
+
     <section v-if="activeScene > 1" class="trail-stagebar showcase-enter" style="--delay: 0.06s">
       <div class="trail-stagebar__copy">
         <p class="trail-stagebar__kicker">{{ activeSceneMeta?.title || '展线继续' }}</p>
@@ -105,7 +174,7 @@
     </section>
 
     <section class="trail-shell" :class="{ 'trail-shell--immersive': activeScene === 3, 'trail-shell--guide': activeScene === 4 }">
-      <section v-show="activeScene === 1" class="filter-panel showcase-enter" style="--delay: 0.12s">
+      <section v-show="activeScene === 1" ref="filterSectionRef" class="filter-panel showcase-enter" style="--delay: 0.12s">
         <div class="panel-head">
           <div>
             <p class="panel-kicker">第一幕 · 时空定点</p>
@@ -113,6 +182,95 @@
           </div>
           <span class="panel-badge">{{ isLoading ? '线索浮现中' : '坐标已落定' }}</span>
         </div>
+
+        <div class="pit-map-layout">
+          <article class="pit-map-card">
+            <div class="pit-map-card__head">
+              <div>
+                <p class="panel-kicker">遗址俯瞰入口</p>
+                <h3>从祭祀坑与代表文物进入展线</h3>
+              </div>
+              <span class="pit-map-card__badge">{{ activePitCode || '俯瞰图' }}</span>
+            </div>
+            <div class="pit-map-scroll" aria-label="三星堆遗址重点文物模型位置示意图">
+              <div class="pit-map-stage">
+                <img class="pit-map-image" src="/images/trail/pit-map.png" alt="三星堆遗址重点文物模型位置示意图" />
+                <button
+                  v-for="spot in pitMapHotspots"
+                  :key="spot.key"
+                  class="pit-hotspot"
+                  :class="[
+                    `pit-hotspot--${spot.kind}`,
+                    {
+                      'pit-hotspot--active': activePitCode === spot.pitCode || selectedArtifactId === spot.entityId,
+                      'pit-hotspot--linked': Boolean(spot.entityId),
+                      'pit-hotspot--pressed': pitHotspotFeedbackKey === spot.key
+                    }
+                  ]"
+                  :style="getPitHotspotStyle(spot)"
+                  type="button"
+                  :aria-label="spot.label"
+                  @click="selectPitHotspot(spot)"
+                >
+                  <span>{{ spot.shortLabel }}</span>
+                </button>
+              </div>
+            </div>
+          </article>
+
+          <aside
+            :key="activePitInfo.pitCode || 'map'"
+            class="pit-map-inspector"
+            :class="{ 'pit-map-inspector--pulse': Boolean(pitHotspotFeedbackKey) }"
+          >
+            <p class="panel-kicker">当前空间线索</p>
+            <div class="pit-map-inspector__code">{{ activePitInfo.pitCode || 'MAP' }}</div>
+            <h3>{{ activePitInfo.title }}</h3>
+            <figure
+              v-if="activePitInfo.image"
+              class="pit-map-inspector__figure"
+              :class="{ 'pit-map-inspector__figure--portrait': activePitInfo.imageLayout === 'portrait' }"
+            >
+              <img :src="activePitInfo.image" :alt="activePitInfo.imageAlt || activePitInfo.title" loading="lazy" />
+              <figcaption>{{ activePitInfo.imageCaption || '科普导览素材' }}</figcaption>
+            </figure>
+            <p>{{ activePitInfo.description }}</p>
+            <div class="pit-map-inspector__tags">
+              <span v-for="tag in activePitInfo.tags" :key="tag">{{ tag }}</span>
+            </div>
+            <div class="pit-map-inspector__guide">
+              <strong>{{ activePitInfo.artifacts.some((item) => item.entityId) ? '可进入代表文物' : '空间线索已记录' }}</strong>
+              <small>{{ activePitInfo.artifacts.some((item) => item.entityId) ? '沿这个坑位进入第二幕展线' : '先作为祭祀坑空间背景保留' }}</small>
+            </div>
+            <div class="pit-map-inspector__artifacts">
+              <button
+                v-for="artifact in activePitInfo.artifacts"
+                :key="artifact.name"
+                class="pit-artifact-link showcase-button-hover"
+                :class="{ 'pit-artifact-link--disabled': !artifact.entityId }"
+                type="button"
+                @click="enterPitArtifact(artifact)"
+              >
+                <span v-if="artifact.image" class="pit-artifact-link__thumb">
+                  <img :src="artifact.image" :alt="artifact.name" loading="lazy" />
+                </span>
+                <span class="pit-artifact-link__copy">
+                  <strong>{{ artifact.name }}</strong>
+                  <small>{{ artifact.entityId ? '进入展线' : artifact.statusText || '空间线索' }}</small>
+                </span>
+              </button>
+            </div>
+          </aside>
+        </div>
+
+        <div class="filter-zone filter-zone--real">
+          <div class="filter-zone__head">
+            <div>
+              <p class="panel-kicker">真实筛选</p>
+              <h3>用已有数据缩小文物范围</h3>
+            </div>
+            <span>会改变结果</span>
+          </div>
 
         <div class="filter-group">
           <label>时代</label>
@@ -192,11 +350,47 @@
           </div>
         </div>
 
+        </div>
+
         <div v-if="meaningFocus" class="meaning-focus">
           <span>当前寓意追踪：{{ meaningFocus }}</span>
           <button class="meaning-clear showcase-button-hover" type="button" @click="meaningFocus = ''">
             清除
           </button>
+        </div>
+
+        <div class="guide-clue-panel">
+          <div class="guide-clue-head">
+            <div>
+              <p class="panel-kicker">导览线索</p>
+              <h3>从坑位、器类和象征角度继续看</h3>
+            </div>
+            <span>空间线索 / 可筛选</span>
+          </div>
+          <div
+            v-for="group in guideClueGroups"
+            :key="group.key"
+            class="guide-clue-group"
+          >
+            <label>{{ group.label }}</label>
+            <div class="guide-clue-row">
+              <button
+                v-for="clue in group.items"
+                :key="`${group.key}-${clue.value}`"
+                class="guide-clue-chip showcase-button-hover"
+                :class="{
+                  active: isGuideClueActive(group, clue),
+                  'guide-clue-chip--filterable': clue.mode === 'filterable',
+                  'guide-clue-chip--placeholder': clue.mode === 'guideOnly'
+                }"
+                type="button"
+                @click="selectGuideClue(group, clue)"
+              >
+                <span>{{ clue.label }}</span>
+                <small>{{ clue.mode === 'filterable' ? '可筛选' : '空间线索' }}</small>
+              </button>
+            </div>
+          </div>
         </div>
 
         <p class="filter-summary">{{ resultNarrative }}</p>
@@ -612,6 +806,7 @@
                   </div>
                   <div class="message-stack">
                     <div class="message-bubble">
+                      <span v-if="item.role === 'guide'" class="message-guide-label">玄喵提示</span>
                       <p v-for="line in item.content" :key="line">{{ line }}</p>
                     </div>
                     <time>{{ item.time }}</time>
@@ -636,23 +831,39 @@
                 </article>
               </div>
 
-              <article v-if="showQuizPromo" class="quiz-promo-card showcase-enter" aria-label="答题赢证书推荐">
-                <button class="quiz-promo-close" type="button" aria-label="关闭答题推荐" @click="dismissQuizPromo">×</button>
-                <div class="quiz-promo-mark">
-                  <i class="fas fa-award"></i>
+              <article v-if="showTrailLoopNudge" class="trail-loop-nudge showcase-enter" aria-label="换一条线索提示">
+                <div>
+                  <strong>想换个线索继续看，也可以回到第一幕。</strong>
+                  <span>当前文物和讲解会保留，等你问完这一轮再换入口也来得及。</span>
                 </div>
-                <div class="quiz-promo-copy">
-                  <p class="quiz-promo-kicker">玄喵小挑战</p>
-                  <h4>听懂了这件文物？来试试答题赢证书</h4>
-                  <p>完成挑战模式，80 分及以上可查看专属证书。</p>
-                  <span>题目围绕三星堆文化与展线知识，不会打断当前讲解。</span>
+                <button class="trail-loop-nudge-action" type="button" @click="returnToTrailStart">
+                  换线索
+                </button>
+                <button class="trail-loop-nudge-close" type="button" aria-label="关闭换线索提示" @click="dismissTrailNextCard">
+                  继续问
+                </button>
+              </article>
+
+              <article v-if="showTrailNextCard" class="trail-next-card showcase-enter" aria-label="展线下一步推荐">
+                <button class="trail-next-close" type="button" aria-label="关闭下一步推荐" @click="dismissTrailNextCard">×</button>
+                <div class="trail-next-mark">
+                  <i :class="showQuizPromo ? 'fas fa-award' : 'fas fa-route'"></i>
                 </div>
-                <div class="quiz-promo-actions">
-                  <button class="quiz-promo-primary showcase-button-hover" type="button" @click="goQuizChallenge">
+                <div class="trail-next-copy">
+                  <p class="trail-next-kicker">{{ showQuizPromo ? '玄喵小挑战' : '展线下一步' }}</p>
+                  <h4>{{ showQuizPromo ? '听懂了这件文物？来试试答题赢证书' : '还想从另一个线索重新看一遍吗？' }}</h4>
+                  <p>{{ showQuizPromo ? '完成挑战模式，80 分及以上可查看专属证书。' : '你可以回到祭祀坑地图或线索标签，换一个入口继续走展线。' }}</p>
+                  <span>{{ showQuizPromo ? '题目围绕三星堆文化与展线知识，不会打断当前讲解。' : '当前文物和讲解不会丢失，回来后仍能接着问玄喵。' }}</span>
+                </div>
+                <div class="trail-next-actions">
+                  <button v-if="showQuizPromo" class="trail-next-primary showcase-button-hover" type="button" @click="goQuizChallenge">
                     去答题赢证书
                   </button>
-                  <button class="quiz-promo-secondary" type="button" @click="dismissQuizPromo">
-                    继续听玄喵讲
+                  <button class="trail-next-secondary trail-next-secondary--route showcase-button-hover" type="button" @click="returnToTrailStart">
+                    再走一条线索
+                  </button>
+                  <button class="trail-next-secondary" type="button" @click="dismissTrailNextCard">
+                    {{ showQuizPromo ? '继续听玄喵讲' : '继续问玄喵' }}
                   </button>
                 </div>
               </article>
@@ -741,6 +952,264 @@ const TYPE_COLORS = {
   ritual: { fill: '#3e665f', stroke: '#8bd0c1', label: '#dcf6f1' }
 }
 
+const PIT_MAP_DATA = [
+  {
+    pitCode: 'K1',
+    title: 'K1 一号祭祀坑',
+    description: '一号祭祀坑以金杖等器物为代表，适合作为古蜀王权、身份标识与祭祀权威的入口。',
+    image: '/images/trail/artifacts/artifact-HI-2025-004-gold-scepter.jpg',
+    imageAlt: '金杖导览图',
+    imageCaption: '代表文物：金杖',
+    tags: ['重点坑位', '金杖', '王权象征', '仪式权威'],
+    artifacts: [
+      {
+        name: '金杖',
+        entityId: 'HI-2025-004',
+        image: '/images/trail/artifacts/artifact-HI-2025-004-gold-scepter.jpg'
+      }
+    ]
+  },
+  {
+    pitCode: 'K2',
+    title: 'K2 二号祭祀坑',
+    description: '二号祭祀坑连接青铜神树、青铜大立人像和青铜纵目面具，是进入三星堆青铜文明最丰富的一处入口。',
+    image: '/images/trail/artifacts/artifact-HI-2025-006-bronze-sacred-tree.jpg',
+    imageAlt: '青铜神树导览图',
+    imageCaption: '代表文物：青铜神树、青铜大立人像、青铜纵目面具',
+    tags: ['重点坑位', '青铜器群', '神权祭祀', '宇宙观'],
+    artifacts: [
+      {
+        name: '青铜神树',
+        entityId: 'HI-2025-006',
+        image: '/images/trail/artifacts/artifact-HI-2025-006-bronze-sacred-tree.jpg'
+      },
+      {
+        name: '青铜大立人像',
+        entityId: 'HI-2025-005',
+        image: '/images/trail/artifacts/artifact-HI-2025-005-bronze-standing-figure.jpg'
+      },
+      {
+        name: '青铜纵目面具',
+        entityId: 'HI-2025-003',
+        image: '/images/trail/artifacts/artifact-HI-2025-003-bronze-vertical-eye-mask.jpg'
+      }
+    ]
+  },
+  {
+    pitCode: 'K3',
+    title: 'K3 三号祭祀坑',
+    description: '三号祭祀坑以金面罩、青铜尊、青铜罍等线索为主，适合观察金器与大型礼器如何共同构成祭祀陈设。',
+    image: '/images/trail/pits/pit-K3-bronze-vessels-gold-mask.image2.png',
+    imageLayout: 'portrait',
+    imageAlt: 'K3 金面罩与大型铜器真实感生成图',
+    imageCaption: '真实感生成：金面罩与大型铜器线索',
+    tags: ['金面罩', '青铜尊', '青铜罍', '礼器组合'],
+    artifacts: [
+      { name: '金面罩', entityId: '', statusText: '空间线索', image: '/images/trail/pits/pit-K3-bronze-vessels-gold-mask.image2.png' },
+      { name: '青铜尊、青铜罍', entityId: '', statusText: '补充线索', image: '/images/trail/pits/pit-K3-bronze-vessels-gold-mask.image2.png' }
+    ]
+  },
+  {
+    pitCode: 'K4',
+    title: 'K4 四号祭祀坑',
+    description: '四号祭祀坑关联铜扭头跪坐人像等人物形象线索，可补足“谁在祭祀、以什么姿态祭祀”的叙事。',
+    image: '/images/trail/pits/pit-K4-kneeling-twisted-head-figure.image2.png',
+    imageLayout: 'portrait',
+    imageAlt: 'K4 铜扭头跪坐人像真实感生成图',
+    imageCaption: '真实感生成：祭祀人物形象',
+    tags: ['铜扭头跪坐人像', '人物形象', '祭祀姿态', '身份表达'],
+    artifacts: [
+      { name: '铜扭头跪坐人像', entityId: '', statusText: '空间线索', image: '/images/trail/pits/pit-K4-kneeling-twisted-head-figure.image2.png' },
+      { name: '玉琮等玉石器线索', entityId: '', statusText: '补充线索', image: '/images/trail/pits/pit-K4-kneeling-twisted-head-figure.image2.png' }
+    ]
+  },
+  {
+    pitCode: 'K5',
+    title: 'K5 五号祭祀坑',
+    description: '五号祭祀坑以金面具为代表，突出黄金崇拜、高等级身份与小型坑位的出土特征。',
+    image: '/images/trail/artifacts/artifact-HI-2025-002-gold-mask.jpg',
+    imageAlt: '金面具导览图',
+    imageCaption: '代表文物：金面具',
+    tags: ['重点坑位', '金面具', '鸟形金饰', '黄金崇拜'],
+    artifacts: [
+      {
+        name: '金面具',
+        entityId: 'HI-2025-002',
+        image: '/images/trail/artifacts/artifact-HI-2025-002-gold-mask.jpg'
+      },
+      { name: '鸟形金饰、金珠', entityId: '', statusText: '补充线索', image: '/images/trail/artifacts/artifact-HI-2025-002-gold-mask.jpg' }
+    ]
+  },
+  {
+    pitCode: 'K6',
+    title: 'K6 六号祭祀坑',
+    description: '六号祭祀坑关联木箱、玉刀、朱砂和丝织品残痕等特殊遗存，提醒观众关注那些不容易保存的材料。',
+    image: '/images/trail/pits/pit-K6-wooden-box-jade-knife.image2.png',
+    imageAlt: 'K6 木箱与玉刀真实感生成图',
+    imageCaption: '真实感生成：木箱、玉刀与有机材料线索',
+    tags: ['木箱', '玉刀', '朱砂', '丝织品残痕'],
+    artifacts: [
+      { name: '木箱、玉刀', entityId: '', statusText: '空间线索', image: '/images/trail/pits/pit-K6-wooden-box-jade-knife.image2.png' },
+      { name: '朱砂与丝织品残痕', entityId: '', statusText: '补充线索', image: '/images/trail/pits/pit-K6-wooden-box-jade-knife.image2.png' }
+    ]
+  },
+  {
+    pitCode: 'K7',
+    title: 'K7 七号祭祀坑',
+    description: '七号祭祀坑以龟背形网格状铜器和玉石器组合为重要线索，适合观察特殊器形、结构和材料的并置。',
+    image: '/images/trail/pits/pit-K7-grid-bronze-jade.image2.png',
+    imageAlt: 'K7 龟背形网格状铜器真实感生成图',
+    imageCaption: '真实感生成：网格铜器与玉石器组合',
+    tags: ['龟背形网格状铜器', '玉石器', '特殊器形', '材料组合'],
+    artifacts: [
+      { name: '龟背形网格状铜器', entityId: '', statusText: '空间线索', image: '/images/trail/pits/pit-K7-grid-bronze-jade.image2.png' },
+      { name: '玉石器组合', entityId: '', statusText: '补充线索', image: '/images/trail/pits/pit-K7-grid-bronze-jade.image2.png' }
+    ]
+  },
+  {
+    pitCode: 'K8',
+    title: 'K8 八号祭祀坑',
+    description: '八号祭祀坑集中呈现顶尊蛇身人像、铜神坛、铜神兽等神话性铜器组合，是理解三星堆想象力的重要入口。',
+    image: '/images/trail/pits/pit-K8-zun-snake-body-bronze-altar.image2.png',
+    imageLayout: 'portrait',
+    imageAlt: 'K8 顶尊蛇身人像与铜神坛真实感生成图',
+    imageCaption: '真实感生成：大型神话性铜器组合',
+    tags: ['顶尊蛇身人像', '铜神坛', '铜神兽', '神话组合'],
+    artifacts: [
+      { name: '顶尊蛇身人像', entityId: '', statusText: '空间线索', image: '/images/trail/pits/pit-K8-zun-snake-body-bronze-altar.image2.png' },
+      { name: '铜神坛、铜神兽', entityId: '', statusText: '补充线索', image: '/images/trail/pits/pit-K8-zun-snake-body-bronze-altar.image2.png' }
+    ]
+  }
+]
+
+const PIT_MAP_HOTSPOTS = [
+  { key: 'pit-k1', kind: 'pit', pitCode: 'K1', shortLabel: 'K1', label: '一号祭祀坑 K1', x: 50.3, y: 39.8, w: 3.3, h: 6.2 },
+  { key: 'pit-k2', kind: 'pit', pitCode: 'K2', shortLabel: 'K2', label: '二号祭祀坑 K2', x: 60.4, y: 53, w: 3.5, h: 6.4 },
+  { key: 'pit-k3', kind: 'pit', pitCode: 'K3', shortLabel: 'K3', label: '三号祭祀坑 K3', x: 57.7, y: 34, w: 3.1, h: 5.6 },
+  { key: 'pit-k4', kind: 'pit', pitCode: 'K4', shortLabel: 'K4', label: '四号祭祀坑 K4', x: 49.6, y: 32.4, w: 3.1, h: 5.6 },
+  { key: 'pit-k5', kind: 'pit', pitCode: 'K5', shortLabel: 'K5', label: '五号祭祀坑 K5', x: 53.6, y: 52.5, w: 3.4, h: 6.2 },
+  { key: 'pit-k6', kind: 'pit', pitCode: 'K6', shortLabel: 'K6', label: '六号祭祀坑 K6', x: 47.7, y: 50.7, w: 3.1, h: 5.8 },
+  { key: 'pit-k7', kind: 'pit', pitCode: 'K7', shortLabel: 'K7', label: '七号祭祀坑 K7', x: 47.7, y: 59.5, w: 3.1, h: 5.8 },
+  { key: 'pit-k8', kind: 'pit', pitCode: 'K8', shortLabel: 'K8', label: '八号祭祀坑 K8', x: 61.8, y: 62, w: 3.1, h: 5.8 },
+  { key: 'artifact-staff', kind: 'artifact', pitCode: 'K1', entityId: 'HI-2025-004', shortLabel: '金杖', label: '金杖，进入一号祭祀坑展线', x: 31.2, y: 33, w: 11.5, h: 9.8 },
+  { key: 'artifact-tree', kind: 'artifact', pitCode: 'K2', entityId: 'HI-2025-006', shortLabel: '神树', label: '青铜神树，进入二号祭祀坑展线', x: 69.5, y: 35.4, w: 12.4, h: 13 },
+  { key: 'artifact-standing', kind: 'artifact', pitCode: 'K2', entityId: 'HI-2025-005', shortLabel: '立人', label: '青铜大立人像，进入二号祭祀坑展线', x: 69.5, y: 51, w: 12.5, h: 11.8 },
+  { key: 'artifact-mask-eye', kind: 'artifact', pitCode: 'K2', entityId: 'HI-2025-003', shortLabel: '纵目', label: '青铜纵目面具，进入二号祭祀坑展线', x: 69.5, y: 66, w: 12.5, h: 11.6 },
+  { key: 'artifact-gold-mask', kind: 'artifact', pitCode: 'K5', entityId: 'HI-2025-002', shortLabel: '金面具', label: '金面具，进入五号祭祀坑展线', x: 46.5, y: 73, w: 12, h: 10.5 }
+]
+
+const TRAIL_COMMAND_NAV_WORDS = [
+  '带我',
+  '带路',
+  '去',
+  '看',
+  '看看',
+  '想看',
+  '我要看',
+  '打开',
+  '进入',
+  '跳到',
+  '切到',
+  '转到',
+  '回到',
+  '回',
+  '导览'
+]
+
+const TRAIL_COMMAND_ARTIFACTS = [
+  {
+    entityId: 'HI-2025-002',
+    title: '金面具',
+    pitCode: 'K5',
+    aliases: ['完整金面具', '金面具', '黄金面具', '五号坑金面具', '5号坑金面具', 'k5金面具']
+  },
+  {
+    entityId: 'HI-2025-003',
+    title: '青铜纵目面具',
+    pitCode: 'K2',
+    aliases: ['青铜纵目面具', '纵目面具', '纵目', '千里眼面具']
+  },
+  {
+    entityId: 'HI-2025-004',
+    title: '金杖',
+    pitCode: 'K1',
+    aliases: ['金杖', '黄金权杖', '权杖', '一号坑金杖', 'k1金杖']
+  },
+  {
+    entityId: 'HI-2025-005',
+    title: '青铜大立人像',
+    pitCode: 'K2',
+    aliases: ['青铜大立人像', '大立人', '立人像', '立人']
+  },
+  {
+    entityId: 'HI-2025-006',
+    title: '青铜神树',
+    pitCode: 'K2',
+    aliases: ['青铜神树', '神树', '通天神树']
+  }
+]
+
+const TRAIL_COMMAND_PITS = [
+  { pitCode: 'K1', title: '一号祭祀坑', aliases: ['K1', 'k1', '一号坑', '1号坑', '一号祭祀坑', '第一号坑'] },
+  { pitCode: 'K2', title: '二号祭祀坑', aliases: ['K2', 'k2', '二号坑', '2号坑', '二号祭祀坑', '第二号坑'] },
+  { pitCode: 'K3', title: '三号祭祀坑', aliases: ['K3', 'k3', '三号坑', '3号坑', '三号祭祀坑', '第三号坑'] },
+  { pitCode: 'K4', title: '四号祭祀坑', aliases: ['K4', 'k4', '四号坑', '4号坑', '四号祭祀坑', '第四号坑'] },
+  { pitCode: 'K5', title: '五号祭祀坑', aliases: ['K5', 'k5', '五号坑', '5号坑', '五号祭祀坑', '第五号坑'] },
+  { pitCode: 'K6', title: '六号祭祀坑', aliases: ['K6', 'k6', '六号坑', '6号坑', '六号祭祀坑', '第六号坑'] },
+  { pitCode: 'K7', title: '七号祭祀坑', aliases: ['K7', 'k7', '七号坑', '7号坑', '七号祭祀坑', '第七号坑'] },
+  { pitCode: 'K8', title: '八号祭祀坑', aliases: ['K8', 'k8', '八号坑', '8号坑', '八号祭祀坑', '第八号坑'] }
+]
+
+const TRAIL_COMMAND_GRAPH_TARGETS = [
+  { type: 'craft', title: '工艺', aliases: ['工艺', '技艺', '铸造', '锻造', '金箔', '鎏金', '焊接'] },
+  { type: 'site', title: '遗址', aliases: ['遗址', '出土地', '地点', '三星堆遗址', '祭祀坑'] },
+  { type: 'era', title: '时代', aliases: ['时代', '年代', '时期', '古蜀晚期', '古蜀'] },
+  { type: 'material', title: '材质', aliases: ['材质', '材料', '青铜', '黄金', '玉石', '木器'] },
+  { type: 'motif', title: '母题', aliases: ['母题', '纹样', '图案'] },
+  { type: 'ritual', title: '仪式', aliases: ['仪式', '祭祀', '礼仪'] },
+  { type: 'meaning', title: '象征', aliases: ['象征', '寓意', '意义', '神权', '王权', '通天', '宇宙观'] },
+  { type: 'artifact', title: '相关文物', aliases: ['相关文物', '文物节点', '别的文物'] }
+]
+
+const GUIDE_CLUE_GROUPS = [
+  {
+    key: 'pit',
+    label: '祭祀坑',
+    items: ['K1', 'K2', 'K3', 'K4', 'K5', 'K6', 'K7', 'K8'].map((pitCode) => ({
+      label: pitCode,
+      value: pitCode,
+      mode: 'guideOnly'
+    }))
+  },
+  {
+    key: 'category',
+    label: '器类',
+    items: ['青铜器', '金器', '玉石器', '祭祀器', '人像', '面具'].map((label) => ({
+      label,
+      value: label,
+      mode: 'guideOnly'
+    }))
+  },
+  {
+    key: 'meaning',
+    label: '象征',
+    items: ['通天', '神权', '王权', '祖先崇拜', '宇宙观', '黄金崇拜'].map((label) => ({
+      label,
+      value: label,
+      mode: 'filterable'
+    }))
+  },
+  {
+    key: 'material',
+    label: '材质',
+    items: ['青铜', '黄金', '玉石', '木器'].map((label) => ({
+      label,
+      value: label,
+      mode: 'guideOnly'
+    }))
+  }
+]
+
 const route = useRoute()
 const router = useRouter()
 const userStore = useUserStore()
@@ -748,6 +1217,7 @@ const userStore = useUserStore()
 const artifactSectionRef = ref(null)
 const stageSectionRef = ref(null)
 const guideSectionRef = ref(null)
+const filterSectionRef = ref(null)
 const viewerRef = ref(null)
 const canvasRef = ref(null)
 const graphRef = ref(null)
@@ -764,7 +1234,17 @@ const activeEra = ref(String(route.query.eraCode || ''))
 const activeSite = ref(String(route.query.siteCode || ''))
 const activeCraft = ref(String(route.query.craftCode || ''))
 const meaningFocus = ref('')
+const activePitCode = ref(String(route.query.pitCode || ''))
+const activeGuideClues = ref({})
+const pitHotspotFeedbackKey = ref('')
 const activeScene = ref(1)
+const trailCommandTransition = ref({
+  visible: false,
+  title: '',
+  line: '',
+  activeIndex: 0,
+  steps: []
+})
 
 const isLoading = ref(true)
 const isRefreshing = ref(false)
@@ -812,6 +1292,8 @@ const currentSessionId = ref(null)
 const lastAutoAskedEntityId = ref('')
 const guideUserQuestionCount = ref(0)
 const showQuizPromo = ref(false)
+const trailNextCardDismissed = ref(false)
+const trailLoopHintVisible = ref(false)
 const voiceGuideEnabled = ref(false)
 const voiceGuidePaused = ref(false)
 const voiceGuidePlaying = ref(false)
@@ -824,6 +1306,7 @@ const voiceGuideError = ref('')
 
 const QUIZ_PROMO_SESSION_KEY = 'sanxingdui.trail.quizPromo.seen'
 const QUIZ_PROMO_TRIGGER_ROUNDS = 2
+const TRAIL_LOOP_NUDGE_TRIGGER_ROUNDS = 1
 
 let scene = null
 let camera = null
@@ -838,20 +1321,26 @@ let environmentTexture = null
 let pmremGenerator = null
 let filterTimer = null
 let chatAbortController = null
+let trailCommandTransitionTimers = new Set()
 let previousBodyOverflow = ''
 let voiceGuideTimer = null
 let voiceGuideAudio = null
 let voiceGuideAudioUrl = ''
 let pendingVoiceGuideNarration = null
 let voiceGuideAbortController = null
+let voiceGuideActivePlayback = null
 const voiceGuideAudioCache = new Map()
 const recentNarrationKeys = new Set()
 const recentNarrationKeyQueue = []
 const prebuiltVoiceGuideEntries = new Map()
+const archivedNarrationKeys = new Set()
 const voiceGuideActiveContext = {
   scene: 0,
   entityId: ''
 }
+
+const pitMapHotspots = PIT_MAP_HOTSPOTS
+const guideClueGroups = GUIDE_CLUE_GROUPS
 
 const visibleArtifacts = computed(() => {
   if (!meaningFocus.value) {
@@ -874,6 +1363,19 @@ const selectedArtifact = computed(() => {
     return selectedArtifactDetail.value
   }
   return null
+})
+
+const activePitInfo = computed(() => {
+  return PIT_MAP_DATA.find((item) => item.pitCode === activePitCode.value) || {
+    pitCode: '',
+    title: '先从地图上点一个坑位',
+    description: '这张图会帮你把文物放回三星堆祭祀区的空间关系里。点击 K1、K2、K5 可直接进入已有文物展线，其他坑位先作为空间线索记录。',
+    image: '/images/trail/pit-map.png',
+    imageAlt: '三星堆遗址重点文物模型位置示意图',
+    imageCaption: '俯瞰图：祭祀区与代表文物位置',
+    tags: ['科普示意', '空间导览', '不改变原展线'],
+    artifacts: []
+  }
 })
 
 const displayVisibleCount = computed(() => (isLoading.value ? '—' : visibleArtifacts.value.length))
@@ -901,6 +1403,12 @@ const activeFilterChips = computed(() => {
   if (craftOption?.label) {
     chips.push({ key: 'craft', label: '工艺', value: craftOption.label })
   }
+  if (activePitCode.value) {
+    chips.push({ key: 'pit', label: '坑位', value: activePitCode.value })
+  }
+  if (meaningFocus.value) {
+    chips.push({ key: 'meaning', label: '象征', value: meaningFocus.value })
+  }
 
   return chips
 })
@@ -913,6 +1421,76 @@ const sceneSteps = [
 ]
 
 const activeSceneMeta = computed(() => sceneSteps.find((item) => item.id === activeScene.value) || sceneSteps[0])
+const showTrailLoopNudge = computed(() => (
+  activeScene.value === 4 &&
+  guideExpanded.value &&
+  !isThinking.value &&
+  !showQuizPromo.value &&
+  !trailNextCardDismissed.value &&
+  guideUserQuestionCount.value >= TRAIL_LOOP_NUDGE_TRIGGER_ROUNDS
+))
+const showTrailNextCard = computed(() => activeScene.value === 4 && guideExpanded.value && showQuizPromo.value)
+
+const hasTrailAnchor = computed(() => Boolean(
+  activePitCode.value ||
+  activeEra.value ||
+  activeSite.value ||
+  activeCraft.value ||
+  meaningFocus.value ||
+  selectedArtifactId.value
+))
+
+const hasTrailArtifact = computed(() => Boolean(selectedArtifactId.value && (selectedArtifact.value || selectedArtifactDetail.value)))
+const hasTrailStage = computed(() => Boolean(stageVisible.value && selectedArtifactDetail.value))
+const hasTrailGuide = computed(() => Boolean(selectedArtifactDetail.value && (guideExpanded.value || activeScene.value === 4 || messages.value.some((item) => item.role === 'user'))))
+
+const trailProgressItems = computed(() => [
+  { id: 1, index: '01', label: '定点', done: hasTrailAnchor.value },
+  { id: 2, index: '02', label: '驻足', done: hasTrailArtifact.value },
+  { id: 3, index: '03', label: '现场', done: hasTrailStage.value },
+  { id: 4, index: '04', label: '讲解', done: hasTrailGuide.value }
+])
+
+const trailSceneProgressPercent = computed(() => Math.round((activeScene.value / sceneSteps.length) * 100))
+
+const trailProgressHint = computed(() => {
+  if (activeScene.value === 1) {
+    if (trailLoopHintVisible.value) {
+      return '已回到第一幕，当前线索仍保留。你可以直接换一个坑位、时代或工艺。'
+    }
+    return hasTrailAnchor.value
+      ? '你回到了第一幕，可以重新选择坑位、时代、遗址或工艺。'
+      : '先从地图、时代、遗址或工艺里落下一个古蜀坐标。'
+  }
+  if (activeScene.value === 2) {
+    return hasTrailArtifact.value
+      ? '当前已经选中文物，也可以在这一幕重新驻足。'
+      : '坐标已经落下，下一步挑一件代表文物停下来。'
+  }
+  if (activeScene.value === 3) {
+    return hasTrailStage.value
+      ? '展品现场已经打开，可以继续看 3D 与关系图谱。'
+      : '已经选中文物，可以进入展品现场看 3D 与关系图谱。'
+  }
+  if (activeScene.value === 4) {
+    return hasTrailGuide.value
+      ? '玄喵正在承接这件文物讲解，可以继续追问。'
+      : '最后让玄喵把这件文物讲成故事。'
+  }
+  if (!hasTrailAnchor.value) {
+    return '先从地图、时代、遗址或工艺里落下一个古蜀坐标。'
+  }
+  if (!hasTrailArtifact.value) {
+    return '坐标已经落下，下一步挑一件代表文物停下来。'
+  }
+  if (!hasTrailStage.value) {
+    return '已经选中文物，可以进入展品现场看 3D 与关系图谱。'
+  }
+  if (!hasTrailGuide.value) {
+    return '展品现场已经打开，最后让玄喵把这件文物讲成故事。'
+  }
+  return '这次展线体验已经形成闭环，可以继续提问或去答题赢证书。'
+})
 
 const resultNarrative = computed(() => {
   if (loadError.value) {
@@ -1096,17 +1674,30 @@ const graphTypeFilters = computed(() => {
   }))
 })
 
-const voiceGuideStatusText = computed(() => {
+const xuanmiaoTrailMode = computed(() => {
   if (!voiceGuideEnabled.value) return '未开启'
-  if (voiceGuideError.value) return '文字提示'
+  if (voiceGuideError.value) return '语音暂不可用'
   if (voiceGuidePaused.value) return '已暂停'
   if (voiceGuideLoading.value) return '准备中'
-  if (voiceGuidePlaying.value) return '讲解中'
-  return '待命中'
+  if (voiceGuidePlaying.value) return '陪游中'
+  if (activeScene.value === 4 && guideExpanded.value) return '可追问'
+  return '陪游中'
+})
+
+const xuanmiaoCompanionLine = computed(() => {
+  if (currentNarrationText.value) return currentNarrationText.value
+  if (activeScene.value === 4 && guideExpanded.value) {
+    return '玄喵已经接上刚才的讲解，你可以继续追问这件文物的线索。'
+  }
+  return '开启后，玄喵会边走边讲；想细问时，可以直接进入第四幕追问。'
 })
 
 onMounted(async () => {
   window.addEventListener('keydown', handleViewerKeydown)
+  window.addEventListener('xuanmiao:speech-ended', handleXuanmiaoSpeechEnded)
+  window.addEventListener('xuanmiao:speech-error', handleXuanmiaoSpeechError)
+  window.addEventListener('xuanmiao:speech-stopped', handleXuanmiaoSpeechStopped)
+  window.addEventListener('xuanmiao:trail-command', handleTrailCommandEvent)
   hydrateQuizPromoState()
   void loadVoiceGuideManifest()
   await loadArtifacts()
@@ -1116,7 +1707,12 @@ onMounted(async () => {
 onBeforeUnmount(() => {
   if (filterTimer) window.clearTimeout(filterTimer)
   if (graphClickTimer) window.clearTimeout(graphClickTimer)
+  clearTrailCommandTransitionTimer()
   window.removeEventListener('keydown', handleViewerKeydown)
+  window.removeEventListener('xuanmiao:speech-ended', handleXuanmiaoSpeechEnded)
+  window.removeEventListener('xuanmiao:speech-error', handleXuanmiaoSpeechError)
+  window.removeEventListener('xuanmiao:speech-stopped', handleXuanmiaoSpeechStopped)
+  window.removeEventListener('xuanmiao:trail-command', handleTrailCommandEvent)
   restoreViewerPageState()
   restoreGraphPageState()
   resizeObserver?.disconnect()
@@ -1164,6 +1760,8 @@ watch(
     guideExpanded,
     selectedNodeId,
     () => selectedArtifactDetail.value?.entityId,
+    activePitCode,
+    meaningFocus,
     () => visibleArtifacts.value.length
   ],
   () => {
@@ -1329,6 +1927,7 @@ function syncQueryState() {
       eraCode: activeEra.value || undefined,
       siteCode: activeSite.value || undefined,
       craftCode: activeCraft.value || undefined,
+      pitCode: activePitCode.value || undefined,
       entityId: selectedArtifactId.value || undefined
     }
   })
@@ -1340,14 +1939,638 @@ function describeFacet(option) {
   return `命中 ${count} 件 · ${ready} 件可进 3D`
 }
 
+function getPitHotspotStyle(spot) {
+  return {
+    left: `${spot.x}%`,
+    top: `${spot.y}%`,
+    width: `${spot.w}%`,
+    height: `${spot.h}%`
+  }
+}
+
+function getPitInfo(pitCode) {
+  return PIT_MAP_DATA.find((item) => item.pitCode === pitCode) || null
+}
+
+function triggerPitHotspotFeedback(key) {
+  if (!key) return
+  pitHotspotFeedbackKey.value = key
+  window.setTimeout(() => {
+    if (pitHotspotFeedbackKey.value === key) {
+      pitHotspotFeedbackKey.value = ''
+    }
+  }, 420)
+}
+
+function selectPitHotspot(spot) {
+  if (!spot?.pitCode) return
+  triggerPitHotspotFeedback(spot.key)
+  activePitCode.value = spot.pitCode
+  activeGuideClues.value = { ...activeGuideClues.value, pit: spot.pitCode }
+  syncQueryState()
+
+  const pitInfo = getPitInfo(spot.pitCode)
+  const message = buildPitVoiceGuideText(pitInfo)
+
+  if (spot.kind === 'artifact' && spot.entityId) {
+    window.setTimeout(() => enterPitArtifact({
+      name: spot.shortLabel,
+      entityId: spot.entityId,
+      pitCode: spot.pitCode
+    }), 140)
+    return
+  }
+
+  announcePitVoiceGuide(message, spot.pitCode)
+}
+
+function enterPitArtifact(artifact) {
+  if (!artifact?.entityId) {
+    announcePitVoiceGuide('这个坑位资料先作为空间线索记录，后续可继续补齐文物展线。', activePitCode.value || artifact?.name || 'pending')
+    return
+  }
+
+  const pitCode = artifact.pitCode || activePitCode.value
+  if (pitCode) {
+    activePitCode.value = pitCode
+    activeGuideClues.value = { ...activeGuideClues.value, pit: pitCode }
+  }
+
+  const listArtifact = artifacts.value.find((item) => item.entityId === artifact.entityId)
+  const target = listArtifact || (selectedArtifactDetail.value?.entityId === artifact.entityId ? selectedArtifactDetail.value : null)
+
+  const fallbackArtifact = target || {
+    entityId: artifact.entityId,
+    displayTitle: artifact.name,
+    title: artifact.name
+  }
+
+  const reason = pitCode
+    ? `你从三星堆祭祀坑俯瞰图的 ${pitCode} 进入，先看 ${artifact.name}。`
+    : `你从三星堆祭祀坑俯瞰图进入，先看 ${artifact.name}。`
+
+  announcePitVoiceGuide(`${reason} 玄喵会沿着这条空间线索继续讲。`, `${pitCode || 'artifact'}-${artifact.entityId}`)
+  void selectArtifact(fallbackArtifact, reason)
+}
+
+function selectGuideClue(group, clue) {
+  if (!group?.key || !clue?.value) return
+
+  if (group.key === 'pit') {
+    const isSamePit = activePitCode.value === clue.value
+    const nextPitCode = isSamePit ? '' : clue.value
+    activePitCode.value = nextPitCode
+    activeGuideClues.value = { ...activeGuideClues.value, pit: nextPitCode }
+    syncQueryState()
+    announcePitVoiceGuide(
+      nextPitCode
+        ? buildPitVoiceGuideText(getPitInfo(nextPitCode))
+        : `已取消 ${clue.label} 这条坑位线索，展线不会自动跳转。`,
+      `pit-clue-${clue.value}-${nextPitCode || 'off'}`
+    )
+    return
+  }
+
+  if (group.key === 'meaning' && clue.mode === 'filterable') {
+    meaningFocus.value = meaningFocus.value === clue.value ? '' : clue.value
+    activeGuideClues.value = { ...activeGuideClues.value, [group.key]: meaningFocus.value }
+    syncQueryState()
+    announcePitVoiceGuide(
+      meaningFocus.value
+        ? `你把线索落在“${clue.label}”。接下来文物结果会优先沿着这条象征意义收束。`
+        : `已取消“${clue.label}”这条象征线索。`,
+      `meaning-${clue.value}-${meaningFocus.value || 'off'}`
+    )
+    return
+  }
+
+  const currentValue = activeGuideClues.value[group.key]
+  const nextValue = currentValue === clue.value ? '' : clue.value
+  activeGuideClues.value = { ...activeGuideClues.value, [group.key]: nextValue }
+  announcePitVoiceGuide(
+    nextValue
+      ? `“${clue.label}”已作为导览线索记录，当前先不改变文物结果。`
+      : `已取消“${clue.label}”这条导览线索。`,
+    `${group.key}-${clue.value}-${nextValue || 'off'}`
+  )
+}
+
+function isGuideClueActive(group, clue) {
+  if (group.key === 'pit') return activePitCode.value === clue.value
+  if (group.key === 'meaning') return meaningFocus.value === clue.value
+  return activeGuideClues.value[group.key] === clue.value
+}
+
+function buildPitVoiceGuideText(pitInfo) {
+  if (!pitInfo) return '这个坑位资料先作为空间线索记录，后续可继续补齐文物展线。'
+  if (pitInfo.pitCode === 'K2') {
+    return '你点到了二号祭祀坑，这里关联青铜神树、青铜大立人像和青铜纵目面具。'
+  }
+  if (pitInfo.artifacts?.some((item) => item.entityId)) {
+    return `你点到了${pitInfo.title}，可以从这里进入${pitInfo.artifacts[0].name}的展线。`
+  }
+  return '这个坑位资料先作为空间线索记录，后续可继续补齐文物展线。'
+}
+
+function announcePitVoiceGuide(text, key) {
+  if (!text) return
+  currentNarrationText.value = text
+  if (!voiceGuideEnabled.value || voiceGuidePaused.value) return
+  void playVoiceGuideNarration(
+    {
+      key: `pit-map-${key}`,
+      intent: 'pit-map',
+      text,
+      scene: activeScene.value,
+      entityId: selectedArtifactId.value || '',
+      skipPreset: true
+    },
+    true
+  )
+}
+
+function normalizeTrailCommandText(text) {
+  return String(text || '')
+    .toLowerCase()
+    .replace(/\s+/g, '')
+    .replace(/[，。！？,.!?;；:：、"'“”‘’（）()[\]{}<>《》]/g, '')
+}
+
+function trailTextIncludesAny(normalizedText, words = []) {
+  return words.some((word) => normalizedText.includes(normalizeTrailCommandText(word)))
+}
+
+function hasTrailNavigationIntent(normalizedText) {
+  return trailTextIncludesAny(normalizedText, TRAIL_COMMAND_NAV_WORDS)
+}
+
+function findTrailArtifactMatches(normalizedText) {
+  const matches = TRAIL_COMMAND_ARTIFACTS.filter((artifact) => {
+    return artifact.aliases.some((alias) => normalizedText.includes(normalizeTrailCommandText(alias)))
+  })
+
+  const unique = new Map(matches.map((item) => [item.entityId, item]))
+  return [...unique.values()]
+}
+
+function findTrailPitMatch(normalizedText) {
+  return TRAIL_COMMAND_PITS.find((pit) => {
+    return pit.aliases.some((alias) => normalizedText.includes(normalizeTrailCommandText(alias)))
+  }) || null
+}
+
+function findTrailGraphTarget(normalizedText) {
+  return TRAIL_COMMAND_GRAPH_TARGETS.find((target) => {
+    return target.aliases.some((alias) => normalizedText.includes(normalizeTrailCommandText(alias)))
+  }) || null
+}
+
+function parseTrailCommand(text) {
+  const normalizedText = normalizeTrailCommandText(text)
+  if (!normalizedText) return null
+
+  const hasNavIntent = hasTrailNavigationIntent(normalizedText)
+  const hasQuestionCue = trailTextIncludesAny(normalizedText, ['什么', '为什么', '含义', '意义', '代表', '怎么', '如何'])
+  const hasStrongNavIntent = trailTextIncludesAny(normalizedText, [
+    '带我',
+    '带路',
+    '去',
+    '打开',
+    '进入',
+    '跳到',
+    '切到',
+    '转到',
+    '回到',
+    '回',
+    '导览',
+    '我要看',
+    '想看'
+  ])
+  const hasDirectLookIntent = normalizedText.startsWith('看') && !hasQuestionCue
+  const hasCommandIntent = hasStrongNavIntent || hasDirectLookIntent
+  const hasGraphCue = trailTextIncludesAny(normalizedText, ['图谱', '关系', '节点', '网络', '关联'])
+  const hasStageCue = trailTextIncludesAny(normalizedText, ['3d', '三维', '模型', '展品现场', '现场', '旋转'])
+  const hasGuideCue = trailTextIncludesAny(normalizedText, ['继续讲解', '继续讲', '玄喵讲', '开讲', '讲解这件', '听讲解', '听玄喵'])
+  const hasQuizCue = trailTextIncludesAny(normalizedText, ['答题', '证书', 'quiz', '挑战'])
+  const hasSceneOneCue = trailTextIncludesAny(normalizedText, ['第一幕', '时空定点', '回地图', '回筛选', '回坐标'])
+  const hasArtifactListCue = trailTextIncludesAny(normalizedText, ['文物列表', '第二幕', '命中文物', '看命中文物'])
+
+  if (hasQuizCue && (hasNavIntent || trailTextIncludesAny(normalizedText, ['赢证书', '去答题']))) {
+    return { action: 'startQuiz' }
+  }
+
+  if (hasSceneOneCue && hasNavIntent) {
+    return { action: 'goSceneOne' }
+  }
+
+  if (hasArtifactListCue && hasNavIntent) {
+    return { action: 'goArtifactList' }
+  }
+
+  if (hasCommandIntent) {
+    const artifactsMatched = findTrailArtifactMatches(normalizedText)
+    if (artifactsMatched.length === 1) {
+      return { action: 'goToArtifact', artifact: artifactsMatched[0] }
+    }
+    if (artifactsMatched.length > 1 || (normalizedText.includes('面具') && !artifactsMatched.length)) {
+      return {
+        action: 'ambiguous',
+        message: '你说的“面具”可能指金面具，也可能指青铜纵目面具。你可以说“带我看金面具”或“带我看纵目面具”。'
+      }
+    }
+
+    const pitMatched = findTrailPitMatch(normalizedText)
+    if (pitMatched) {
+      return { action: 'selectPit', pit: pitMatched }
+    }
+  }
+
+  if (hasGraphCue) {
+    return { action: 'focusGraphNode', target: findTrailGraphTarget(normalizedText), rawText: normalizedText }
+  }
+
+  if (hasStageCue && (hasNavIntent || trailTextIncludesAny(normalizedText, ['3d', '三维']))) {
+    return { action: 'openStage' }
+  }
+
+  if (hasGuideCue && (hasNavIntent || trailTextIncludesAny(normalizedText, ['讲解', '玄喵']))) {
+    return { action: 'openGuide' }
+  }
+
+  return null
+}
+
+function sayTrailCommand(text, key = 'reply') {
+  if (!text) return
+  currentNarrationText.value = text
+  window.dispatchEvent(new CustomEvent('xuanmiao:say', {
+    detail: {
+      key: `trail-command-${key}`,
+      text,
+      source: 'trail-command',
+      interrupt: true,
+      playDelayMs: 120,
+      charDelay: 68
+    }
+  }))
+}
+
+function stopTrailGuideForCommand() {
+  cancelVoiceGuideRequest()
+  stopExternalXuanmiaoSpeech()
+  stopVoiceGuideAudio()
+  voiceGuidePlaying.value = false
+  voiceGuideLoading.value = false
+}
+
+function clearTrailCommandTransitionTimer() {
+  trailCommandTransitionTimers.forEach((timer) => {
+    window.clearTimeout(timer)
+  })
+  trailCommandTransitionTimers.clear()
+}
+
+function setTrailCommandTransitionTimer(callback, ms) {
+  const timer = window.setTimeout(() => {
+    trailCommandTransitionTimers.delete(timer)
+    callback()
+  }, ms)
+  trailCommandTransitionTimers.add(timer)
+  return timer
+}
+
+function resetTrailCommandTransition() {
+  clearTrailCommandTransitionTimer()
+  trailCommandTransition.value = {
+    visible: false,
+    title: '',
+    line: '',
+    activeIndex: 0,
+    steps: []
+  }
+}
+
+function waitTrailCommandTransition(ms = 520) {
+  return new Promise((resolve) => {
+    setTrailCommandTransitionTimer(() => {
+      resolve()
+    }, ms)
+  })
+}
+
+function buildTrailCommandTransitionSteps(artifactCommand) {
+  const pitTitle = artifactCommand.pitCode
+    ? getPitInfo(artifactCommand.pitCode)?.title || `${artifactCommand.pitCode} 祭祀坑`
+    : '目标线索'
+  return [
+    { key: 'pit', label: `定位${pitTitle}` },
+    { key: 'guide', label: '调取讲解资料' },
+    { key: 'stage', label: '进入展品现场' }
+  ]
+}
+
+function showTrailCommandTransition(artifactCommand) {
+  resetTrailCommandTransition()
+  trailCommandTransition.value = {
+    visible: true,
+    title: `前往 ${artifactCommand.title}`,
+    line: `正在顺着${artifactCommand.title}的出土线索往展品现场走，讲解也在同步准备。`,
+    activeIndex: 0,
+    steps: buildTrailCommandTransitionSteps(artifactCommand)
+  }
+}
+
+async function runTrailCommandTransitionStep(index, line, ms = 620) {
+  trailCommandTransition.value = {
+    ...trailCommandTransition.value,
+    activeIndex: index,
+    line
+  }
+  await waitTrailCommandTransition(ms)
+}
+
+function hideTrailCommandTransition(delay = 460) {
+  setTrailCommandTransitionTimer(() => {
+    trailCommandTransition.value = {
+      ...trailCommandTransition.value,
+      visible: false
+    }
+  }, delay)
+}
+
+function handleTrailCommandEvent(event) {
+  const detail = event?.detail || {}
+  const respond = typeof detail.respond === 'function' ? detail.respond : () => {}
+
+  if (route.path !== '/trail') {
+    respond({ handled: false })
+    return
+  }
+
+  let command = null
+  try {
+    command = parseTrailCommand(detail.text)
+  } catch (error) {
+    console.error('玄喵展线命令解析失败:', error)
+    respond({ handled: false })
+    return
+  }
+  if (!command) {
+    respond({ handled: false })
+    return
+  }
+
+  respond({ handled: true, action: command.action })
+  void executeTrailCommand(command)
+}
+
+async function executeTrailCommand(command) {
+  stopTrailGuideForCommand()
+
+  try {
+    if (command.action === 'ambiguous') {
+      sayTrailCommand(command.message, 'ambiguous')
+      return
+    }
+
+    if (command.action === 'startQuiz') {
+      sayTrailCommand('好，我带你去答题赢证书。未登录的话，系统会先带你登录，再回到答题页。', 'quiz')
+      window.setTimeout(() => {
+        void router.push('/quiz')
+      }, 360)
+      return
+    }
+
+    if (command.action === 'goSceneOne') {
+      activeScene.value = 1
+      stageVisible.value = false
+      guideExpanded.value = false
+      sayTrailCommand('好，我们回到第一幕。你可以重新从祭祀坑地图、时代、遗址和工艺里定一个坐标。', 'scene-one')
+      return
+    }
+
+    if (command.action === 'goArtifactList') {
+      scrollToArtifacts()
+      sayTrailCommand('好，我把视线切回文物驻足。你可以先选一件文物，再进入 3D、图谱和讲解。', 'artifact-list')
+      return
+    }
+
+    if (command.action === 'goToArtifact') {
+      await executeTrailGoToArtifact(command.artifact)
+      return
+    }
+
+    if (command.action === 'selectPit') {
+      executeTrailSelectPit(command.pit)
+      return
+    }
+
+    if (command.action === 'openStage') {
+      await executeTrailOpenStage()
+      return
+    }
+
+    if (command.action === 'openGuide') {
+      await executeTrailOpenGuide()
+      return
+    }
+
+    if (command.action === 'focusGraphNode') {
+      await executeTrailFocusGraphNode(command.target, command.rawText)
+    }
+  } catch (error) {
+    console.error('玄喵展线动作执行失败:', error)
+    hideTrailCommandTransition(180)
+    sayTrailCommand('这一步我没能顺利带过去。你可以先手动点一下当前展线按钮，我再继续讲解。', 'error')
+  }
+}
+
+async function ensureTrailArtifactDetailReady() {
+  if (selectedArtifactDetail.value) return true
+  if (selectedArtifact.value) {
+    await selectArtifact(selectedArtifact.value, selectedReason.value || buildArtifactReason(selectedArtifact.value), {
+      keepScene: true
+    })
+  }
+  return Boolean(selectedArtifactDetail.value)
+}
+
+async function executeTrailGoToArtifact(artifactCommand) {
+  const target =
+    artifacts.value.find((item) => item.entityId === artifactCommand.entityId) ||
+    (selectedArtifactDetail.value?.entityId === artifactCommand.entityId ? selectedArtifactDetail.value : null) ||
+    {
+      entityId: artifactCommand.entityId,
+      displayTitle: artifactCommand.title,
+      title: artifactCommand.title
+    }
+
+  sayTrailCommand(`好，我带你去看${artifactCommand.title}，讲解资料也会同步准备。`, `artifact-${artifactCommand.entityId}-start`)
+  showTrailCommandTransition(artifactCommand)
+
+  if (artifactCommand.pitCode) {
+    activeScene.value = 1
+    stageVisible.value = false
+    guideExpanded.value = false
+    activePitCode.value = artifactCommand.pitCode
+    activeGuideClues.value = { ...activeGuideClues.value, pit: artifactCommand.pitCode }
+    triggerPitHotspotFeedback(`pit-${artifactCommand.pitCode.toLowerCase()}`)
+    syncQueryState()
+  }
+
+  const selectPromise = selectArtifact(target, `玄喵根据你的指令，带你直接来到 ${artifactCommand.title}。`, {
+    keepScene: true
+  })
+
+  await runTrailCommandTransitionStep(
+    0,
+    artifactCommand.pitCode
+      ? `${artifactCommand.title}的空间线索已经落到${getPitInfo(artifactCommand.pitCode)?.title || artifactCommand.pitCode}。`
+      : `已经锁定${artifactCommand.title}的展线位置。`,
+    720
+  )
+
+  activeScene.value = 2
+  stageVisible.value = false
+  guideExpanded.value = false
+  await nextTick()
+
+  await runTrailCommandTransitionStep(
+    1,
+    `文物详情、知识图谱和开场讲解正在同步调取，稍后可以直接接着听。`,
+    780
+  )
+
+  await selectPromise
+  if (!selectedArtifactDetail.value) {
+    sayTrailCommand(`我找到了${artifactCommand.title}，但这件文物的详情暂时没载入完成。你可以稍等一下再让我打开展品现场。`, `artifact-${artifactCommand.entityId}-pending`)
+    hideTrailCommandTransition(180)
+    return
+  }
+
+  stageVisible.value = true
+  activeScene.value = 3
+  await nextTick()
+  const stagePromise = ensureStageExperience(true)
+  await runTrailCommandTransitionStep(
+    2,
+    `${artifactCommand.title}的展品现场正在打开，右侧图谱也会跟着展开。`,
+    640
+  )
+  await stagePromise
+  hideTrailCommandTransition()
+  sayTrailCommand(`到了，我们现在看${artifactCommand.title}。开场讲解已经在第四幕整理，想继续听可以直接进入玄喵讲解。`, `artifact-${artifactCommand.entityId}`)
+}
+
+function executeTrailSelectPit(pitCommand) {
+  activeScene.value = 1
+  stageVisible.value = false
+  guideExpanded.value = false
+  activePitCode.value = pitCommand.pitCode
+  activeGuideClues.value = { ...activeGuideClues.value, pit: pitCommand.pitCode }
+  syncQueryState()
+  triggerPitHotspotFeedback(`pit-${pitCommand.pitCode.toLowerCase()}`)
+  sayTrailCommand(`好，我把地图焦点放到${pitCommand.title}。这里先记录空间线索，不会自动跳到某一件文物。`, `pit-${pitCommand.pitCode}`)
+}
+
+async function executeTrailOpenStage() {
+  if (!selectedArtifact.value && !selectedArtifactDetail.value) {
+    sayTrailCommand('还没有选中文物。你可以说“带我看金面具”或先在第二幕选一件文物，我再打开 3D 展品现场。', 'stage-empty')
+    return
+  }
+
+  const ready = await ensureTrailArtifactDetailReady()
+  if (!ready) {
+    sayTrailCommand('这件文物的详情还没载入完成，先稍等一下，再打开 3D 展品现场。', 'stage-not-ready')
+    return
+  }
+
+  scrollToStage()
+  await nextTick()
+  await ensureStageExperience(true)
+  sayTrailCommand(`好，我把你带到${selectedArtifactDetail.value?.displayTitle || '这件文物'}的展品现场。你可以拖拽旋转，也可以顺着旁边图谱看关系。`, 'stage')
+}
+
+async function executeTrailOpenGuide() {
+  if (!selectedArtifact.value && !selectedArtifactDetail.value) {
+    sayTrailCommand('还没有选中文物。你可以先说“带我看青铜神树”，我再接着为它讲解。', 'guide-empty')
+    return
+  }
+
+  const ready = await ensureTrailArtifactDetailReady()
+  if (!ready) {
+    sayTrailCommand('这件文物的讲解资料还没准备好。等详情载入后，我再继续讲。', 'guide-not-ready')
+    return
+  }
+
+  scrollToGuide()
+  sayTrailCommand(`好，我们进入玄喵讲解。我会围绕${selectedArtifactDetail.value?.displayTitle || '这件文物'}继续讲它的背景、工艺和关系。`, 'guide')
+}
+
+function findGraphNodeByTrailCommand(target, rawText) {
+  const nodes = graphPayload.value.nodes || []
+  if (!nodes.length) return null
+
+  if (!target) {
+    return nodes.find((node) => node.id !== graphPayload.value.centerNodeId) || nodes[0]
+  }
+
+  const aliases = target.aliases.map((alias) => normalizeTrailCommandText(alias))
+  const typedNodes = nodes.filter((node) => node.type === target.type)
+  const exactNode = typedNodes.find((node) => {
+    const label = normalizeTrailCommandText(`${node.label || ''}${node.summary || ''}${node.routeTarget || ''}`)
+    return aliases.some((alias) => rawText.includes(alias) && label.includes(alias))
+  })
+
+  return exactNode || typedNodes[0] || null
+}
+
+async function executeTrailFocusGraphNode(target, rawText) {
+  if (!selectedArtifact.value && !selectedArtifactDetail.value) {
+    sayTrailCommand('要看图谱，得先选中一件文物。你可以说“带我看金面具”，我会先带你进入它的展品现场。', 'graph-empty')
+    return
+  }
+
+  const ready = await ensureTrailArtifactDetailReady()
+  if (!ready) {
+    sayTrailCommand('当前文物详情还没准备好，图谱暂时不能展开。等它载入后我再带你看关系。', 'graph-not-ready')
+    return
+  }
+
+  scrollToStage()
+  await nextTick()
+  await ensureStageExperience(true)
+
+  const node = findGraphNodeByTrailCommand(target, rawText)
+  if (!node) {
+    sayTrailCommand('我在当前图谱里暂时没找到这个线索。你可以换成“工艺、遗址、时代、材质、象征”这类词再试。', 'graph-missing')
+    return
+  }
+
+  const requiredTypes = ['artifact', node.type]
+  if (requiredTypes.some((type) => !activeTypeFilters.value.includes(type))) {
+    activeTypeFilters.value = [...new Set([...activeTypeFilters.value, ...requiredTypes])]
+    await renderGraph()
+  }
+
+  selectedNodeId.value = node.id
+  await nextTick()
+  await applyFocusState(node.id)
+  const typeLabel = TYPE_LABELS[node.type] || target?.title || '线索'
+  sayTrailCommand(`好，我把图谱焦点切到${typeLabel}“${node.label || target?.title || '这个节点'}”。你可以顺着高亮关系继续看它和当前文物的联系。`, `graph-${node.id}`)
+}
+
 function resetFilters() {
   activeScene.value = 1
   activeEra.value = ''
   activeSite.value = ''
   activeCraft.value = ''
   meaningFocus.value = ''
+  activePitCode.value = ''
+  activeGuideClues.value = {}
   stageVisible.value = false
   guideExpanded.value = false
+  syncQueryState()
 }
 
 async function ensureStageExperience(force = false) {
@@ -1383,12 +2606,14 @@ function goToScene(sceneId) {
   }
 
   if (sceneId === 2) {
+    trailLoopHintVisible.value = false
     activeScene.value = 2
     return
   }
 
   if (sceneId === 3) {
     if (!selectedArtifact.value) return
+    trailLoopHintVisible.value = false
     stageVisible.value = true
     activeScene.value = 3
     return
@@ -1396,6 +2621,8 @@ function goToScene(sceneId) {
 
   if (sceneId === 4) {
     if (!selectedArtifact.value) return
+    trailLoopHintVisible.value = false
+    trailNextCardDismissed.value = false
     stageVisible.value = true
     guideExpanded.value = true
     activeScene.value = 4
@@ -1403,17 +2630,21 @@ function goToScene(sceneId) {
 }
 
 function scrollToArtifacts() {
+  trailLoopHintVisible.value = false
   activeScene.value = 2
 }
 
 function scrollToStage() {
   if (!selectedArtifact.value) return
+  trailLoopHintVisible.value = false
   stageVisible.value = true
   activeScene.value = 3
 }
 
 function scrollToGuide() {
   if (!selectedArtifact.value) return
+  trailLoopHintVisible.value = false
+  trailNextCardDismissed.value = false
   stageVisible.value = true
   guideExpanded.value = true
   activeScene.value = 4
@@ -1458,8 +2689,13 @@ function closeVoiceGuide() {
 function scheduleVoiceGuideNarration(force = false) {
   try {
     if (!voiceGuideEnabled.value || voiceGuidePaused.value) return
-    const narration = buildVoiceGuideNarration()
+    const narration = buildVoiceGuideNarrationV2()
     if (!narration?.key || !narration.text) {
+      voiceGuideLoading.value = false
+      return
+    }
+    if (isThinking.value) {
+      currentNarrationText.value = narration.text
       voiceGuideLoading.value = false
       return
     }
@@ -1477,33 +2713,33 @@ function scheduleVoiceGuideNarration(force = false) {
       voiceGuideLoading.value = true
       voiceGuideError.value = ''
       if (!voiceGuidePlaying.value || force) {
-        currentNarrationText.value = VOICE_GUIDE_LOADING_TEXT
+        currentNarrationText.value = narration.text
       }
     }
 
     if (voiceGuideTimer) window.clearTimeout(voiceGuideTimer)
-    const delay = force ? 0 : narration.intent === 'graph-node' ? 760 : 360
+    const delay = force ? 0 : narration.intent === 'graph-node' ? 900 : narration.intent === 'scene-anchor' ? 560 : 420
     voiceGuideTimer = window.setTimeout(() => {
       void playVoiceGuideNarration(narration, force)
     }, delay)
   } catch (error) {
-    settleVoiceGuideTextFallback('语音向导暂时没组织好，已先显示文字提示', error)
+    settleVoiceGuideTextFallback('玄喵陪游暂时没组织好，已先显示文字提示', error)
   }
 }
 
 async function playCurrentVoiceGuideNarration(force = false) {
-  if (!voiceGuideEnabled.value || voiceGuidePaused.value) return
+  if (!voiceGuideEnabled.value || voiceGuidePaused.value || isThinking.value) return
   try {
-    const narration = buildVoiceGuideNarration()
+    const narration = buildVoiceGuideNarrationV2()
     if (!narration?.key || !narration.text) return
     await playVoiceGuideNarration(narration, force)
   } catch (error) {
-    settleVoiceGuideTextFallback('语音向导暂时没组织好，已先显示文字提示', error)
+    settleVoiceGuideTextFallback('玄喵陪游暂时没组织好，已先显示文字提示', error)
   }
 }
 
 async function playVoiceGuideNarration(narration, force = false) {
-  if (!voiceGuideEnabled.value || voiceGuidePaused.value) return
+  if (!voiceGuideEnabled.value || voiceGuidePaused.value || isThinking.value) return
   if (!narration?.key || !narration.text) return
   if (!force && recentNarrationKeys.has(narration.key)) {
     voiceGuideLoading.value = false
@@ -1562,34 +2798,17 @@ async function playVoiceGuideNarration(narration, force = false) {
 
     voiceGuideLoading.value = false
     voiceGuideAudioUrl = audioUrl
-    voiceGuideAudio = new Audio(audioUrl)
-    voiceGuideAudio.onended = () => {
-      voiceGuidePlaying.value = false
-      voiceGuideAudio = null
-      voiceGuideAudioUrl = ''
-      const pending = pendingVoiceGuideNarration
-      pendingVoiceGuideNarration = null
-      if (pending && voiceGuideEnabled.value && !voiceGuidePaused.value) {
-        void playVoiceGuideNarration(pending)
-      }
-    }
-    voiceGuideAudio.onerror = () => {
-      voiceGuidePlaying.value = false
-      voiceGuideLoading.value = false
-      voiceGuideAudio = null
-      voiceGuideAudioUrl = ''
-      if (usedPrebuilt) {
-        voiceGuideAudioCache.delete(resolvedCacheKey)
-        void playVoiceGuideNarration({ ...narration, skipPreset: true }, true)
-        return
-      }
-      voiceGuideError.value = '语音暂不可用，已显示文字提示'
-    }
-
     voiceGuideActiveContext.scene = narration.scene
     voiceGuideActiveContext.entityId = narration.entityId
+    voiceGuideActivePlayback = {
+      key: narration.key,
+      narration,
+      usedPrebuilt,
+      resolvedCacheKey
+    }
+    archiveVoiceGuideNarration(narration, currentNarrationText.value)
     voiceGuidePlaying.value = true
-    await voiceGuideAudio.play()
+    dispatchXuanmiaoSpeech(narration, audioUrl, currentNarrationText.value)
   } catch (error) {
     if (isVoiceGuideRequestCurrent(requestId, narration)) {
       stopVoiceGuideAudio()
@@ -1647,7 +2866,7 @@ async function loadVoiceGuideManifest() {
       list.sort((a, b) => (b.priority || 0) - (a.priority || 0))
     })
   } catch (error) {
-    console.warn('语音向导预制清单读取失败，将使用实时 TTS。', error)
+    console.warn('玄喵陪游预制清单读取失败，将使用实时 TTS。', error)
   }
 }
 
@@ -1681,6 +2900,71 @@ function getPrebuiltAudioUrl(entry) {
   return entry?.sources?.wav || entry?.audioUrl || ''
 }
 
+function dispatchXuanmiaoSpeech(narration, audioUrl, text) {
+  window.dispatchEvent(new CustomEvent('xuanmiao:say', {
+    detail: {
+      key: narration.key,
+      text: text || narration.text,
+      audioUrl,
+      source: 'trail-guide',
+      interrupt: true
+    }
+  }))
+}
+
+function stopExternalXuanmiaoSpeech(key = lastNarrationKey.value) {
+  window.dispatchEvent(new CustomEvent('xuanmiao:stop', {
+    detail: {
+      key,
+      source: 'trail-guide'
+    }
+  }))
+}
+
+function handleXuanmiaoSpeechEnded(event) {
+  const detail = event?.detail || {}
+  if (detail.source !== 'trail-guide') return
+  if (voiceGuideActivePlayback?.key && detail.key !== voiceGuideActivePlayback.key) return
+
+  voiceGuidePlaying.value = false
+  voiceGuideAudioUrl = ''
+  voiceGuideActivePlayback = null
+  const pending = pendingVoiceGuideNarration
+  pendingVoiceGuideNarration = null
+  if (pending && voiceGuideEnabled.value && !voiceGuidePaused.value && !isThinking.value) {
+    void playVoiceGuideNarration(pending)
+  }
+}
+
+function handleXuanmiaoSpeechError(event) {
+  const detail = event?.detail || {}
+  if (detail.source !== 'trail-guide') return
+  const active = voiceGuideActivePlayback
+  if (active?.key && detail.key !== active.key) return
+
+  voiceGuidePlaying.value = false
+  voiceGuideLoading.value = false
+  voiceGuideAudioUrl = ''
+  voiceGuideActivePlayback = null
+  if (active?.usedPrebuilt) {
+    voiceGuideAudioCache.delete(active.resolvedCacheKey)
+    void playVoiceGuideNarration({ ...active.narration, skipPreset: true }, true)
+    return
+  }
+  voiceGuideError.value = '语音暂不可用，已显示文字提示'
+}
+
+function handleXuanmiaoSpeechStopped(event) {
+  const detail = event?.detail || {}
+  if (detail.source !== 'trail-guide') return
+  if (voiceGuideActivePlayback?.key && detail.key !== voiceGuideActivePlayback.key) return
+  voiceGuidePlaying.value = false
+  voiceGuideLoading.value = false
+  voiceGuideAudioUrl = ''
+  voiceGuideActivePlayback = null
+  pendingVoiceGuideNarration = null
+}
+
 function hasPrebuiltAudio(entry) {
   if (!entry) return false
   if (entry.sources?.wav || entry.audioUrl) return true
@@ -1711,8 +2995,12 @@ function stopVoiceGuideAudio() {
     voiceGuideAudio.currentTime = 0
     voiceGuideAudio = null
   }
+  if (voiceGuideActivePlayback?.key) {
+    stopExternalXuanmiaoSpeech(voiceGuideActivePlayback.key)
+  }
   voiceGuidePlaying.value = false
   voiceGuideAudioUrl = ''
+  voiceGuideActivePlayback = null
 }
 
 function cancelVoiceGuideRequest() {
@@ -1728,7 +3016,7 @@ function cancelVoiceGuideRequest() {
 }
 
 function settleVoiceGuideTextFallback(message, error) {
-  console.warn('语音向导降级:', error)
+  console.warn('玄喵陪游降级:', error)
   voiceGuideLoading.value = false
   voiceGuidePlaying.value = false
   voiceGuideError.value = message
@@ -1787,7 +3075,7 @@ function buildVoiceGuideNarration() {
   const context = getVoiceGuideArtifactContext()
 
   if (activeScene.value === 1) {
-    const filterKey = `${activeEra.value || 'all'}-${activeSite.value || 'all'}-${activeCraft.value || 'all'}-${visibleArtifacts.value.length}`
+    const filterKey = `${activeEra.value || 'all'}-${activeSite.value || 'all'}-${activeCraft.value || 'all'}-${activePitCode.value || 'map'}-${meaningFocus.value || 'all'}-${visibleArtifacts.value.length}`
     const filterText = activeFilterChips.value.length
       ? `现在的坐标是${activeFilterChips.value.map((item) => item.value).join('、')}。`
       : '可以先从时代、遗址或工艺里选一个入口。'
@@ -1890,6 +3178,124 @@ function buildVoiceGuideNarration() {
   return null
 }
 
+function buildVoiceGuideNarrationV2() {
+  const entityId = selectedArtifactDetail.value?.entityId || selectedArtifact.value?.entityId || 'none'
+  const title = selectedArtifactDetail.value?.displayTitle || selectedArtifact.value?.displayTitle || ''
+  const context = getVoiceGuideArtifactContext()
+
+  if (activeScene.value === 1) {
+    const pitInfo = getPitInfo(activePitCode.value)
+    const filterKey = `${activeEra.value || 'all'}-${activeSite.value || 'all'}-${activeCraft.value || 'all'}-${activePitCode.value || 'map'}-${meaningFocus.value || 'all'}`
+    const filterText = activeFilterChips.value.length
+      ? `当前线索是 ${activeFilterChips.value.map((item) => item.value).join('、')}。`
+      : '还没有固定线索，可以先从祭祀坑地图、时代、遗址或工艺里选一个入口。'
+    const sceneText = pitInfo
+      ? `${pitInfo.pitCode} 已经作为空间线索记录。先看它关联的代表文物，再决定要不要进入第二幕。`
+      : `${filterText} 第一幕的重点不是填条件，而是帮你找到一次参观的起点。`
+
+    return {
+      key: `scene-1-${filterKey}`,
+      intent: 'scene-anchor',
+      scene: 1,
+      entityId: 'filters',
+      presetKeys: ['scene-anchor.default'],
+      text: pickVoiceVariant(`scene-1-v2-${filterKey}`, [
+        sceneText,
+        `${filterText} 真实筛选会改变结果，导览线索只帮助你决定观察角度。`
+      ])
+    }
+  }
+
+  if (activeScene.value === 2) {
+    const count = visibleArtifacts.value.length
+    const targetTitle = selectedArtifact.value?.displayTitle || visibleArtifacts.value[0]?.displayTitle || '一件代表性文物'
+    const hint = context.summary ? `它的看点是：${context.summary}。` : '可以先看年代、出土地、类别和是否有 3D 模型。'
+
+    return {
+      key: `scene-2-${selectedArtifact.value?.entityId || 'list'}-${count ? 'has-result' : 'empty'}`,
+      intent: 'artifact-list',
+      scene: 2,
+      entityId: selectedArtifact.value?.entityId || 'artifact-list',
+      presetKeys: [
+        `artifact-list.${selectedArtifact.value?.entityId || ''}`,
+        `artifact-context.${selectedArtifact.value?.entityId || ''}`,
+        'artifact-list.default'
+      ],
+      text: pickVoiceVariant(`scene-2-v2-${targetTitle}-${count}`, [
+        selectedArtifact.value
+          ? `你已经停在 ${targetTitle} 前。${hint} 下一步适合进入展品现场。`
+          : `当前命中 ${count} 件文物。先选一件代表文物停下来，后面的 3D、图谱和玄喵讲解才会接上。`,
+        `${targetTitle} 可以作为这一轮展线的观察对象。先确认它的身份，再往下看造型和关系。`
+      ])
+    }
+  }
+
+  if (activeScene.value === 3 && stageVisible.value && selectedNodeId.value && selectedNodeId.value !== graphPayload.value.centerNodeId) {
+    const nodeType = TYPE_LABELS[selectedGraphNode.value?.type] || '线索'
+    const nodeSummary = clipVoiceText(selectedNodeSummary.value, 36)
+
+    return {
+      key: `scene-3-node-${entityId}-${selectedNodeId.value}`,
+      intent: 'graph-node',
+      scene: 3,
+      entityId,
+      presetKeys: [
+        `graph-type.${selectedGraphNode.value?.type || ''}`,
+        'graph-type.default'
+      ],
+      text: pickVoiceVariant(`scene-3-node-v2-${selectedNodeId.value}`, [
+        `你点到的是${nodeType}“${selectedNodeTitle.value}”。${nodeSummary || '先看它和当前文物之间的关系。'}`,
+        `现在从“${selectedNodeTitle.value}”回看${title || '当前文物'}，重点是关系，不是孤立看一件器物。`
+      ])
+    }
+  }
+
+  if (activeScene.value === 3 && stageVisible.value) {
+    return {
+      key: `scene-3-stage-${entityId}`,
+      intent: 'stage-viewer',
+      scene: 3,
+      entityId,
+      presetKeys: [
+        `stage-viewer.${entityId}`,
+        `artifact-craft.${entityId}`,
+        `artifact-symbol.${entityId}`,
+        `artifact-context.${entityId}`,
+        'stage-viewer.default'
+      ],
+      text: title
+        ? pickVoiceVariant(`scene-3-stage-v2-${entityId}`, [
+            `现在看 ${title}。先拖拽模型观察轮廓和细节，再看右侧图谱里的${context.site}、${context.era}和${context.craft}。`,
+            `${title} 已经进入展品现场。左侧看造型，右侧看关系，两边合起来才像一次完整观察。`
+          ])
+        : '现在进入展品现场。可以先观察 3D 模型，再顺着右侧图谱理解它的文化关系。'
+    }
+  }
+
+  if (activeScene.value === 4) {
+    return {
+      key: `scene-4-guide-${entityId}`,
+      intent: 'guide-chat',
+      scene: 4,
+      entityId,
+      presetKeys: [
+        `guide-chat.${entityId}`,
+        `artifact-next.${entityId}`,
+        `artifact-symbol.${entityId}`,
+        'guide-chat.default'
+      ],
+      text: title
+        ? pickVoiceVariant(`scene-4-guide-v2-${entityId}`, [
+            `这里可以继续问玄喵。围绕 ${title}，你可以问它为什么重要、用了什么工艺，或和哪件文物有关。`,
+            `讲解区已经准备好。接下来不用背知识点，只要追问 ${title} 的看点，玄喵会把线索串起来。`
+          ])
+        : '这里是玄喵讲解区。你可以继续提问，让玄喵把展线里的文物线索讲成一段故事。'
+    }
+  }
+
+  return null
+}
+
 function getVoiceGuideArtifactContext() {
   const artifact = selectedArtifactDetail.value || selectedArtifact.value || {}
   return {
@@ -1919,11 +3325,27 @@ function pickVoiceVariant(key, variants) {
 function toggleGuideExpanded(expanded) {
   guideExpanded.value = expanded
   if (expanded) {
+    trailNextCardDismissed.value = false
     scrollMessagesToBottom()
   }
 }
 
+function askXuanmiaoFromCompanion() {
+  if (!selectedArtifact.value && !selectedArtifactDetail.value) {
+    scrollToArtifacts()
+    return
+  }
+  trailLoopHintVisible.value = false
+  trailNextCardDismissed.value = false
+  stageVisible.value = true
+  guideExpanded.value = true
+  activeScene.value = 4
+  scrollMessagesToBottom()
+}
+
 function openGuideAndAsk(question) {
+  trailLoopHintVisible.value = false
+  trailNextCardDismissed.value = false
   stageVisible.value = true
   guideExpanded.value = true
   activeScene.value = 4
@@ -2640,7 +4062,7 @@ function restoreGraphPageState() {
 async function initializeGuide() {
   chatAbortController?.abort?.()
   resetMessages()
-  await maybeAutoStartGuide()
+  void maybeAutoStartGuide()
 }
 
 function createInitialMessages() {
@@ -2676,8 +4098,33 @@ function createInitialMessages() {
 
 function resetMessages() {
   currentSessionId.value = null
+  archivedNarrationKeys.clear()
   messages.value = createInitialMessages()
   scrollMessagesToBottom()
+}
+
+function archiveVoiceGuideNarration(narration, text) {
+  if (!shouldArchiveVoiceGuideNarration(narration)) return
+  const archiveKey = narration.key
+  if (!archiveKey || archivedNarrationKeys.has(archiveKey)) return
+
+  archivedNarrationKeys.add(archiveKey)
+  messages.value.push({
+    id: `guide-${archiveKey}-${Date.now()}`,
+    role: 'guide',
+    narrationKey: archiveKey,
+    content: [clipVoiceText(text || narration.text, 96)],
+    time: getCurrentTime()
+  })
+
+  if (activeScene.value === 4 && guideExpanded.value) {
+    scrollMessagesToBottom()
+  }
+}
+
+function shouldArchiveVoiceGuideNarration(narration) {
+  if (!narration?.intent) return false
+  return ['scene-anchor', 'artifact-list', 'stage-viewer', 'graph-node', 'guide-chat'].includes(narration.intent)
 }
 
 function getCurrentArtifactEntityId() {
@@ -2767,6 +4214,9 @@ async function requestAutoGuide(expectedEntityId) {
       signal: controller.signal,
       openWhenHidden: true,
       onmessage(event) {
+        if (controller.signal.aborted || getCurrentArtifactEntityId() !== expectedEntityId) {
+          return
+        }
         if (event.data === '[DONE]') {
           isThinking.value = false
           return
@@ -2846,6 +4296,11 @@ function getMockReply(question = '', docs = []) {
 async function sendMessage(presetQuestion = '') {
   const question = (presetQuestion || draft.value).trim()
   if (!question || isThinking.value) return
+
+  if (voiceGuideEnabled.value && !voiceGuidePaused.value) {
+    cancelVoiceGuideRequest()
+    stopVoiceGuideAudio()
+  }
 
   const fixedAnswer = matchFixedAnswer(question)
   messages.value.push({
@@ -2998,13 +4453,33 @@ function maybeRevealQuizPromo(roundCount) {
   if (roundCount < QUIZ_PROMO_TRIGGER_ROUNDS) return
 
   showQuizPromo.value = true
+  trailNextCardDismissed.value = false
   markQuizPromoSeen()
   scrollMessagesToBottom()
+}
+
+function dismissTrailNextCard() {
+  if (showQuizPromo.value) {
+    dismissQuizPromo()
+    return
+  }
+  trailNextCardDismissed.value = true
 }
 
 function dismissQuizPromo() {
   showQuizPromo.value = false
   markQuizPromoSeen()
+}
+
+function returnToTrailStart() {
+  activeScene.value = 1
+  guideExpanded.value = false
+  trailLoopHintVisible.value = true
+  trailNextCardDismissed.value = false
+
+  nextTick(() => {
+    filterSectionRef.value?.scrollIntoView?.({ behavior: 'smooth', block: 'start' })
+  })
 }
 
 function goQuizChallenge() {
@@ -3079,6 +4554,138 @@ function goQuizChallenge() {
   border-color: rgba(66, 102, 79, 0.26);
 }
 
+.trail-command-overlay {
+  position: fixed;
+  left: 50%;
+  top: calc(var(--voice-guide-top) + 84px);
+  z-index: 790;
+  width: min(680px, calc(100vw - 40px));
+  pointer-events: none;
+  transform: translateX(-50%);
+}
+
+.trail-command-overlay__panel {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 14px 16px;
+  align-items: center;
+  padding: 16px;
+  border: 1px solid rgba(66, 102, 79, 0.24);
+  border-radius: 18px;
+  background:
+    linear-gradient(135deg, rgba(252, 248, 238, 0.96), rgba(236, 244, 236, 0.94)),
+    rgba(255, 255, 255, 0.92);
+  box-shadow: 0 22px 48px rgba(37, 56, 45, 0.18);
+  backdrop-filter: blur(16px);
+}
+
+.trail-command-overlay__mark {
+  display: grid;
+  place-items: center;
+  width: 48px;
+  height: 48px;
+  border: 1px solid rgba(184, 146, 67, 0.36);
+  border-radius: 14px;
+  color: #fffaf0;
+  background: linear-gradient(135deg, #b89243, #42664f);
+  box-shadow: 0 12px 24px rgba(66, 102, 79, 0.22);
+}
+
+.trail-command-overlay__copy {
+  min-width: 0;
+}
+
+.trail-command-overlay__copy span {
+  display: block;
+  margin-bottom: 4px;
+  color: var(--gold);
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0;
+}
+
+.trail-command-overlay__copy h2 {
+  margin: 0;
+  color: var(--green-deep);
+  font-size: 22px;
+  line-height: 1.2;
+}
+
+.trail-command-overlay__copy p {
+  margin: 6px 0 0;
+  color: var(--ink-soft);
+  font-size: 14px;
+  line-height: 1.7;
+}
+
+.trail-command-overlay__steps {
+  grid-column: 1 / -1;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.trail-command-overlay__steps span {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 8px;
+  align-items: center;
+  min-width: 0;
+  padding: 9px 10px;
+  border: 1px solid rgba(66, 102, 79, 0.12);
+  border-radius: 12px;
+  color: rgba(29, 52, 43, 0.56);
+  background: rgba(255, 255, 255, 0.46);
+  transition: transform 0.22s ease, border-color 0.22s ease, color 0.22s ease, background 0.22s ease;
+}
+
+.trail-command-overlay__steps i {
+  display: grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  color: inherit;
+  font-size: 12px;
+  font-style: normal;
+  font-weight: 800;
+  background: rgba(66, 102, 79, 0.1);
+}
+
+.trail-command-overlay__steps small {
+  overflow: hidden;
+  min-width: 0;
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.trail-command-overlay__steps span.is-active {
+  color: var(--green-deep);
+  border-color: rgba(184, 146, 67, 0.38);
+  background: rgba(255, 251, 243, 0.86);
+  transform: translateY(-1px);
+}
+
+.trail-command-overlay__steps span.is-done {
+  color: #42664f;
+  border-color: rgba(66, 102, 79, 0.22);
+  background: rgba(232, 242, 231, 0.78);
+}
+
+.trail-command-enter-active,
+.trail-command-leave-active {
+  transition: opacity 0.26s ease, transform 0.26s ease;
+}
+
+.trail-command-enter-from,
+.trail-command-leave-to {
+  opacity: 0;
+  transform: translate(-50%, -10px);
+}
+
 .voice-guide-panel--loading .voice-guide-panel__mark {
   background: linear-gradient(135deg, #b89243, var(--green));
 }
@@ -3150,6 +4757,7 @@ function goQuizChallenge() {
 
 .voice-guide-panel__actions {
   display: flex;
+  flex-wrap: wrap;
   gap: 8px;
   align-items: center;
   justify-content: flex-end;
@@ -3167,6 +4775,11 @@ function goQuizChallenge() {
   font-weight: 800;
   background: rgba(255, 255, 255, 0.72);
   cursor: pointer;
+}
+
+.voice-guide-button:disabled {
+  opacity: 0.46;
+  cursor: not-allowed;
 }
 
 .voice-guide-button--primary {
@@ -3232,6 +4845,22 @@ function goQuizChallenge() {
   background: rgba(121, 196, 167, 0.16);
   color: #f4eddc;
   border-color: rgba(121, 196, 167, 0.24);
+}
+
+.time-space-trail--immersive .trail-progress-card {
+  background: rgba(255, 255, 255, 0.04);
+  border-color: rgba(121, 196, 167, 0.12);
+  color: rgba(233, 241, 233, 0.72);
+}
+
+.time-space-trail--immersive .trail-progress-card__head strong,
+.time-space-trail--immersive .trail-progress-card__steps span.is-done small,
+.time-space-trail--immersive .trail-progress-card__steps span.is-active small {
+  color: #f4eddc;
+}
+
+.time-space-trail--immersive .trail-progress-card p {
+  color: rgba(233, 241, 233, 0.58);
 }
 
 .time-space-trail--immersive .trail-stagebar__kicker {
@@ -3317,6 +4946,106 @@ function goQuizChallenge() {
   align-items: end;
   margin-bottom: 14px;
   padding: 14px 0 10px;
+}
+
+.trail-progress-card {
+  width: min(1400px, calc(100vw - 56px));
+  margin: -6px auto 18px;
+  padding: 14px 16px;
+  border: 1px solid rgba(66, 102, 79, 0.12);
+  border-radius: 22px;
+  background: rgba(255, 255, 255, 0.62);
+  box-shadow: 0 12px 28px rgba(46, 64, 50, 0.06);
+}
+
+.trail-progress-card__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  color: var(--ink-soft);
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.trail-progress-card__head strong {
+  color: var(--green);
+  font-size: 15px;
+}
+
+.trail-progress-card__bar {
+  height: 5px;
+  margin-top: 10px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: rgba(66, 102, 79, 0.1);
+}
+
+.trail-progress-card__bar i {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, #4e765d, #d1a852);
+  transition: width 0.32s ease;
+}
+
+.trail-progress-card__steps {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.trail-progress-card__steps span {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  color: var(--ink-soft);
+}
+
+.trail-progress-card__steps em {
+  width: 26px;
+  height: 26px;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+  background: rgba(66, 102, 79, 0.08);
+  color: var(--green);
+  font-size: 11px;
+  font-style: normal;
+  font-weight: 900;
+}
+
+.trail-progress-card__steps small {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.trail-progress-card__steps span.is-done em {
+  background: #315845;
+  color: #f7f2e4;
+}
+
+.trail-progress-card__steps span.is-active em {
+  box-shadow: 0 0 0 4px rgba(184, 146, 67, 0.16);
+}
+
+.trail-progress-card__steps span.is-done small,
+.trail-progress-card__steps span.is-active small {
+  color: var(--green);
+}
+
+.trail-progress-card p {
+  margin: 10px 0 0;
+  color: var(--ink-soft);
+  font-size: 13px;
+  line-height: 1.6;
 }
 
 .hero-kicker,
@@ -3592,6 +5321,437 @@ function goQuizChallenge() {
   scroll-snap-align: start;
 }
 
+.pit-map-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1.65fr) minmax(280px, 0.75fr);
+  gap: 18px;
+  margin-top: 24px;
+  align-items: stretch;
+}
+
+.pit-map-card,
+.pit-map-inspector,
+.guide-clue-panel {
+  border: 1px solid rgba(66, 102, 79, 0.14);
+  background: rgba(255, 255, 255, 0.74);
+  box-shadow: 0 18px 44px rgba(38, 56, 43, 0.08);
+}
+
+.pit-map-card {
+  overflow: hidden;
+  border-radius: 22px;
+}
+
+.pit-map-card__head,
+.guide-clue-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 16px 18px 12px;
+}
+
+.pit-map-card__head h3,
+.pit-map-inspector h3,
+.guide-clue-head h3 {
+  margin: 0;
+  color: var(--ink);
+  font-size: 20px;
+  line-height: 1.25;
+}
+
+.pit-map-card__badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 64px;
+  height: 32px;
+  padding: 0 12px;
+  border-radius: 999px;
+  background: rgba(184, 146, 67, 0.14);
+  color: #7a5a1e;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.pit-map-scroll {
+  overflow: auto hidden;
+  padding: 0 16px 16px;
+  scrollbar-width: thin;
+}
+
+.pit-map-stage {
+  position: relative;
+  min-width: 720px;
+  aspect-ratio: 16 / 9;
+  border-radius: 18px;
+  overflow: hidden;
+  background: #e8dec7;
+}
+
+.pit-map-image {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  user-select: none;
+  pointer-events: none;
+}
+
+.pit-hotspot {
+  position: absolute;
+  transform: translate(-50%, -50%);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid transparent;
+  border-radius: 12px;
+  color: transparent;
+  background: transparent;
+  box-shadow: none;
+  cursor: pointer;
+  transition: background 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease, color 0.2s ease, transform 0.2s ease, opacity 0.2s ease;
+}
+
+.pit-hotspot span {
+  padding: 3px 7px;
+  border-radius: 999px;
+  background: rgba(18, 34, 25, 0);
+  font-size: 11px;
+  font-weight: 800;
+  pointer-events: none;
+}
+
+.pit-hotspot:hover,
+.pit-hotspot--active {
+  color: #fff8e6;
+  border-color: rgba(255, 238, 186, 0.92);
+  background: rgba(176, 78, 38, 0.22);
+  box-shadow: 0 0 0 3px rgba(211, 159, 70, 0.2), 0 10px 24px rgba(63, 42, 20, 0.24);
+}
+
+.pit-hotspot--pressed {
+  transform: translate(-50%, -50%) scale(0.94);
+}
+
+.pit-hotspot:hover span,
+.pit-hotspot--active span {
+  background: rgba(37, 58, 43, 0.86);
+}
+
+.pit-hotspot--pit {
+  border-color: rgba(49, 88, 69, 0.2);
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.pit-hotspot--pit::after {
+  content: "";
+  position: absolute;
+  inset: -4px;
+  border-radius: 14px;
+  border: 1px solid rgba(217, 169, 86, 0);
+  pointer-events: none;
+}
+
+.pit-hotspot--pit span {
+  opacity: 0;
+  transform: translateY(2px);
+  transition: opacity 0.2s ease, transform 0.2s ease, background 0.2s ease, color 0.2s ease;
+}
+
+.pit-hotspot--pit:hover,
+.pit-hotspot--pit.pit-hotspot--active,
+.pit-hotspot--pit.pit-hotspot--pressed {
+  color: #fff8e6;
+  border-color: rgba(255, 238, 186, 0.86);
+  background: rgba(176, 78, 38, 0.14);
+  box-shadow: 0 0 0 2px rgba(211, 159, 70, 0.16), 0 10px 24px rgba(63, 42, 20, 0.18);
+}
+
+.pit-hotspot--pit:hover span,
+.pit-hotspot--pit.pit-hotspot--active span,
+.pit-hotspot--pit.pit-hotspot--pressed span {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.pit-hotspot--pit.pit-hotspot--pressed::after {
+  animation: pitHotspotPulse 0.42s ease-out;
+}
+
+.pit-hotspot--artifact {
+  width: 48px !important;
+  height: 48px !important;
+  border-radius: 50%;
+  color: transparent;
+  background: transparent;
+  border-color: transparent;
+  backdrop-filter: none;
+}
+
+.pit-hotspot--artifact::after {
+  content: "";
+  position: absolute;
+  inset: -7px;
+  border-radius: inherit;
+  border: 1px solid rgba(69, 120, 92, 0.28);
+  opacity: 0;
+  transform: scale(0.82);
+  transition: opacity 0.2s ease, transform 0.2s ease;
+}
+
+.pit-hotspot--artifact span {
+  max-width: 38px;
+  padding: 0;
+  background: rgba(37, 84, 63, 0);
+  color: transparent;
+  font-size: 10px;
+  line-height: 1.1;
+  text-align: center;
+  white-space: normal;
+  transition: background 0.2s ease, color 0.2s ease;
+}
+
+.pit-hotspot--artifact:hover,
+.pit-hotspot--artifact.pit-hotspot--active {
+  background: transparent;
+  border-color: rgba(151, 214, 184, 0.72);
+}
+
+.pit-hotspot--artifact.pit-hotspot--active:not(:hover):not(.pit-hotspot--pressed),
+.pit-hotspot--artifact:not(:hover):not(.pit-hotspot--pressed) {
+  border-color: transparent;
+  background: transparent;
+  box-shadow: none;
+}
+
+.pit-hotspot--artifact.pit-hotspot--active:not(:hover):not(.pit-hotspot--pressed)::after,
+.pit-hotspot--artifact:not(:hover):not(.pit-hotspot--pressed)::after {
+  opacity: 0;
+}
+
+.pit-hotspot--artifact.pit-hotspot--active:not(:hover):not(.pit-hotspot--pressed) span,
+.pit-hotspot--artifact:not(:hover):not(.pit-hotspot--pressed) span {
+  color: transparent;
+  background: transparent;
+}
+
+.pit-hotspot--artifact:hover span,
+.pit-hotspot--artifact.pit-hotspot--pressed span {
+  background: rgba(37, 84, 63, 0.7);
+  color: #fff8e6;
+}
+
+.pit-hotspot--artifact:hover::after,
+.pit-hotspot--artifact.pit-hotspot--pressed::after {
+  opacity: 1;
+  transform: scale(1);
+}
+
+.pit-hotspot--artifact.pit-hotspot--pressed::after {
+  animation: pitHotspotPulse 0.42s ease-out;
+}
+
+@keyframes pitHotspotPulse {
+  0% {
+    opacity: 0.75;
+    transform: scale(0.86);
+    box-shadow: 0 0 0 0 rgba(217, 169, 86, 0.42);
+  }
+
+  100% {
+    opacity: 0;
+    transform: scale(1.55);
+    box-shadow: 0 0 0 14px rgba(217, 169, 86, 0);
+  }
+}
+
+@keyframes pitInspectorIn {
+  0% {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.pit-map-inspector {
+  display: flex;
+  flex-direction: column;
+  min-height: 100%;
+  padding: 20px;
+  border-radius: 22px;
+  position: relative;
+  overflow: hidden;
+  transition: border-color 0.24s ease, box-shadow 0.24s ease, transform 0.24s ease;
+  animation: pitInspectorIn 0.24s ease both;
+}
+
+.pit-map-inspector::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: radial-gradient(circle at 84% 12%, rgba(184, 146, 67, 0.18), transparent 34%);
+}
+
+.pit-map-inspector--pulse {
+  border-color: rgba(184, 146, 67, 0.38);
+  box-shadow: 0 22px 56px rgba(58, 76, 54, 0.14);
+  transform: translateY(-1px);
+}
+
+.pit-map-inspector__code {
+  align-self: flex-start;
+  min-width: 48px;
+  height: 28px;
+  margin: -2px 0 10px;
+  padding: 0 10px;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(49, 88, 69, 0.12);
+  color: var(--green);
+  font-size: 12px;
+  font-weight: 900;
+  letter-spacing: 0;
+}
+
+.pit-map-inspector p {
+  margin: 12px 0 0;
+  color: var(--ink-soft);
+  line-height: 1.8;
+}
+
+.pit-map-inspector__figure {
+  margin: 12px 0 0;
+  border-radius: 18px;
+  overflow: hidden;
+  border: 1px solid rgba(66, 102, 79, 0.12);
+  background:
+    linear-gradient(135deg, rgba(255, 255, 255, 0.92), rgba(244, 239, 226, 0.78)),
+    rgba(255, 255, 255, 0.7);
+}
+
+.pit-map-inspector__figure img {
+  display: block;
+  width: 100%;
+  aspect-ratio: 4 / 3;
+  max-height: 300px;
+  object-fit: contain;
+  object-position: center;
+}
+
+.pit-map-inspector__figure--portrait img {
+  aspect-ratio: 1 / 1;
+  max-height: 340px;
+}
+
+.pit-map-inspector__figure figcaption {
+  padding: 8px 12px;
+  color: var(--ink-soft);
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.pit-map-inspector__tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 16px;
+}
+
+.pit-map-inspector__tags span {
+  padding: 6px 10px;
+  border-radius: 999px;
+  background: rgba(66, 102, 79, 0.1);
+  color: var(--green);
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.pit-map-inspector__guide {
+  display: grid;
+  gap: 4px;
+  margin-top: 16px;
+  padding: 12px 14px;
+  border: 1px solid rgba(184, 146, 67, 0.2);
+  border-radius: 16px;
+  background: rgba(184, 146, 67, 0.1);
+  color: var(--green);
+}
+
+.pit-map-inspector__guide strong {
+  font-size: 14px;
+}
+
+.pit-map-inspector__guide small {
+  color: var(--ink-soft);
+  line-height: 1.55;
+}
+
+.pit-map-inspector__artifacts {
+  display: grid;
+  gap: 10px;
+  margin-top: auto;
+  padding-top: 18px;
+}
+
+.pit-artifact-link {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 12px 14px;
+  border: 1px solid rgba(66, 102, 79, 0.12);
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.78);
+  color: var(--green);
+  text-align: left;
+}
+
+.pit-artifact-link__thumb {
+  flex: 0 0 48px;
+  width: 48px;
+  height: 48px;
+  overflow: hidden;
+  border-radius: 12px;
+  background: rgba(49, 88, 69, 0.08);
+}
+
+.pit-artifact-link__thumb img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  object-position: center;
+}
+
+.pit-artifact-link__copy {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+}
+
+.pit-artifact-link strong {
+  font-size: 14px;
+  line-height: 1.35;
+}
+
+.pit-artifact-link small {
+  color: var(--ink-soft);
+  line-height: 1.35;
+}
+
+.pit-artifact-link--disabled {
+  opacity: 0.72;
+  cursor: default;
+}
+
 .panel-head,
 .section-head {
   display: flex;
@@ -3633,6 +5793,127 @@ function goQuizChallenge() {
 
 .filter-group {
   margin-top: 22px;
+}
+
+.filter-zone {
+  margin-top: 24px;
+  padding: 18px;
+  border: 1px solid rgba(66, 102, 79, 0.12);
+  border-radius: 22px;
+  background: rgba(255, 255, 255, 0.58);
+}
+
+.filter-zone__head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 14px;
+  margin-bottom: 4px;
+}
+
+.filter-zone__head h3 {
+  margin: 0;
+  color: var(--ink);
+  font-size: 19px;
+}
+
+.filter-zone__head span {
+  flex: 0 0 auto;
+  padding: 7px 10px;
+  border-radius: 999px;
+  background: rgba(49, 88, 69, 0.12);
+  color: var(--green);
+  font-size: 12px;
+  font-weight: 900;
+}
+
+.filter-zone .filter-group:first-of-type {
+  margin-top: 14px;
+}
+
+.guide-clue-panel {
+  margin-top: 22px;
+  padding-bottom: 16px;
+  border-radius: 22px;
+  background: rgba(250, 247, 239, 0.72);
+}
+
+.guide-clue-head span {
+  flex: 0 0 auto;
+  padding: 7px 10px;
+  border-radius: 999px;
+  background: rgba(184, 146, 67, 0.12);
+  color: #81601f;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.guide-clue-group {
+  display: grid;
+  grid-template-columns: 78px 1fr;
+  gap: 12px;
+  align-items: start;
+  padding: 0 18px 12px;
+}
+
+.guide-clue-group label {
+  padding-top: 8px;
+  color: var(--ink);
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.guide-clue-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.guide-clue-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 34px;
+  padding: 7px 10px;
+  border: 1px solid rgba(66, 102, 79, 0.12);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.8);
+  color: var(--green);
+  white-space: nowrap;
+}
+
+.guide-clue-chip span {
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.guide-clue-chip small {
+  color: var(--ink-soft);
+  font-size: 11px;
+}
+
+.guide-clue-chip.active {
+  background: #315845;
+  color: #f7f2e4;
+  border-color: transparent;
+}
+
+.guide-clue-chip.active small {
+  color: rgba(247, 242, 228, 0.82);
+}
+
+.guide-clue-chip--placeholder:not(.active) {
+  background: rgba(241, 238, 226, 0.72);
+  color: #5f6f60;
+}
+
+.guide-clue-chip--filterable:not(.active) {
+  border-color: rgba(184, 146, 67, 0.28);
+  background: rgba(255, 252, 242, 0.86);
+}
+
+.guide-clue-chip--filterable small {
+  color: #8a6826;
 }
 
 .filter-group label {
@@ -4891,6 +7172,30 @@ function goQuizChallenge() {
   justify-content: flex-end;
 }
 
+.message-row--guide {
+  justify-content: center;
+}
+
+.message-row--guide .message-stack {
+  width: min(560px, 92%);
+  max-width: none;
+}
+
+.message-row--guide .message-bubble {
+  border: 1px solid rgba(184, 146, 67, 0.22);
+  background:
+    linear-gradient(135deg, rgba(255, 251, 239, 0.88), rgba(235, 244, 238, 0.78));
+  color: rgba(29, 52, 43, 0.78);
+}
+
+.message-guide-label {
+  display: inline-flex;
+  margin-bottom: 6px;
+  color: var(--gold);
+  font-size: 12px;
+  font-weight: 800;
+}
+
 .message-row--user .message-stack {
   margin-left: 0;
   align-items: flex-end;
@@ -4949,7 +7254,65 @@ function goQuizChallenge() {
   font-size: 12px;
 }
 
-.quiz-promo-card {
+.trail-loop-nudge {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px 10px 14px;
+  border: 1px solid rgba(66, 102, 79, 0.14);
+  border-radius: 14px;
+  background: rgba(255, 251, 239, 0.72);
+  box-shadow: 0 10px 22px rgba(43, 59, 46, 0.08);
+}
+
+.trail-loop-nudge div {
+  min-width: 0;
+  flex: 1;
+}
+
+.trail-loop-nudge strong,
+.trail-loop-nudge span {
+  display: block;
+}
+
+.trail-loop-nudge strong {
+  color: var(--green-deep);
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.trail-loop-nudge span {
+  margin-top: 2px;
+  color: rgba(29, 52, 43, 0.58);
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.trail-loop-nudge-action,
+.trail-loop-nudge-close {
+  flex: 0 0 auto;
+  border: 0;
+  border-radius: 999px;
+  cursor: pointer;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.trail-loop-nudge-action {
+  min-height: 32px;
+  padding: 0 12px;
+  color: #f8f2df;
+  background: var(--green);
+}
+
+.trail-loop-nudge-close {
+  padding: 0 4px;
+  color: var(--green);
+  background: transparent;
+}
+
+.trail-next-card {
   position: relative;
   display: grid;
   grid-template-columns: auto minmax(0, 1fr) auto;
@@ -4957,43 +7320,43 @@ function goQuizChallenge() {
   align-items: center;
   padding: 16px 18px;
   border: 1px solid rgba(184, 146, 67, 0.32);
-  border-radius: 22px;
+  border-radius: 18px;
   background:
-    radial-gradient(circle at 0% 0%, rgba(216, 184, 109, 0.24), transparent 32%),
-    linear-gradient(135deg, rgba(255, 251, 239, 0.98), rgba(235, 244, 238, 0.94));
+    radial-gradient(circle at 0% 0%, rgba(216, 184, 109, 0.2), transparent 32%),
+    linear-gradient(135deg, rgba(255, 251, 239, 0.98), rgba(235, 244, 238, 0.96));
   box-shadow: 0 18px 38px rgba(43, 59, 46, 0.12);
 }
 
-.quiz-promo-mark {
+.trail-next-mark {
   display: grid;
   width: 48px;
   height: 48px;
   place-items: center;
   color: #f8f2df;
-  background: linear-gradient(135deg, #d4a84c, #4e765d);
-  border-radius: 16px;
+  background: linear-gradient(135deg, #d0a757, #4e765d);
+  border-radius: 14px;
   box-shadow: 0 12px 24px rgba(184, 146, 67, 0.18);
 }
 
-.quiz-promo-copy {
+.trail-next-copy {
   min-width: 0;
 }
 
-.quiz-promo-kicker,
-.quiz-promo-copy h4,
-.quiz-promo-copy p,
-.quiz-promo-copy span {
+.trail-next-kicker,
+.trail-next-copy h4,
+.trail-next-copy p,
+.trail-next-copy span {
   margin: 0;
 }
 
-.quiz-promo-kicker {
+.trail-next-kicker {
   color: var(--gold);
   font-size: 12px;
   font-weight: 800;
-  letter-spacing: 0.08em;
+  letter-spacing: 0.04em;
 }
 
-.quiz-promo-copy h4 {
+.trail-next-copy h4 {
   margin-top: 3px;
   color: var(--ink);
   font-family: 'STZhongsong', 'Noto Serif SC', serif;
@@ -5001,53 +7364,64 @@ function goQuizChallenge() {
   line-height: 1.25;
 }
 
-.quiz-promo-copy p {
+.trail-next-copy p {
   margin-top: 6px;
   color: var(--green-deep);
   font-size: 14px;
   font-weight: 700;
 }
 
-.quiz-promo-copy span {
+.trail-next-copy span {
   display: block;
   margin-top: 4px;
   color: rgba(29, 52, 43, 0.64);
   font-size: 12px;
 }
 
-.quiz-promo-actions {
-  display: grid;
+.trail-next-actions {
+  display: flex;
+  flex-wrap: wrap;
   gap: 8px;
-  min-width: 134px;
+  justify-content: flex-end;
+  min-width: 226px;
 }
 
-.quiz-promo-primary,
-.quiz-promo-secondary,
-.quiz-promo-close {
+.trail-next-primary,
+.trail-next-secondary,
+.trail-next-close {
   border: 0;
   cursor: pointer;
   font: inherit;
 }
 
-.quiz-promo-primary {
+.trail-next-primary,
+.trail-next-secondary--route {
   min-height: 40px;
   padding: 0 14px;
   border-radius: 999px;
-  color: #f8f2df;
-  background: linear-gradient(135deg, #4e765d, #29483a);
   font-size: 13px;
   font-weight: 800;
+}
+
+.trail-next-primary {
+  color: #f8f2df;
+  background: linear-gradient(135deg, #4e765d, #29483a);
   box-shadow: 0 12px 22px rgba(41, 72, 58, 0.16);
 }
 
-.quiz-promo-secondary {
+.trail-next-secondary--route {
+  color: var(--green-deep);
+  background: rgba(66, 102, 79, 0.1);
+}
+
+.trail-next-secondary {
   color: var(--green);
   background: transparent;
   font-size: 12px;
   font-weight: 700;
 }
 
-.quiz-promo-close {
+.trail-next-close {
   position: absolute;
   top: 10px;
   right: 12px;
@@ -5060,7 +7434,7 @@ function goQuizChallenge() {
   line-height: 1;
 }
 
-.quiz-promo-close:hover {
+.trail-next-close:hover {
   color: var(--ink);
   background: rgba(255, 255, 255, 0.92);
 }
@@ -5220,6 +7594,7 @@ function goQuizChallenge() {
 
   .trail-nav,
   .trail-hero,
+  .trail-progress-card,
   .trail-stagebar,
   .trail-shell,
   .voice-guide-panel {
@@ -5247,6 +7622,29 @@ function goQuizChallenge() {
     flex-wrap: wrap;
   }
 
+  .trail-command-overlay {
+    top: calc(var(--voice-guide-top) + 156px);
+    width: calc(100vw - 24px);
+  }
+
+  .trail-command-overlay__panel {
+    grid-template-columns: 1fr;
+    gap: 10px;
+    padding: 14px;
+  }
+
+  .trail-command-overlay__mark {
+    display: none;
+  }
+
+  .trail-command-overlay__copy h2 {
+    font-size: 18px;
+  }
+
+  .trail-command-overlay__steps {
+    grid-template-columns: 1fr;
+  }
+
   .trail-hero {
     padding: 16px;
     gap: 10px;
@@ -5254,6 +7652,43 @@ function goQuizChallenge() {
 
   .trail-nav {
     grid-template-columns: 1fr 1fr;
+  }
+
+  .trail-progress-card {
+    margin-top: -8px;
+    padding: 12px;
+    border-radius: 18px;
+  }
+
+  .trail-progress-card__steps {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .pit-map-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .pit-map-card__head,
+  .guide-clue-head {
+    flex-direction: column;
+  }
+
+  .pit-map-scroll {
+    margin: 0 -4px;
+    padding: 0 4px 14px;
+  }
+
+  .pit-map-stage {
+    min-width: 760px;
+  }
+
+  .guide-clue-group {
+    grid-template-columns: 1fr;
+    gap: 8px;
+  }
+
+  .guide-clue-group label {
+    padding-top: 0;
   }
 
   .composer {
@@ -5265,17 +7700,34 @@ function goQuizChallenge() {
     min-height: 50px;
   }
 
-  .quiz-promo-card {
+  .trail-loop-nudge {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .trail-loop-nudge-action,
+  .trail-loop-nudge-close {
+    width: 100%;
+    min-height: 34px;
+  }
+
+  .trail-next-card {
     grid-template-columns: 1fr;
     padding: 16px;
   }
 
-  .quiz-promo-mark {
+  .trail-next-mark {
     display: none;
   }
 
-  .quiz-promo-actions {
+  .trail-next-actions {
+    justify-content: stretch;
     min-width: 0;
+  }
+
+  .trail-next-primary,
+  .trail-next-secondary--route {
+    width: 100%;
   }
 
   .scene-context-row {

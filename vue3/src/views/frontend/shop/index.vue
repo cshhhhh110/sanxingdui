@@ -255,8 +255,8 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
-import { useRouter } from 'vue-router'
+import { ref, onMounted, watch } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
 import { message } from 'ant-design-vue'
 import { getProductPage } from '@/api/ShopProductApi'
 import { getEnabledCategories } from '@/api/ShopCategoryApi'
@@ -265,6 +265,7 @@ import '@/styles/scroll-header.css'
 
 // ========== 路由 (原封不动) ==========
 const router = useRouter()
+const route = useRoute()
 
 // ========== 响应式数据 (原封不动) ==========
 const loading = ref(false)
@@ -281,11 +282,26 @@ const total = ref(0)
 
 // ========== 生命周期 (原封不动) ==========
 onMounted(() => {
+  applyRouteQuery()
   fetchCategories()
   fetchProducts()
 })
 
+watch(
+  () => [route.query.keyword, route.query.search, route.query.category, route.query.mode],
+  () => {
+    applyRouteQuery()
+    fetchProducts()
+  }
+)
+
 // ========== 方法逻辑 (原封不动) ==========
+const applyRouteQuery = () => {
+  searchKeyword.value = String(route.query.keyword || route.query.search || route.query.category || '')
+  selectedCategoryId.value = null
+  currentPage.value = 1
+}
+
 const fetchCategories = () => {
   getEnabledCategories({
     onSuccess: (res) => {

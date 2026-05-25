@@ -1,0 +1,159 @@
+{
+  "meta": {
+    "project": "sanxingdui-trail",
+    "version": "2026-05-25",
+    "description": "Assets and source notes for the /trail Sanxingdui pit guide.",
+    "scope": "TimeSpaceTrail first-scene pit map, pit knowledge, and artifact guide images."
+  },
+  "sources": [
+    {
+      "id": "people-20220225",
+      "title": "三星堆新发现祭祀坑出土文物相关报道",
+      "url": "https://ent.people.com.cn/n1/2022/0225/c1012-32359761.html",
+      "publisher": "人民网",
+      "usage": "Pit and artifact fact cross-checking only."
+    },
+    {
+      "id": "xinhua-20220613",
+      "title": "三星堆遗址祭祀区考古新发现相关报道",
+      "url": "https://www.news.cn/politics/2022-06/13/c_1128736321.htm",
+      "publisher": "新华网",
+      "usage": "Pit and excavation overview fact cross-checking only."
+    },
+    {
+      "id": "scwwj-20210910",
+      "title": "三星堆遗址三、四号祭祀坑阶段性考古成果",
+      "url": "https://wwj.sc.gov.cn/scwwj/wbyw/2021/9/10/853ddc0461e0408ba25f05e1a4b96d05.shtml",
+      "publisher": "四川省文物局",
+      "usage": "K3/K4 context fact cross-checking only."
+    }
+  ],
+  "assets": [
+    {
+      "id": "pit-map-main",
+      "type": "map",
+      "pitCode": "",
+      "entityId": "",
+      "title": "三星堆遗址重点文物模型位置示意图",
+      "file": "/images/trail/pit-map.png",
+      "sourceUrl": "local-provided-by-user",
+      "license": "project-provided asset",
+      "isGenerated": false
+    },
+    {
+      "id": "artifact-HI-2025-006",
+      "type": "artifact",
+      "pitCode": "K2",
+      "entityId": "HI-2025-006",
+      "title": "青铜神树",
+      "file": "/images/trail/artifacts/artifact-HI-2025-006-bronze-sacred-tree.jpg",
+      "sourceUrl": "https://commons.wikimedia.org/wiki/File:Bronze_Tree,_Sanxingdui_1b.jpg",
+      "license": "Wikimedia Commons source-page license applies; verify before redistribution",
+      "isGenerated": false
+    },
+    {
+      "id": "artifact-HI-2025-005",
+      "type": "artifact",
+      "pitCode": "K2",
+      "entityId": "HI-2025-005",
+      "title": "青铜大立人像",
+      "file": "/images/trail/artifacts/artifact-HI-2025-005-bronze-standing-figure.jpg",
+      "sourceUrl": "https://commons.wikimedia.org/wiki/File:Bronze_Standing_Figure.jpg",
+      "license": "Wikimedia Commons source-page license applies; verify before redistribution",
+      "isGenerated": false
+    },
+    {
+      "id": "artifact-HI-2025-003",
+      "type": "artifact",
+      "pitCode": "K2",
+      "entityId": "HI-2025-003",
+      "title": "青铜纵目面具",
+      "file": "/images/trail/artifacts/artifact-HI-2025-003-bronze-vertical-eye-mask.jpg",
+      "sourceUrl": "local-existing-project-asset",
+      "license": "project-existing asset",
+      "isGenerated": false
+    },
+    {
+      "id": "artifact-HI-2025-004",
+      "type": "artifact",
+      "pitCode": "K1",
+      "entityId": "HI-2025-004",
+      "title": "金杖",
+      "file": "/images/trail/artifacts/artifact-HI-2025-004-gold-scepter.jpg",
+      "sourceUrl": "local-existing-project-asset",
+      "license": "project-existing asset",
+      "isGenerated": false
+    },
+    {
+      "id": "artifact-HI-2025-002",
+      "type": "artifact",
+      "pitCode": "K5",
+      "entityId": "HI-2025-002",
+      "title": "金面具",
+      "file": "/images/trail/artifacts/artifact-HI-2025-002-gold-mask.jpg",
+      "sourceUrl": "local-existing-project-asset",
+      "license": "project-existing asset",
+      "isGenerated": false
+    },
+    {
+      "id": "pit-K3-guide",
+      "type": "pit",
+      "pitCode": "K3",
+      "entityId": "",
+      "title": "金面罩与大型铜器线索",
+      "file": "/images/trail/pits/pit-K3-bronze-vessels-gold-mask.image2.png",
+      "sourceUrl": "generated-by-gpt-image2-with-real-archaeology-reference",
+      "license": "project-generated asset",
+      "isGenerated": true,
+      "prompt": "Photorealistic museum catalog image for Sanxingdui K3, ancient bronze zun and bronze lei ritual vessel group with a small gold mask fragment, realistic archaeological artifact photography, dark museum background, oxidized bronze patina, hammered gold surface, no text."
+    },
+    {
+      "id": "pit-K4-guide",
+      "type": "pit",
+      "pitCode": "K4",
+      "entityId": "",
+      "title": "铜扭头跪坐人像线索",
+      "file": "/images/trail/pits/pit-K4-kneeling-twisted-head-figure.image2.png",
+      "sourceUrl": "generated-by-gpt-image2-with-real-archaeology-reference",
+      "license": "project-generated asset",
+      "isGenerated": true,
+      "prompt": "Photorealistic museum catalog image for Sanxingdui K4, ancient bronze kneeling human figure with twisted turned head and ritual posture, green-blue oxidized bronze patina, neutral museum background, no text."
+    },
+    {
+      "id": "pit-K6-guide",
+      "type": "pit",
+      "pitCode": "K6",
+      "entityId": "",
+      "title": "木箱、玉刀与小型遗存",
+      "file": "/images/trail/pits/pit-K6-wooden-box-jade-knife.image2.png",
+      "sourceUrl": "generated-by-gpt-image2-with-real-archaeology-reference",
+      "license": "project-generated asset",
+      "isGenerated": true,
+      "prompt": "Photorealistic museum catalog image for Sanxingdui K6, weathered wooden box remnant, pale jade blade or jade knife, cinnabar-red powder traces and textile residue fragments, realistic archaeological display, no text."
+    },
+    {
+      "id": "pit-K7-guide",
+      "type": "pit",
+      "pitCode": "K7",
+      "entityId": "",
+      "title": "龟背形网格状铜器与玉石器",
+      "file": "/images/trail/pits/pit-K7-grid-bronze-jade.image2.png",
+      "sourceUrl": "generated-by-gpt-image2-with-real-archaeology-reference",
+      "license": "project-generated asset",
+      "isGenerated": true,
+      "prompt": "Photorealistic museum catalog image for Sanxingdui K7, tortoise-shell-shaped openwork bronze grid object with jade pieces, curved turtle-back lattice made of aged bronze ribs, realistic archaeological artifact photography, no text."
+    },
+    {
+      "id": "pit-K8-guide",
+      "type": "pit",
+      "pitCode": "K8",
+      "entityId": "",
+      "title": "顶尊蛇身人像与神话性铜器组合",
+      "file": "/images/trail/pits/pit-K8-zun-snake-body-bronze-altar.image2.png",
+      "sourceUrl": "generated-by-gpt-image2-with-real-archaeology-reference",
+      "license": "project-generated asset",
+      "isGenerated": true,
+      "prompt": "Photorealistic museum catalog image for Sanxingdui K8, complex ancient bronze ritual assemblage with zun-shaped vessel top, sinuous snake-like human or animal motif and bronze altar elements, realistic oxidized bronze museum photography, no text."
+    }
+  ]
+}

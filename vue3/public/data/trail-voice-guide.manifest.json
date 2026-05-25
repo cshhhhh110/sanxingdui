@@ -1,6 +1,6 @@
 {
   "version": 2,
-  "generatedAt": "2026-05-25T00:39:01.781Z",
+  "generatedAt": "2026-05-25T07:47:21.341Z",
   "provider": "current-backend-tts",
   "voices": [
     "default",
@@ -297,6 +297,7 @@
       "ready": true,
       "readyVoices": [
         "default",
+        "zh_female",
         "sweet"
       ]
     },
@@ -440,7 +441,9 @@
       },
       "ready": true,
       "readyVoices": [
-        "default"
+        "default",
+        "zh_female",
+        "sweet"
       ]
     },
     {
@@ -472,8 +475,12 @@
           "wav": "/audio/trail-guide/graph-type.default.v1.sweet.ef4e2bfec5.wav"
         }
       },
-      "ready": false,
-      "readyVoices": []
+      "ready": true,
+      "readyVoices": [
+        "default",
+        "zh_female",
+        "sweet"
+      ]
     },
     {
       "key": "graph-type.default.v2",
@@ -504,8 +511,12 @@
           "wav": "/audio/trail-guide/graph-type.default.v2.sweet.1f1023c978.wav"
         }
       },
-      "ready": false,
-      "readyVoices": []
+      "ready": true,
+      "readyVoices": [
+        "default",
+        "zh_female",
+        "sweet"
+      ]
     },
     {
       "key": "graph-type.artifact.v1",
@@ -537,8 +548,12 @@
           "wav": "/audio/trail-guide/graph-type.artifact.v1.sweet.581c3d128d.wav"
         }
       },
-      "ready": false,
-      "readyVoices": []
+      "ready": true,
+      "readyVoices": [
+        "default",
+        "zh_female",
+        "sweet"
+      ]
     },
     {
       "key": "graph-type.artifact.v2",
@@ -570,8 +585,12 @@
           "wav": "/audio/trail-guide/graph-type.artifact.v2.sweet.ecbba0ca1a.wav"
         }
       },
-      "ready": false,
-      "readyVoices": []
+      "ready": true,
+      "readyVoices": [
+        "default",
+        "zh_female",
+        "sweet"
+      ]
     },
     {
       "key": "graph-type.site.v1",
@@ -603,8 +622,12 @@
           "wav": "/audio/trail-guide/graph-type.site.v1.sweet.63b380eabe.wav"
         }
       },
-      "ready": false,
-      "readyVoices": []
+      "ready": true,
+      "readyVoices": [
+        "default",
+        "zh_female",
+        "sweet"
+      ]
     },
     {
       "key": "graph-type.site.v2",
@@ -636,8 +659,12 @@
           "wav": "/audio/trail-guide/graph-type.site.v2.sweet.f762071c7b.wav"
         }
       },
-      "ready": false,
-      "readyVoices": []
+      "ready": true,
+      "readyVoices": [
+        "default",
+        "zh_female",
+        "sweet"
+      ]
     },
     {
       "key": "graph-type.era.v1",
@@ -669,8 +696,12 @@
           "wav": "/audio/trail-guide/graph-type.era.v1.sweet.d3187e814d.wav"
         }
       },
-      "ready": false,
-      "readyVoices": []
+      "ready": true,
+      "readyVoices": [
+        "default",
+        "zh_female",
+        "sweet"
+      ]
     },
     {
       "key": "graph-type.era.v2",
@@ -702,8 +733,12 @@
           "wav": "/audio/trail-guide/graph-type.era.v2.sweet.ea9783aa91.wav"
         }
       },
-      "ready": false,
-      "readyVoices": []
+      "ready": true,
+      "readyVoices": [
+        "default",
+        "zh_female",
+        "sweet"
+      ]
     },
     {
       "key": "graph-type.craft.v1",
@@ -735,8 +770,12 @@
           "wav": "/audio/trail-guide/graph-type.craft.v1.sweet.53127686fb.wav"
         }
       },
-      "ready": false,
-      "readyVoices": []
+      "ready": true,
+      "readyVoices": [
+        "default",
+        "zh_female",
+        "sweet"
+      ]
     },
     {
       "key": "graph-type.craft.v2",
@@ -768,8 +807,12 @@
           "wav": "/audio/trail-guide/graph-type.craft.v2.sweet.ac80e71933.wav"
         }
       },
-      "ready": false,
-      "readyVoices": []
+      "ready": true,
+      "readyVoices": [
+        "default",
+        "zh_female",
+        "sweet"
+      ]
     },
     {
       "key": "graph-type.material.v1",
@@ -801,8 +844,12 @@
           "wav": "/audio/trail-guide/graph-type.material.v1.sweet.d36303efd1.wav"
         }
       },
-      "ready": false,
-      "readyVoices": []
+      "ready": true,
+      "readyVoices": [
+        "default",
+        "zh_female",
+        "sweet"
+      ]
     },
     {
       "key": "graph-type.material.v2",
@@ -834,8 +881,12 @@
           "wav": "/audio/trail-guide/graph-type.material.v2.sweet.8ecb50c57c.wav"
         }
       },
-      "ready": false,
-      "readyVoices": []
+      "ready": true,
+      "readyVoices": [
+        "default",
+        "zh_female",
+        "sweet"
+      ]
     },
     {
       "key": "graph-type.meaning.v1",
@@ -867,8 +918,12 @@
           "wav": "/audio/trail-guide/graph-type.meaning.v1.sweet.80847d63e0.wav"
         }
       },
-      "ready": false,
-      "readyVoices": []
+      "ready": true,
+      "readyVoices": [
+        "default",
+        "zh_female",
+        "sweet"
+      ]
     },
     {
       "key": "graph-type.meaning.v2",
@@ -900,8 +955,12 @@
           "wav": "/audio/trail-guide/graph-type.meaning.v2.sweet.b656e0be6c.wav"
         }
       },
-      "ready": false,
-      "readyVoices": []
+      "ready": true,
+      "readyVoices": [
+        "default",
+        "zh_female",
+        "sweet"
+      ]
     },
     {
       "key": "graph-type.motif.v1",
@@ -933,8 +992,12 @@
           "wav": "/audio/trail-guide/graph-type.motif.v1.sweet.49b95fe040.wav"
         }
       },
-      "ready": false,
-      "readyVoices": []
+      "ready": true,
+      "readyVoices": [
+        "default",
+        "zh_female",
+        "sweet"
+      ]
     },
     {
       "key": "graph-type.motif.v2",
@@ -966,8 +1029,12 @@
           "wav": "/audio/trail-guide/graph-type.motif.v2.sweet.de1daedfff.wav"
         }
       },
-      "ready": false,
-      "readyVoices": []
+      "ready": true,
+      "readyVoices": [
+        "default",
+        "zh_female",
+        "sweet"
+      ]
     },
     {
       "key": "graph-type.ritual.v1",
@@ -999,8 +1066,12 @@
           "wav": "/audio/trail-guide/graph-type.ritual.v1.sweet.410d0ce28d.wav"
         }
       },
-      "ready": false,
-      "readyVoices": []
+      "ready": true,
+      "readyVoices": [
+        "default",
+        "zh_female",
+        "sweet"
+      ]
     },
     {
       "key": "graph-type.ritual.v2",
@@ -1032,8 +1103,12 @@
           "wav": "/audio/trail-guide/graph-type.ritual.v2.sweet.cad8eefde5.wav"
         }
       },
-      "ready": false,
-      "readyVoices": []
+      "ready": true,
+      "readyVoices": [
+        "default",
+        "zh_female",
+        "sweet"
+      ]
     },
     {
       "key": "artifact-list.HI-2025-006.v1",
@@ -1065,8 +1140,12 @@
           "wav": "/audio/trail-guide/artifact-list.HI-2025-006.v1.sweet.4afa5273fc.wav"
         }
       },
-      "ready": false,
-      "readyVoices": []
+      "ready": true,
+      "readyVoices": [
+        "default",
+        "zh_female",
+        "sweet"
+      ]
     },
     {
       "key": "artifact-list.HI-2025-006.v2",
@@ -1098,8 +1177,12 @@
           "wav": "/audio/trail-guide/artifact-list.HI-2025-006.v2.sweet.eab520f4cf.wav"
         }
       },
-      "ready": false,
-      "readyVoices": []
+      "ready": true,
+      "readyVoices": [
+        "default",
+        "zh_female",
+        "sweet"
+      ]
     },
     {
       "key": "artifact-list.HI-2025-006.v3",
@@ -1131,8 +1214,12 @@
           "wav": "/audio/trail-guide/artifact-list.HI-2025-006.v3.sweet.c258e562ec.wav"
         }
       },
-      "ready": false,
-      "readyVoices": []
+      "ready": true,
+      "readyVoices": [
+        "default",
+        "zh_female",
+        "sweet"
+      ]
     },
     {
       "key": "stage-viewer.HI-2025-006.v1",
@@ -1164,8 +1251,12 @@
           "wav": "/audio/trail-guide/stage-viewer.HI-2025-006.v1.sweet.d7458154dd.wav"
         }
       },
-      "ready": false,
-      "readyVoices": []
+      "ready": true,
+      "readyVoices": [
+        "default",
+        "zh_female",
+        "sweet"
+      ]
     },
     {
       "key": "stage-viewer.HI-2025-006.v2",
@@ -1197,8 +1288,12 @@
           "wav": "/audio/trail-guide/stage-viewer.HI-2025-006.v2.sweet.f67a2ada63.wav"
         }
       },
-      "ready": false,
-      "readyVoices": []
+      "ready": true,
+      "readyVoices": [
+        "default",
+        "zh_female",
+        "sweet"
+      ]
     },
     {
       "key": "stage-viewer.HI-2025-006.v3",
@@ -1230,8 +1325,12 @@
           "wav": "/audio/trail-guide/stage-viewer.HI-2025-006.v3.sweet.afad79cb6b.wav"
         }
       },
-      "ready": false,
-      "readyVoices": []
+      "ready": true,
+      "readyVoices": [
+        "default",
+        "zh_female",
+        "sweet"
+      ]
     },
     {
       "key": "guide-chat.HI-2025-006.v1",
@@ -1263,8 +1362,12 @@
           "wav": "/audio/trail-guide/guide-chat.HI-2025-006.v1.sweet.55747fc63b.wav"
         }
       },
-      "ready": false,
-      "readyVoices": []
+      "ready": true,
+      "readyVoices": [
+        "default",
+        "zh_female",
+        "sweet"
+      ]
     },
     {
       "key": "guide-chat.HI-2025-006.v2",
@@ -1296,8 +1399,12 @@
           "wav": "/audio/trail-guide/guide-chat.HI-2025-006.v2.sweet.ba15b46e4e.wav"
         }
       },
-      "ready": false,
-      "readyVoices": []
+      "ready": true,
+      "readyVoices": [
+        "default",
+        "zh_female",
+        "sweet"
+      ]
     },
     {
       "key": "guide-chat.HI-2025-006.v3",
@@ -1329,8 +1436,12 @@
           "wav": "/audio/trail-guide/guide-chat.HI-2025-006.v3.sweet.8faafad788.wav"
         }
       },
-      "ready": false,
-      "readyVoices": []
+      "ready": true,
+      "readyVoices": [
+        "default",
+        "zh_female",
+        "sweet"
+      ]
     },
     {
       "key": "artifact-craft.HI-2025-006.v1",
@@ -1362,8 +1473,12 @@
           "wav": "/audio/trail-guide/artifact-craft.HI-2025-006.v1.sweet.d82705bc40.wav"
         }
       },
-      "ready": false,
-      "readyVoices": []
+      "ready": true,
+      "readyVoices": [
+        "default",
+        "zh_female",
+        "sweet"
+      ]
     },
     {
       "key": "artifact-craft.HI-2025-006.v2",
@@ -1395,8 +1510,12 @@
           "wav": "/audio/trail-guide/artifact-craft.HI-2025-006.v2.sweet.fcfd3be756.wav"
         }
       },
-      "ready": false,
-      "readyVoices": []
+      "ready": true,
+      "readyVoices": [
+        "default",
+        "zh_female",
+        "sweet"
+      ]
     },
     {
       "key": "artifact-symbol.HI-2025-006.v1",
@@ -1428,8 +1547,12 @@
           "wav": "/audio/trail-guide/artifact-symbol.HI-2025-006.v1.sweet.2e300ae382.wav"
         }
       },
-      "ready": false,
-      "readyVoices": []
+      "ready": true,
+      "readyVoices": [
+        "default",
+        "zh_female",
+        "sweet"
+      ]
     },
     {
       "key": "artifact-symbol.HI-2025-006.v2",
@@ -1461,8 +1584,12 @@
           "wav": "/audio/trail-guide/artifact-symbol.HI-2025-006.v2.sweet.bb57c79fe1.wav"
         }
       },
-      "ready": false,
-      "readyVoices": []
+      "ready": true,
+      "readyVoices": [
+        "default",
+        "zh_female",
+        "sweet"
+      ]
     },
     {
       "key": "artifact-context.HI-2025-006.v1",
@@ -1494,8 +1621,12 @@
           "wav": "/audio/trail-guide/artifact-context.HI-2025-006.v1.sweet.92882c39de.wav"
         }
       },
-      "ready": false,
-      "readyVoices": []
+      "ready": true,
+      "readyVoices": [
+        "default",
+        "zh_female",
+        "sweet"
+      ]
     },
     {
       "key": "artifact-context.HI-2025-006.v2",
@@ -1527,8 +1658,12 @@
           "wav": "/audio/trail-guide/artifact-context.HI-2025-006.v2.sweet.a4b4948aea.wav"
         }
       },
-      "ready": false,
-      "readyVoices": []
+      "ready": true,
+      "readyVoices": [
+        "default",
+        "zh_female",
+        "sweet"
+      ]
     },
     {
       "key": "artifact-next.HI-2025-006.v1",
@@ -1560,8 +1695,12 @@
           "wav": "/audio/trail-guide/artifact-next.HI-2025-006.v1.sweet.f5ee8927f7.wav"
         }
       },
-      "ready": false,
-      "readyVoices": []
+      "ready": true,
+      "readyVoices": [
+        "default",
+        "zh_female",
+        "sweet"
+      ]
     },
     {
       "key": "artifact-next.HI-2025-006.v2",
@@ -1593,8 +1732,12 @@
           "wav": "/audio/trail-guide/artifact-next.HI-2025-006.v2.sweet.996645a330.wav"
         }
       },
-      "ready": false,
-      "readyVoices": []
+      "ready": true,
+      "readyVoices": [
+        "default",
+        "zh_female",
+        "sweet"
+      ]
     },
     {
       "key": "artifact-list.HI-2025-003.v1",
@@ -1626,8 +1769,12 @@
           "wav": "/audio/trail-guide/artifact-list.HI-2025-003.v1.sweet.34b2eb1445.wav"
         }
       },
-      "ready": false,
-      "readyVoices": []
+      "ready": true,
+      "readyVoices": [
+        "default",
+        "zh_female",
+        "sweet"
+      ]
     },
     {
       "key": "artifact-list.HI-2025-003.v2",
@@ -1659,8 +1806,12 @@
           "wav": "/audio/trail-guide/artifact-list.HI-2025-003.v2.sweet.f485600d48.wav"
         }
       },
-      "ready": false,
-      "readyVoices": []
+      "ready": true,
+      "readyVoices": [
+        "default",
+        "zh_female",
+        "sweet"
+      ]
     },
     {
       "key": "artifact-list.HI-2025-003.v3",
@@ -1692,8 +1843,12 @@
           "wav": "/audio/trail-guide/artifact-list.HI-2025-003.v3.sweet.3e8c24b63a.wav"
         }
       },
-      "ready": false,
-      "readyVoices": []
+      "ready": true,
+      "readyVoices": [
+        "default",
+        "zh_female",
+        "sweet"
+      ]
     },
     {
       "key": "stage-viewer.HI-2025-003.v1",
@@ -1713,18 +1868,8 @@
         "zh_female",
         "sweet"
       ],
-      "audioUrl": "/audio/trail-guide/stage-viewer.HI-2025-003.v1.default.345b0b46c2.wav",
-      "sources": {
-        "default": {
-          "wav": "/audio/trail-guide/stage-viewer.HI-2025-003.v1.default.345b0b46c2.wav"
-        },
-        "zh_female": {
-          "wav": "/audio/trail-guide/stage-viewer.HI-2025-003.v1.zh_female.0efd79c652.wav"
-        },
-        "sweet": {
-          "wav": "/audio/trail-guide/stage-viewer.HI-2025-003.v1.sweet.8f52162dbe.wav"
-        }
-      },
+      "audioUrl": "",
+      "sources": {},
       "ready": false,
       "readyVoices": []
     },
@@ -1746,18 +1891,8 @@
         "zh_female",
         "sweet"
       ],
-      "audioUrl": "/audio/trail-guide/stage-viewer.HI-2025-003.v2.default.b10586941d.wav",
-      "sources": {
-        "default": {
-          "wav": "/audio/trail-guide/stage-viewer.HI-2025-003.v2.default.b10586941d.wav"
-        },
-        "zh_female": {
-          "wav": "/audio/trail-guide/stage-viewer.HI-2025-003.v2.zh_female.7332270362.wav"
-        },
-        "sweet": {
-          "wav": "/audio/trail-guide/stage-viewer.HI-2025-003.v2.sweet.d54a3c9281.wav"
-        }
-      },
+      "audioUrl": "",
+      "sources": {},
       "ready": false,
       "readyVoices": []
     },
@@ -1779,18 +1914,8 @@
         "zh_female",
         "sweet"
       ],
-      "audioUrl": "/audio/trail-guide/stage-viewer.HI-2025-003.v3.default.d46f82e94c.wav",
-      "sources": {
-        "default": {
-          "wav": "/audio/trail-guide/stage-viewer.HI-2025-003.v3.default.d46f82e94c.wav"
-        },
-        "zh_female": {
-          "wav": "/audio/trail-guide/stage-viewer.HI-2025-003.v3.zh_female.8e9065b665.wav"
-        },
-        "sweet": {
-          "wav": "/audio/trail-guide/stage-viewer.HI-2025-003.v3.sweet.7f2d2553ec.wav"
-        }
-      },
+      "audioUrl": "",
+      "sources": {},
       "ready": false,
       "readyVoices": []
     },
@@ -1812,18 +1937,8 @@
         "zh_female",
         "sweet"
       ],
-      "audioUrl": "/audio/trail-guide/guide-chat.HI-2025-003.v1.default.68bad35bb6.wav",
-      "sources": {
-        "default": {
-          "wav": "/audio/trail-guide/guide-chat.HI-2025-003.v1.default.68bad35bb6.wav"
-        },
-        "zh_female": {
-          "wav": "/audio/trail-guide/guide-chat.HI-2025-003.v1.zh_female.7c74e0b9d5.wav"
-        },
-        "sweet": {
-          "wav": "/audio/trail-guide/guide-chat.HI-2025-003.v1.sweet.d7dadd4ee4.wav"
-        }
-      },
+      "audioUrl": "",
+      "sources": {},
       "ready": false,
       "readyVoices": []
     },
@@ -1845,18 +1960,8 @@
         "zh_female",
         "sweet"
       ],
-      "audioUrl": "/audio/trail-guide/guide-chat.HI-2025-003.v2.default.33fdc83091.wav",
-      "sources": {
-        "default": {
-          "wav": "/audio/trail-guide/guide-chat.HI-2025-003.v2.default.33fdc83091.wav"
-        },
-        "zh_female": {
-          "wav": "/audio/trail-guide/guide-chat.HI-2025-003.v2.zh_female.e9d479b4da.wav"
-        },
-        "sweet": {
-          "wav": "/audio/trail-guide/guide-chat.HI-2025-003.v2.sweet.8e72b3f386.wav"
-        }
-      },
+      "audioUrl": "",
+      "sources": {},
       "ready": false,
       "readyVoices": []
     },
@@ -1878,18 +1983,8 @@
         "zh_female",
         "sweet"
       ],
-      "audioUrl": "/audio/trail-guide/guide-chat.HI-2025-003.v3.default.b136d5c8eb.wav",
-      "sources": {
-        "default": {
-          "wav": "/audio/trail-guide/guide-chat.HI-2025-003.v3.default.b136d5c8eb.wav"
-        },
-        "zh_female": {
-          "wav": "/audio/trail-guide/guide-chat.HI-2025-003.v3.zh_female.aed8362d35.wav"
-        },
-        "sweet": {
-          "wav": "/audio/trail-guide/guide-chat.HI-2025-003.v3.sweet.3b4681a671.wav"
-        }
-      },
+      "audioUrl": "",
+      "sources": {},
       "ready": false,
       "readyVoices": []
     },
@@ -1911,18 +2006,8 @@
         "zh_female",
         "sweet"
       ],
-      "audioUrl": "/audio/trail-guide/artifact-craft.HI-2025-003.v1.default.c0ce3fa794.wav",
-      "sources": {
-        "default": {
-          "wav": "/audio/trail-guide/artifact-craft.HI-2025-003.v1.default.c0ce3fa794.wav"
-        },
-        "zh_female": {
-          "wav": "/audio/trail-guide/artifact-craft.HI-2025-003.v1.zh_female.a4b24aab19.wav"
-        },
-        "sweet": {
-          "wav": "/audio/trail-guide/artifact-craft.HI-2025-003.v1.sweet.b1a44a3aad.wav"
-        }
-      },
+      "audioUrl": "",
+      "sources": {},
       "ready": false,
       "readyVoices": []
     },
@@ -1944,18 +2029,8 @@
         "zh_female",
         "sweet"
       ],
-      "audioUrl": "/audio/trail-guide/artifact-craft.HI-2025-003.v2.default.02e52edbac.wav",
-      "sources": {
-        "default": {
-          "wav": "/audio/trail-guide/artifact-craft.HI-2025-003.v2.default.02e52edbac.wav"
-        },
-        "zh_female": {
-          "wav": "/audio/trail-guide/artifact-craft.HI-2025-003.v2.zh_female.1d9c5003c1.wav"
-        },
-        "sweet": {
-          "wav": "/audio/trail-guide/artifact-craft.HI-2025-003.v2.sweet.e64e544c13.wav"
-        }
-      },
+      "audioUrl": "",
+      "sources": {},
       "ready": false,
       "readyVoices": []
     },
@@ -1977,18 +2052,8 @@
         "zh_female",
         "sweet"
       ],
-      "audioUrl": "/audio/trail-guide/artifact-symbol.HI-2025-003.v1.default.b515ef6bd0.wav",
-      "sources": {
-        "default": {
-          "wav": "/audio/trail-guide/artifact-symbol.HI-2025-003.v1.default.b515ef6bd0.wav"
-        },
-        "zh_female": {
-          "wav": "/audio/trail-guide/artifact-symbol.HI-2025-003.v1.zh_female.10dc602ce5.wav"
-        },
-        "sweet": {
-          "wav": "/audio/trail-guide/artifact-symbol.HI-2025-003.v1.sweet.dfe3704203.wav"
-        }
-      },
+      "audioUrl": "",
+      "sources": {},
       "ready": false,
       "readyVoices": []
     },
@@ -2010,18 +2075,8 @@
         "zh_female",
         "sweet"
       ],
-      "audioUrl": "/audio/trail-guide/artifact-symbol.HI-2025-003.v2.default.0d3a350e01.wav",
-      "sources": {
-        "default": {
-          "wav": "/audio/trail-guide/artifact-symbol.HI-2025-003.v2.default.0d3a350e01.wav"
-        },
-        "zh_female": {
-          "wav": "/audio/trail-guide/artifact-symbol.HI-2025-003.v2.zh_female.84ea8a805e.wav"
-        },
-        "sweet": {
-          "wav": "/audio/trail-guide/artifact-symbol.HI-2025-003.v2.sweet.b87b95a693.wav"
-        }
-      },
+      "audioUrl": "",
+      "sources": {},
       "ready": false,
       "readyVoices": []
     },
@@ -2043,18 +2098,8 @@
         "zh_female",
         "sweet"
       ],
-      "audioUrl": "/audio/trail-guide/artifact-context.HI-2025-003.v1.default.be9a0110b1.wav",
-      "sources": {
-        "default": {
-          "wav": "/audio/trail-guide/artifact-context.HI-2025-003.v1.default.be9a0110b1.wav"
-        },
-        "zh_female": {
-          "wav": "/audio/trail-guide/artifact-context.HI-2025-003.v1.zh_female.df9ef0248b.wav"
-        },
-        "sweet": {
-          "wav": "/audio/trail-guide/artifact-context.HI-2025-003.v1.sweet.782f7e79c4.wav"
-        }
-      },
+      "audioUrl": "",
+      "sources": {},
       "ready": false,
       "readyVoices": []
     },
@@ -2076,18 +2121,8 @@
         "zh_female",
         "sweet"
       ],
-      "audioUrl": "/audio/trail-guide/artifact-context.HI-2025-003.v2.default.a030c4833c.wav",
-      "sources": {
-        "default": {
-          "wav": "/audio/trail-guide/artifact-context.HI-2025-003.v2.default.a030c4833c.wav"
-        },
-        "zh_female": {
-          "wav": "/audio/trail-guide/artifact-context.HI-2025-003.v2.zh_female.58b23903b7.wav"
-        },
-        "sweet": {
-          "wav": "/audio/trail-guide/artifact-context.HI-2025-003.v2.sweet.8e8c3b4597.wav"
-        }
-      },
+      "audioUrl": "",
+      "sources": {},
       "ready": false,
       "readyVoices": []
     },
@@ -2109,18 +2144,8 @@
         "zh_female",
         "sweet"
       ],
-      "audioUrl": "/audio/trail-guide/artifact-next.HI-2025-003.v1.default.9d607c2c32.wav",
-      "sources": {
-        "default": {
-          "wav": "/audio/trail-guide/artifact-next.HI-2025-003.v1.default.9d607c2c32.wav"
-        },
-        "zh_female": {
-          "wav": "/audio/trail-guide/artifact-next.HI-2025-003.v1.zh_female.ee62c118df.wav"
-        },
-        "sweet": {
-          "wav": "/audio/trail-guide/artifact-next.HI-2025-003.v1.sweet.e2091e2059.wav"
-        }
-      },
+      "audioUrl": "",
+      "sources": {},
       "ready": false,
       "readyVoices": []
     },
@@ -2142,18 +2167,8 @@
         "zh_female",
         "sweet"
       ],
-      "audioUrl": "/audio/trail-guide/artifact-next.HI-2025-003.v2.default.5625d8e340.wav",
-      "sources": {
-        "default": {
-          "wav": "/audio/trail-guide/artifact-next.HI-2025-003.v2.default.5625d8e340.wav"
-        },
-        "zh_female": {
-          "wav": "/audio/trail-guide/artifact-next.HI-2025-003.v2.zh_female.1f0f22d6c9.wav"
-        },
-        "sweet": {
-          "wav": "/audio/trail-guide/artifact-next.HI-2025-003.v2.sweet.60328c7f02.wav"
-        }
-      },
+      "audioUrl": "",
+      "sources": {},
       "ready": false,
       "readyVoices": []
     },
@@ -2175,18 +2190,8 @@
         "zh_female",
         "sweet"
       ],
-      "audioUrl": "/audio/trail-guide/artifact-list.HI-2025-005.v1.default.95ef863889.wav",
-      "sources": {
-        "default": {
-          "wav": "/audio/trail-guide/artifact-list.HI-2025-005.v1.default.95ef863889.wav"
-        },
-        "zh_female": {
-          "wav": "/audio/trail-guide/artifact-list.HI-2025-005.v1.zh_female.cfc80f9818.wav"
-        },
-        "sweet": {
-          "wav": "/audio/trail-guide/artifact-list.HI-2025-005.v1.sweet.b86e1d8103.wav"
-        }
-      },
+      "audioUrl": "",
+      "sources": {},
       "ready": false,
       "readyVoices": []
     },
@@ -2208,18 +2213,8 @@
         "zh_female",
         "sweet"
       ],
-      "audioUrl": "/audio/trail-guide/artifact-list.HI-2025-005.v2.default.de9ad55564.wav",
-      "sources": {
-        "default": {
-          "wav": "/audio/trail-guide/artifact-list.HI-2025-005.v2.default.de9ad55564.wav"
-        },
-        "zh_female": {
-          "wav": "/audio/trail-guide/artifact-list.HI-2025-005.v2.zh_female.a665ff33b4.wav"
-        },
-        "sweet": {
-          "wav": "/audio/trail-guide/artifact-list.HI-2025-005.v2.sweet.e01a69317a.wav"
-        }
-      },
+      "audioUrl": "",
+      "sources": {},
       "ready": false,
       "readyVoices": []
     },
@@ -2241,18 +2236,8 @@
         "zh_female",
         "sweet"
       ],
-      "audioUrl": "/audio/trail-guide/artifact-list.HI-2025-005.v3.default.5577ea2372.wav",
-      "sources": {
-        "default": {
-          "wav": "/audio/trail-guide/artifact-list.HI-2025-005.v3.default.5577ea2372.wav"
-        },
-        "zh_female": {
-          "wav": "/audio/trail-guide/artifact-list.HI-2025-005.v3.zh_female.419d62a212.wav"
-        },
-        "sweet": {
-          "wav": "/audio/trail-guide/artifact-list.HI-2025-005.v3.sweet.2d198a470d.wav"
-        }
-      },
+      "audioUrl": "",
+      "sources": {},
       "ready": false,
       "readyVoices": []
     },
@@ -2274,18 +2259,8 @@
         "zh_female",
         "sweet"
       ],
-      "audioUrl": "/audio/trail-guide/stage-viewer.HI-2025-005.v1.default.d70a9d83eb.wav",
-      "sources": {
-        "default": {
-          "wav": "/audio/trail-guide/stage-viewer.HI-2025-005.v1.default.d70a9d83eb.wav"
-        },
-        "zh_female": {
-          "wav": "/audio/trail-guide/stage-viewer.HI-2025-005.v1.zh_female.18e5b34597.wav"
-        },
-        "sweet": {
-          "wav": "/audio/trail-guide/stage-viewer.HI-2025-005.v1.sweet.81cf2f6bae.wav"
-        }
-      },
+      "audioUrl": "",
+      "sources": {},
       "ready": false,
       "readyVoices": []
     },
@@ -2307,18 +2282,8 @@
         "zh_female",
         "sweet"
       ],
-      "audioUrl": "/audio/trail-guide/stage-viewer.HI-2025-005.v2.default.bafe52b172.wav",
-      "sources": {
-        "default": {
-          "wav": "/audio/trail-guide/stage-viewer.HI-2025-005.v2.default.bafe52b172.wav"
-        },
-        "zh_female": {
-          "wav": "/audio/trail-guide/stage-viewer.HI-2025-005.v2.zh_female.371f2252e9.wav"
-        },
-        "sweet": {
-          "wav": "/audio/trail-guide/stage-viewer.HI-2025-005.v2.sweet.75af2a55e0.wav"
-        }
-      },
+      "audioUrl": "",
+      "sources": {},
       "ready": false,
       "readyVoices": []
     },
@@ -2340,18 +2305,8 @@
         "zh_female",
         "sweet"
       ],
-      "audioUrl": "/audio/trail-guide/stage-viewer.HI-2025-005.v3.default.ac35f0dd62.wav",
-      "sources": {
-        "default": {
-          "wav": "/audio/trail-guide/stage-viewer.HI-2025-005.v3.default.ac35f0dd62.wav"
-        },
-        "zh_female": {
-          "wav": "/audio/trail-guide/stage-viewer.HI-2025-005.v3.zh_female.9ce87b6522.wav"
-        },
-        "sweet": {
-          "wav": "/audio/trail-guide/stage-viewer.HI-2025-005.v3.sweet.6ea5b44393.wav"
-        }
-      },
+      "audioUrl": "",
+      "sources": {},
       "ready": false,
       "readyVoices": []
     },
@@ -2373,18 +2328,8 @@
         "zh_female",
         "sweet"
       ],
-      "audioUrl": "/audio/trail-guide/guide-chat.HI-2025-005.v1.default.7cc2af5562.wav",
-      "sources": {
-        "default": {
-          "wav": "/audio/trail-guide/guide-chat.HI-2025-005.v1.default.7cc2af5562.wav"
-        },
-        "zh_female": {
-          "wav": "/audio/trail-guide/guide-chat.HI-2025-005.v1.zh_female.aca93586ee.wav"
-        },
-        "sweet": {
-          "wav": "/audio/trail-guide/guide-chat.HI-2025-005.v1.sweet.0296ac2303.wav"
-        }
-      },
+      "audioUrl": "",
+      "sources": {},
       "ready": false,
       "readyVoices": []
     },
@@ -2406,18 +2351,8 @@
         "zh_female",
         "sweet"
       ],
-      "audioUrl": "/audio/trail-guide/guide-chat.HI-2025-005.v2.default.0957609d0b.wav",
-      "sources": {
-        "default": {
-          "wav": "/audio/trail-guide/guide-chat.HI-2025-005.v2.default.0957609d0b.wav"
-        },
-        "zh_female": {
-          "wav": "/audio/trail-guide/guide-chat.HI-2025-005.v2.zh_female.740199c1ba.wav"
-        },
-        "sweet": {
-          "wav": "/audio/trail-guide/guide-chat.HI-2025-005.v2.sweet.8bfd05e157.wav"
-        }
-      },
+      "audioUrl": "",
+      "sources": {},
       "ready": false,
       "readyVoices": []
     },
@@ -2439,18 +2374,8 @@
         "zh_female",
         "sweet"
       ],
-      "audioUrl": "/audio/trail-guide/guide-chat.HI-2025-005.v3.default.338926e887.wav",
-      "sources": {
-        "default": {
-          "wav": "/audio/trail-guide/guide-chat.HI-2025-005.v3.default.338926e887.wav"
-        },
-        "zh_female": {
-          "wav": "/audio/trail-guide/guide-chat.HI-2025-005.v3.zh_female.65cd316ace.wav"
-        },
-        "sweet": {
-          "wav": "/audio/trail-guide/guide-chat.HI-2025-005.v3.sweet.6c61814a81.wav"
-        }
-      },
+      "audioUrl": "",
+      "sources": {},
       "ready": false,
       "readyVoices": []
     },
@@ -2472,18 +2397,8 @@
         "zh_female",
         "sweet"
       ],
-      "audioUrl": "/audio/trail-guide/artifact-craft.HI-2025-005.v1.default.f415cf932c.wav",
-      "sources": {
-        "default": {
-          "wav": "/audio/trail-guide/artifact-craft.HI-2025-005.v1.default.f415cf932c.wav"
-        },
-        "zh_female": {
-          "wav": "/audio/trail-guide/artifact-craft.HI-2025-005.v1.zh_female.4c32022c0d.wav"
-        },
-        "sweet": {
-          "wav": "/audio/trail-guide/artifact-craft.HI-2025-005.v1.sweet.9de256d84a.wav"
-        }
-      },
+      "audioUrl": "",
+      "sources": {},
       "ready": false,
       "readyVoices": []
     },
@@ -2505,18 +2420,8 @@
         "zh_female",
         "sweet"
       ],
-      "audioUrl": "/audio/trail-guide/artifact-craft.HI-2025-005.v2.default.67c7497e87.wav",
-      "sources": {
-        "default": {
-          "wav": "/audio/trail-guide/artifact-craft.HI-2025-005.v2.default.67c7497e87.wav"
-        },
-        "zh_female": {
-          "wav": "/audio/trail-guide/artifact-craft.HI-2025-005.v2.zh_female.facff98942.wav"
-        },
-        "sweet": {
-          "wav": "/audio/trail-guide/artifact-craft.HI-2025-005.v2.sweet.883ffb3da3.wav"
-        }
-      },
+      "audioUrl": "",
+      "sources": {},
       "ready": false,
       "readyVoices": []
     },
@@ -2538,18 +2443,8 @@
         "zh_female",
         "sweet"
       ],
-      "audioUrl": "/audio/trail-guide/artifact-symbol.HI-2025-005.v1.default.78e536b1e9.wav",
-      "sources": {
-        "default": {
-          "wav": "/audio/trail-guide/artifact-symbol.HI-2025-005.v1.default.78e536b1e9.wav"
-        },
-        "zh_female": {
-          "wav": "/audio/trail-guide/artifact-symbol.HI-2025-005.v1.zh_female.13ce59d7ad.wav"
-        },
-        "sweet": {
-          "wav": "/audio/trail-guide/artifact-symbol.HI-2025-005.v1.sweet.ba6becb114.wav"
-        }
-      },
+      "audioUrl": "",
+      "sources": {},
       "ready": false,
       "readyVoices": []
     },
@@ -2571,18 +2466,8 @@
         "zh_female",
         "sweet"
       ],
-      "audioUrl": "/audio/trail-guide/artifact-symbol.HI-2025-005.v2.default.2a2b34989d.wav",
-      "sources": {
-        "default": {
-          "wav": "/audio/trail-guide/artifact-symbol.HI-2025-005.v2.default.2a2b34989d.wav"
-        },
-        "zh_female": {
-          "wav": "/audio/trail-guide/artifact-symbol.HI-2025-005.v2.zh_female.32a8a6e292.wav"
-        },
-        "sweet": {
-          "wav": "/audio/trail-guide/artifact-symbol.HI-2025-005.v2.sweet.6349bc91ea.wav"
-        }
-      },
+      "audioUrl": "",
+      "sources": {},
       "ready": false,
       "readyVoices": []
     },
@@ -2604,18 +2489,8 @@
         "zh_female",
         "sweet"
       ],
-      "audioUrl": "/audio/trail-guide/artifact-context.HI-2025-005.v1.default.6a02ff5bdb.wav",
-      "sources": {
-        "default": {
-          "wav": "/audio/trail-guide/artifact-context.HI-2025-005.v1.default.6a02ff5bdb.wav"
-        },
-        "zh_female": {
-          "wav": "/audio/trail-guide/artifact-context.HI-2025-005.v1.zh_female.a7ad286878.wav"
-        },
-        "sweet": {
-          "wav": "/audio/trail-guide/artifact-context.HI-2025-005.v1.sweet.0a82a53b98.wav"
-        }
-      },
+      "audioUrl": "",
+      "sources": {},
       "ready": false,
       "readyVoices": []
     },
@@ -2637,18 +2512,8 @@
         "zh_female",
         "sweet"
       ],
-      "audioUrl": "/audio/trail-guide/artifact-context.HI-2025-005.v2.default.84f102ae73.wav",
-      "sources": {
-        "default": {
-          "wav": "/audio/trail-guide/artifact-context.HI-2025-005.v2.default.84f102ae73.wav"
-        },
-        "zh_female": {
-          "wav": "/audio/trail-guide/artifact-context.HI-2025-005.v2.zh_female.fbf5feca70.wav"
-        },
-        "sweet": {
-          "wav": "/audio/trail-guide/artifact-context.HI-2025-005.v2.sweet.0cb768de0b.wav"
-        }
-      },
+      "audioUrl": "",
+      "sources": {},
       "ready": false,
       "readyVoices": []
     },
@@ -2670,18 +2535,8 @@
         "zh_female",
         "sweet"
       ],
-      "audioUrl": "/audio/trail-guide/artifact-next.HI-2025-005.v1.default.3851e4898d.wav",
-      "sources": {
-        "default": {
-          "wav": "/audio/trail-guide/artifact-next.HI-2025-005.v1.default.3851e4898d.wav"
-        },
-        "zh_female": {
-          "wav": "/audio/trail-guide/artifact-next.HI-2025-005.v1.zh_female.ed9aaa5a0a.wav"
-        },
-        "sweet": {
-          "wav": "/audio/trail-guide/artifact-next.HI-2025-005.v1.sweet.3f646b2c81.wav"
-        }
-      },
+      "audioUrl": "",
+      "sources": {},
       "ready": false,
       "readyVoices": []
     },
@@ -2703,18 +2558,8 @@
         "zh_female",
         "sweet"
       ],
-      "audioUrl": "/audio/trail-guide/artifact-next.HI-2025-005.v2.default.493f6fb9ab.wav",
-      "sources": {
-        "default": {
-          "wav": "/audio/trail-guide/artifact-next.HI-2025-005.v2.default.493f6fb9ab.wav"
-        },
-        "zh_female": {
-          "wav": "/audio/trail-guide/artifact-next.HI-2025-005.v2.zh_female.205de9aab4.wav"
-        },
-        "sweet": {
-          "wav": "/audio/trail-guide/artifact-next.HI-2025-005.v2.sweet.dd24c44583.wav"
-        }
-      },
+      "audioUrl": "",
+      "sources": {},
       "ready": false,
       "readyVoices": []
     },
@@ -2736,18 +2581,8 @@
         "zh_female",
         "sweet"
       ],
-      "audioUrl": "/audio/trail-guide/artifact-list.HI-2025-004.v1.default.bdf4a4edb6.wav",
-      "sources": {
-        "default": {
-          "wav": "/audio/trail-guide/artifact-list.HI-2025-004.v1.default.bdf4a4edb6.wav"
-        },
-        "zh_female": {
-          "wav": "/audio/trail-guide/artifact-list.HI-2025-004.v1.zh_female.978975269f.wav"
-        },
-        "sweet": {
-          "wav": "/audio/trail-guide/artifact-list.HI-2025-004.v1.sweet.0b04ac2469.wav"
-        }
-      },
+      "audioUrl": "",
+      "sources": {},
       "ready": false,
       "readyVoices": []
     },
@@ -2769,18 +2604,8 @@
         "zh_female",
         "sweet"
       ],
-      "audioUrl": "/audio/trail-guide/artifact-list.HI-2025-004.v2.default.4c3eee92ee.wav",
-      "sources": {
-        "default": {
-          "wav": "/audio/trail-guide/artifact-list.HI-2025-004.v2.default.4c3eee92ee.wav"
-        },
-        "zh_female": {
-          "wav": "/audio/trail-guide/artifact-list.HI-2025-004.v2.zh_female.222fb35593.wav"
-        },
-        "sweet": {
-          "wav": "/audio/trail-guide/artifact-list.HI-2025-004.v2.sweet.9894ecbb27.wav"
-        }
-      },
+      "audioUrl": "",
+      "sources": {},
       "ready": false,
       "readyVoices": []
     },
@@ -2802,18 +2627,8 @@
         "zh_female",
         "sweet"
       ],
-      "audioUrl": "/audio/trail-guide/artifact-list.HI-2025-004.v3.default.46c03f6624.wav",
-      "sources": {
-        "default": {
-          "wav": "/audio/trail-guide/artifact-list.HI-2025-004.v3.default.46c03f6624.wav"
-        },
-        "zh_female": {
-          "wav": "/audio/trail-guide/artifact-list.HI-2025-004.v3.zh_female.49abf9c5dd.wav"
-        },
-        "sweet": {
-          "wav": "/audio/trail-guide/artifact-list.HI-2025-004.v3.sweet.32ded3309b.wav"
-        }
-      },
+      "audioUrl": "",
+      "sources": {},
       "ready": false,
       "readyVoices": []
     },
@@ -2835,18 +2650,8 @@
         "zh_female",
         "sweet"
       ],
-      "audioUrl": "/audio/trail-guide/stage-viewer.HI-2025-004.v1.default.cfd4077347.wav",
-      "sources": {
-        "default": {
-          "wav": "/audio/trail-guide/stage-viewer.HI-2025-004.v1.default.cfd4077347.wav"
-        },
-        "zh_female": {
-          "wav": "/audio/trail-guide/stage-viewer.HI-2025-004.v1.zh_female.7bde70305b.wav"
-        },
-        "sweet": {
-          "wav": "/audio/trail-guide/stage-viewer.HI-2025-004.v1.sweet.abbf0dadb5.wav"
-        }
-      },
+      "audioUrl": "",
+      "sources": {},
       "ready": false,
       "readyVoices": []
     },
@@ -2868,18 +2673,8 @@
         "zh_female",
         "sweet"
       ],
-      "audioUrl": "/audio/trail-guide/stage-viewer.HI-2025-004.v2.default.2a2966d256.wav",
-      "sources": {
-        "default": {
-          "wav": "/audio/trail-guide/stage-viewer.HI-2025-004.v2.default.2a2966d256.wav"
-        },
-        "zh_female": {
-          "wav": "/audio/trail-guide/stage-viewer.HI-2025-004.v2.zh_female.d335ea4436.wav"
-        },
-        "sweet": {
-          "wav": "/audio/trail-guide/stage-viewer.HI-2025-004.v2.sweet.875e098be0.wav"
-        }
-      },
+      "audioUrl": "",
+      "sources": {},
       "ready": false,
       "readyVoices": []
     },
@@ -2901,18 +2696,8 @@
         "zh_female",
         "sweet"
       ],
-      "audioUrl": "/audio/trail-guide/stage-viewer.HI-2025-004.v3.default.59521f4163.wav",
-      "sources": {
-        "default": {
-          "wav": "/audio/trail-guide/stage-viewer.HI-2025-004.v3.default.59521f4163.wav"
-        },
-        "zh_female": {
-          "wav": "/audio/trail-guide/stage-viewer.HI-2025-004.v3.zh_female.4c1040e96d.wav"
-        },
-        "sweet": {
-          "wav": "/audio/trail-guide/stage-viewer.HI-2025-004.v3.sweet.6bafad2635.wav"
-        }
-      },
+      "audioUrl": "",
+      "sources": {},
       "ready": false,
       "readyVoices": []
     },
@@ -2934,18 +2719,8 @@
         "zh_female",
         "sweet"
       ],
-      "audioUrl": "/audio/trail-guide/guide-chat.HI-2025-004.v1.default.51c67a94fa.wav",
-      "sources": {
-        "default": {
-          "wav": "/audio/trail-guide/guide-chat.HI-2025-004.v1.default.51c67a94fa.wav"
-        },
-        "zh_female": {
-          "wav": "/audio/trail-guide/guide-chat.HI-2025-004.v1.zh_female.7d4903b429.wav"
-        },
-        "sweet": {
-          "wav": "/audio/trail-guide/guide-chat.HI-2025-004.v1.sweet.9eb03b5d08.wav"
-        }
-      },
+      "audioUrl": "",
+      "sources": {},
       "ready": false,
       "readyVoices": []
     },
@@ -2967,18 +2742,8 @@
         "zh_female",
         "sweet"
       ],
-      "audioUrl": "/audio/trail-guide/guide-chat.HI-2025-004.v2.default.3646187a42.wav",
-      "sources": {
-        "default": {
-          "wav": "/audio/trail-guide/guide-chat.HI-2025-004.v2.default.3646187a42.wav"
-        },
-        "zh_female": {
-          "wav": "/audio/trail-guide/guide-chat.HI-2025-004.v2.zh_female.284a7ec1bc.wav"
-        },
-        "sweet": {
-          "wav": "/audio/trail-guide/guide-chat.HI-2025-004.v2.sweet.2a407426f7.wav"
-        }
-      },
+      "audioUrl": "",
+      "sources": {},
       "ready": false,
       "readyVoices": []
     },
@@ -3000,18 +2765,8 @@
         "zh_female",
         "sweet"
       ],
-      "audioUrl": "/audio/trail-guide/guide-chat.HI-2025-004.v3.default.daf8848dd7.wav",
-      "sources": {
-        "default": {
-          "wav": "/audio/trail-guide/guide-chat.HI-2025-004.v3.default.daf8848dd7.wav"
-        },
-        "zh_female": {
-          "wav": "/audio/trail-guide/guide-chat.HI-2025-004.v3.zh_female.d65f8cbdcc.wav"
-        },
-        "sweet": {
-          "wav": "/audio/trail-guide/guide-chat.HI-2025-004.v3.sweet.89908e7b93.wav"
-        }
-      },
+      "audioUrl": "",
+      "sources": {},
       "ready": false,
       "readyVoices": []
     },
@@ -3033,18 +2788,8 @@
         "zh_female",
         "sweet"
       ],
-      "audioUrl": "/audio/trail-guide/artifact-craft.HI-2025-004.v1.default.facdfbe037.wav",
-      "sources": {
-        "default": {
-          "wav": "/audio/trail-guide/artifact-craft.HI-2025-004.v1.default.facdfbe037.wav"
-        },
-        "zh_female": {
-          "wav": "/audio/trail-guide/artifact-craft.HI-2025-004.v1.zh_female.ced621211b.wav"
-        },
-        "sweet": {
-          "wav": "/audio/trail-guide/artifact-craft.HI-2025-004.v1.sweet.0ba4b336a3.wav"
-        }
-      },
+      "audioUrl": "",
+      "sources": {},
       "ready": false,
       "readyVoices": []
     },
@@ -3066,18 +2811,8 @@
         "zh_female",
         "sweet"
       ],
-      "audioUrl": "/audio/trail-guide/artifact-craft.HI-2025-004.v2.default.93528668b4.wav",
-      "sources": {
-        "default": {
-          "wav": "/audio/trail-guide/artifact-craft.HI-2025-004.v2.default.93528668b4.wav"
-        },
-        "zh_female": {
-          "wav": "/audio/trail-guide/artifact-craft.HI-2025-004.v2.zh_female.b8605bad78.wav"
-        },
-        "sweet": {
-          "wav": "/audio/trail-guide/artifact-craft.HI-2025-004.v2.sweet.ed08cc338c.wav"
-        }
-      },
+      "audioUrl": "",
+      "sources": {},
       "ready": false,
       "readyVoices": []
     },
@@ -3099,18 +2834,8 @@
         "zh_female",
         "sweet"
       ],
-      "audioUrl": "/audio/trail-guide/artifact-symbol.HI-2025-004.v1.default.6a212ea778.wav",
-      "sources": {
-        "default": {
-          "wav": "/audio/trail-guide/artifact-symbol.HI-2025-004.v1.default.6a212ea778.wav"
-        },
-        "zh_female": {
-          "wav": "/audio/trail-guide/artifact-symbol.HI-2025-004.v1.zh_female.4bb0d40d6b.wav"
-        },
-        "sweet": {
-          "wav": "/audio/trail-guide/artifact-symbol.HI-2025-004.v1.sweet.d55aea94d5.wav"
-        }
-      },
+      "audioUrl": "",
+      "sources": {},
       "ready": false,
       "readyVoices": []
     },
@@ -3132,18 +2857,8 @@
         "zh_female",
         "sweet"
       ],
-      "audioUrl": "/audio/trail-guide/artifact-symbol.HI-2025-004.v2.default.b93d96b901.wav",
-      "sources": {
-        "default": {
-          "wav": "/audio/trail-guide/artifact-symbol.HI-2025-004.v2.default.b93d96b901.wav"
-        },
-        "zh_female": {
-          "wav": "/audio/trail-guide/artifact-symbol.HI-2025-004.v2.zh_female.070f53ef86.wav"
-        },
-        "sweet": {
-          "wav": "/audio/trail-guide/artifact-symbol.HI-2025-004.v2.sweet.799107e8db.wav"
-        }
-      },
+      "audioUrl": "",
+      "sources": {},
       "ready": false,
       "readyVoices": []
     },
@@ -3165,18 +2880,8 @@
         "zh_female",
         "sweet"
       ],
-      "audioUrl": "/audio/trail-guide/artifact-context.HI-2025-004.v1.default.151f2a01ca.wav",
-      "sources": {
-        "default": {
-          "wav": "/audio/trail-guide/artifact-context.HI-2025-004.v1.default.151f2a01ca.wav"
-        },
-        "zh_female": {
-          "wav": "/audio/trail-guide/artifact-context.HI-2025-004.v1.zh_female.240e1e1138.wav"
-        },
-        "sweet": {
-          "wav": "/audio/trail-guide/artifact-context.HI-2025-004.v1.sweet.d4fa731c57.wav"
-        }
-      },
+      "audioUrl": "",
+      "sources": {},
       "ready": false,
       "readyVoices": []
     },
@@ -3198,18 +2903,8 @@
         "zh_female",
         "sweet"
       ],
-      "audioUrl": "/audio/trail-guide/artifact-context.HI-2025-004.v2.default.1f4d7f9684.wav",
-      "sources": {
-        "default": {
-          "wav": "/audio/trail-guide/artifact-context.HI-2025-004.v2.default.1f4d7f9684.wav"
-        },
-        "zh_female": {
-          "wav": "/audio/trail-guide/artifact-context.HI-2025-004.v2.zh_female.25b32bfc9b.wav"
-        },
-        "sweet": {
-          "wav": "/audio/trail-guide/artifact-context.HI-2025-004.v2.sweet.70fa7d7d23.wav"
-        }
-      },
+      "audioUrl": "",
+      "sources": {},
       "ready": false,
       "readyVoices": []
     },
@@ -3231,18 +2926,8 @@
         "zh_female",
         "sweet"
       ],
-      "audioUrl": "/audio/trail-guide/artifact-next.HI-2025-004.v1.default.3d3faf0cc5.wav",
-      "sources": {
-        "default": {
-          "wav": "/audio/trail-guide/artifact-next.HI-2025-004.v1.default.3d3faf0cc5.wav"
-        },
-        "zh_female": {
-          "wav": "/audio/trail-guide/artifact-next.HI-2025-004.v1.zh_female.e1b3852850.wav"
-        },
-        "sweet": {
-          "wav": "/audio/trail-guide/artifact-next.HI-2025-004.v1.sweet.c4da565c59.wav"
-        }
-      },
+      "audioUrl": "",
+      "sources": {},
       "ready": false,
       "readyVoices": []
     },
@@ -3264,18 +2949,8 @@
         "zh_female",
         "sweet"
       ],
-      "audioUrl": "/audio/trail-guide/artifact-next.HI-2025-004.v2.default.6ca225d372.wav",
-      "sources": {
-        "default": {
-          "wav": "/audio/trail-guide/artifact-next.HI-2025-004.v2.default.6ca225d372.wav"
-        },
-        "zh_female": {
-          "wav": "/audio/trail-guide/artifact-next.HI-2025-004.v2.zh_female.6e3a8dab47.wav"
-        },
-        "sweet": {
-          "wav": "/audio/trail-guide/artifact-next.HI-2025-004.v2.sweet.3260673f8e.wav"
-        }
-      },
+      "audioUrl": "",
+      "sources": {},
       "ready": false,
       "readyVoices": []
     },
@@ -3297,18 +2972,8 @@
         "zh_female",
         "sweet"
       ],
-      "audioUrl": "/audio/trail-guide/artifact-list.HI-2025-002.v1.default.8b0ed0ce3a.wav",
-      "sources": {
-        "default": {
-          "wav": "/audio/trail-guide/artifact-list.HI-2025-002.v1.default.8b0ed0ce3a.wav"
-        },
-        "zh_female": {
-          "wav": "/audio/trail-guide/artifact-list.HI-2025-002.v1.zh_female.2f1d742db5.wav"
-        },
-        "sweet": {
-          "wav": "/audio/trail-guide/artifact-list.HI-2025-002.v1.sweet.670df5bb8c.wav"
-        }
-      },
+      "audioUrl": "",
+      "sources": {},
       "ready": false,
       "readyVoices": []
     },
@@ -3330,18 +2995,8 @@
         "zh_female",
         "sweet"
       ],
-      "audioUrl": "/audio/trail-guide/artifact-list.HI-2025-002.v2.default.6d60dd4f64.wav",
-      "sources": {
-        "default": {
-          "wav": "/audio/trail-guide/artifact-list.HI-2025-002.v2.default.6d60dd4f64.wav"
-        },
-        "zh_female": {
-          "wav": "/audio/trail-guide/artifact-list.HI-2025-002.v2.zh_female.76300f1079.wav"
-        },
-        "sweet": {
-          "wav": "/audio/trail-guide/artifact-list.HI-2025-002.v2.sweet.d8e905604b.wav"
-        }
-      },
+      "audioUrl": "",
+      "sources": {},
       "ready": false,
       "readyVoices": []
     },
@@ -3363,18 +3018,8 @@
         "zh_female",
         "sweet"
       ],
-      "audioUrl": "/audio/trail-guide/artifact-list.HI-2025-002.v3.default.601e4bbd0c.wav",
-      "sources": {
-        "default": {
-          "wav": "/audio/trail-guide/artifact-list.HI-2025-002.v3.default.601e4bbd0c.wav"
-        },
-        "zh_female": {
-          "wav": "/audio/trail-guide/artifact-list.HI-2025-002.v3.zh_female.325544ccd0.wav"
-        },
-        "sweet": {
-          "wav": "/audio/trail-guide/artifact-list.HI-2025-002.v3.sweet.3bf923420a.wav"
-        }
-      },
+      "audioUrl": "",
+      "sources": {},
       "ready": false,
       "readyVoices": []
     },
@@ -3396,18 +3041,8 @@
         "zh_female",
         "sweet"
       ],
-      "audioUrl": "/audio/trail-guide/stage-viewer.HI-2025-002.v1.default.58d6b71a27.wav",
-      "sources": {
-        "default": {
-          "wav": "/audio/trail-guide/stage-viewer.HI-2025-002.v1.default.58d6b71a27.wav"
-        },
-        "zh_female": {
-          "wav": "/audio/trail-guide/stage-viewer.HI-2025-002.v1.zh_female.e38b4808a1.wav"
-        },
-        "sweet": {
-          "wav": "/audio/trail-guide/stage-viewer.HI-2025-002.v1.sweet.34361c3eb7.wav"
-        }
-      },
+      "audioUrl": "",
+      "sources": {},
       "ready": false,
       "readyVoices": []
     },
@@ -3429,18 +3064,8 @@
         "zh_female",
         "sweet"
       ],
-      "audioUrl": "/audio/trail-guide/stage-viewer.HI-2025-002.v2.default.4691be4c77.wav",
-      "sources": {
-        "default": {
-          "wav": "/audio/trail-guide/stage-viewer.HI-2025-002.v2.default.4691be4c77.wav"
-        },
-        "zh_female": {
-          "wav": "/audio/trail-guide/stage-viewer.HI-2025-002.v2.zh_female.9389a7dc58.wav"
-        },
-        "sweet": {
-          "wav": "/audio/trail-guide/stage-viewer.HI-2025-002.v2.sweet.f5449ba9f4.wav"
-        }
-      },
+      "audioUrl": "",
+      "sources": {},
       "ready": false,
       "readyVoices": []
     },
@@ -3462,18 +3087,8 @@
         "zh_female",
         "sweet"
       ],
-      "audioUrl": "/audio/trail-guide/stage-viewer.HI-2025-002.v3.default.c4bec3eb32.wav",
-      "sources": {
-        "default": {
-          "wav": "/audio/trail-guide/stage-viewer.HI-2025-002.v3.default.c4bec3eb32.wav"
-        },
-        "zh_female": {
-          "wav": "/audio/trail-guide/stage-viewer.HI-2025-002.v3.zh_female.0b7f8a07d0.wav"
-        },
-        "sweet": {
-          "wav": "/audio/trail-guide/stage-viewer.HI-2025-002.v3.sweet.d709c98fd4.wav"
-        }
-      },
+      "audioUrl": "",
+      "sources": {},
       "ready": false,
       "readyVoices": []
     },
@@ -3495,18 +3110,8 @@
         "zh_female",
         "sweet"
       ],
-      "audioUrl": "/audio/trail-guide/guide-chat.HI-2025-002.v1.default.d8b62fcf98.wav",
-      "sources": {
-        "default": {
-          "wav": "/audio/trail-guide/guide-chat.HI-2025-002.v1.default.d8b62fcf98.wav"
-        },
-        "zh_female": {
-          "wav": "/audio/trail-guide/guide-chat.HI-2025-002.v1.zh_female.ea9511d4c5.wav"
-        },
-        "sweet": {
-          "wav": "/audio/trail-guide/guide-chat.HI-2025-002.v1.sweet.0e0fdcb388.wav"
-        }
-      },
+      "audioUrl": "",
+      "sources": {},
       "ready": false,
       "readyVoices": []
     },
@@ -3528,18 +3133,8 @@
         "zh_female",
         "sweet"
       ],
-      "audioUrl": "/audio/trail-guide/guide-chat.HI-2025-002.v2.default.806d5da0bf.wav",
-      "sources": {
-        "default": {
-          "wav": "/audio/trail-guide/guide-chat.HI-2025-002.v2.default.806d5da0bf.wav"
-        },
-        "zh_female": {
-          "wav": "/audio/trail-guide/guide-chat.HI-2025-002.v2.zh_female.62da9f92ab.wav"
-        },
-        "sweet": {
-          "wav": "/audio/trail-guide/guide-chat.HI-2025-002.v2.sweet.f97342851d.wav"
-        }
-      },
+      "audioUrl": "",
+      "sources": {},
       "ready": false,
       "readyVoices": []
     },
@@ -3561,18 +3156,8 @@
         "zh_female",
         "sweet"
       ],
-      "audioUrl": "/audio/trail-guide/guide-chat.HI-2025-002.v3.default.9ebd6097ce.wav",
-      "sources": {
-        "default": {
-          "wav": "/audio/trail-guide/guide-chat.HI-2025-002.v3.default.9ebd6097ce.wav"
-        },
-        "zh_female": {
-          "wav": "/audio/trail-guide/guide-chat.HI-2025-002.v3.zh_female.8a716ad25a.wav"
-        },
-        "sweet": {
-          "wav": "/audio/trail-guide/guide-chat.HI-2025-002.v3.sweet.3e23e63538.wav"
-        }
-      },
+      "audioUrl": "",
+      "sources": {},
       "ready": false,
       "readyVoices": []
     },
@@ -3594,18 +3179,8 @@
         "zh_female",
         "sweet"
       ],
-      "audioUrl": "/audio/trail-guide/artifact-craft.HI-2025-002.v1.default.32cbb9a846.wav",
-      "sources": {
-        "default": {
-          "wav": "/audio/trail-guide/artifact-craft.HI-2025-002.v1.default.32cbb9a846.wav"
-        },
-        "zh_female": {
-          "wav": "/audio/trail-guide/artifact-craft.HI-2025-002.v1.zh_female.61998c08e3.wav"
-        },
-        "sweet": {
-          "wav": "/audio/trail-guide/artifact-craft.HI-2025-002.v1.sweet.ce8d564899.wav"
-        }
-      },
+      "audioUrl": "",
+      "sources": {},
       "ready": false,
       "readyVoices": []
     },
@@ -3627,18 +3202,8 @@
         "zh_female",
         "sweet"
       ],
-      "audioUrl": "/audio/trail-guide/artifact-craft.HI-2025-002.v2.default.14dbf0a3e2.wav",
-      "sources": {
-        "default": {
-          "wav": "/audio/trail-guide/artifact-craft.HI-2025-002.v2.default.14dbf0a3e2.wav"
-        },
-        "zh_female": {
-          "wav": "/audio/trail-guide/artifact-craft.HI-2025-002.v2.zh_female.54eb0d78cd.wav"
-        },
-        "sweet": {
-          "wav": "/audio/trail-guide/artifact-craft.HI-2025-002.v2.sweet.fe3b632db3.wav"
-        }
-      },
+      "audioUrl": "",
+      "sources": {},
       "ready": false,
       "readyVoices": []
     },
@@ -3660,18 +3225,8 @@
         "zh_female",
         "sweet"
       ],
-      "audioUrl": "/audio/trail-guide/artifact-symbol.HI-2025-002.v1.default.bab96ec1b0.wav",
-      "sources": {
-        "default": {
-          "wav": "/audio/trail-guide/artifact-symbol.HI-2025-002.v1.default.bab96ec1b0.wav"
-        },
-        "zh_female": {
-          "wav": "/audio/trail-guide/artifact-symbol.HI-2025-002.v1.zh_female.bfe19bd3ee.wav"
-        },
-        "sweet": {
-          "wav": "/audio/trail-guide/artifact-symbol.HI-2025-002.v1.sweet.37eb826251.wav"
-        }
-      },
+      "audioUrl": "",
+      "sources": {},
       "ready": false,
       "readyVoices": []
     },
@@ -3693,18 +3248,8 @@
         "zh_female",
         "sweet"
       ],
-      "audioUrl": "/audio/trail-guide/artifact-symbol.HI-2025-002.v2.default.4ec192c136.wav",
-      "sources": {
-        "default": {
-          "wav": "/audio/trail-guide/artifact-symbol.HI-2025-002.v2.default.4ec192c136.wav"
-        },
-        "zh_female": {
-          "wav": "/audio/trail-guide/artifact-symbol.HI-2025-002.v2.zh_female.617d864ca4.wav"
-        },
-        "sweet": {
-          "wav": "/audio/trail-guide/artifact-symbol.HI-2025-002.v2.sweet.4207c57e95.wav"
-        }
-      },
+      "audioUrl": "",
+      "sources": {},
       "ready": false,
       "readyVoices": []
     },
@@ -3726,18 +3271,8 @@
         "zh_female",
         "sweet"
       ],
-      "audioUrl": "/audio/trail-guide/artifact-context.HI-2025-002.v1.default.d459d1f990.wav",
-      "sources": {
-        "default": {
-          "wav": "/audio/trail-guide/artifact-context.HI-2025-002.v1.default.d459d1f990.wav"
-        },
-        "zh_female": {
-          "wav": "/audio/trail-guide/artifact-context.HI-2025-002.v1.zh_female.4816b77c70.wav"
-        },
-        "sweet": {
-          "wav": "/audio/trail-guide/artifact-context.HI-2025-002.v1.sweet.c4cb860d90.wav"
-        }
-      },
+      "audioUrl": "",
+      "sources": {},
       "ready": false,
       "readyVoices": []
     },
@@ -3759,18 +3294,8 @@
         "zh_female",
         "sweet"
       ],
-      "audioUrl": "/audio/trail-guide/artifact-context.HI-2025-002.v2.default.94caa79956.wav",
-      "sources": {
-        "default": {
-          "wav": "/audio/trail-guide/artifact-context.HI-2025-002.v2.default.94caa79956.wav"
-        },
-        "zh_female": {
-          "wav": "/audio/trail-guide/artifact-context.HI-2025-002.v2.zh_female.0ebac277bf.wav"
-        },
-        "sweet": {
-          "wav": "/audio/trail-guide/artifact-context.HI-2025-002.v2.sweet.4178c82ac6.wav"
-        }
-      },
+      "audioUrl": "",
+      "sources": {},
       "ready": false,
       "readyVoices": []
     },
@@ -3792,18 +3317,8 @@
         "zh_female",
         "sweet"
       ],
-      "audioUrl": "/audio/trail-guide/artifact-next.HI-2025-002.v1.default.aa72cc0827.wav",
-      "sources": {
-        "default": {
-          "wav": "/audio/trail-guide/artifact-next.HI-2025-002.v1.default.aa72cc0827.wav"
-        },
-        "zh_female": {
-          "wav": "/audio/trail-guide/artifact-next.HI-2025-002.v1.zh_female.ca16cce612.wav"
-        },
-        "sweet": {
-          "wav": "/audio/trail-guide/artifact-next.HI-2025-002.v1.sweet.3d8906e4d2.wav"
-        }
-      },
+      "audioUrl": "",
+      "sources": {},
       "ready": false,
       "readyVoices": []
     },
@@ -3825,18 +3340,8 @@
         "zh_female",
         "sweet"
       ],
-      "audioUrl": "/audio/trail-guide/artifact-next.HI-2025-002.v2.default.e46489c133.wav",
-      "sources": {
-        "default": {
-          "wav": "/audio/trail-guide/artifact-next.HI-2025-002.v2.default.e46489c133.wav"
-        },
-        "zh_female": {
-          "wav": "/audio/trail-guide/artifact-next.HI-2025-002.v2.zh_female.7391000b4c.wav"
-        },
-        "sweet": {
-          "wav": "/audio/trail-guide/artifact-next.HI-2025-002.v2.sweet.40c72c765a.wav"
-        }
-      },
+      "audioUrl": "",
+      "sources": {},
       "ready": false,
       "readyVoices": []
     },

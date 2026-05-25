@@ -9,6 +9,9 @@
 
 <script setup>
 import Live2DAvatar from '@/components/Live2DAvatar.vue'
+import { setupMcpEventListeners } from '@/plugins/mcpListeners.js'
+
+setupMcpEventListeners()
 </script>
 
 <style lang="scss">

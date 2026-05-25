@@ -114,12 +114,13 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
-import { useRouter } from 'vue-router'
+import { ref, computed, onMounted, watch } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
 import { message } from 'ant-design-vue'
 import { getHeritageItemPage, HERITAGE_CATEGORIES } from '@/api/HeritageApi'
 
 const router = useRouter()
+const route = useRoute()
 const loading = ref(false)
 const searchKeyword = ref('')
 const selectedCategory = ref('全部')
@@ -166,6 +167,11 @@ function fetchHeritageList() {
   })
 }
 
+function applyRouteQuery() {
+  searchKeyword.value = String(route.query.keyword || route.query.search || '')
+  currentPage.value = 1
+}
+
 function handleSearch() {
   currentPage.value = 1
   fetchHeritageList()
@@ -190,7 +196,18 @@ function handleItemClick(item) {
   router.push(`/heritage/${item.id}`)
 }
 
-onMounted(fetchHeritageList)
+onMounted(() => {
+  applyRouteQuery()
+  fetchHeritageList()
+})
+
+watch(
+  () => [route.query.keyword, route.query.search],
+  () => {
+    applyRouteQuery()
+    fetchHeritageList()
+  }
+)
 </script>
 
 <style scoped>
