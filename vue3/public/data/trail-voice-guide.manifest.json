@@ -1,0 +1,4400 @@
+{
+  "version": 2,
+  "generatedAt": "2026-05-25T00:39:01.781Z",
+  "provider": "current-backend-tts",
+  "voices": [
+    "default",
+    "zh_female",
+    "sweet"
+  ],
+  "defaultVoice": "default",
+  "speed": 1,
+  "format": "wav",
+  "entries": [
+    {
+      "key": "scene-anchor.default.v1",
+      "presetKey": "scene-anchor.default",
+      "variant": "v1",
+      "intent": "scene-anchor",
+      "priority": 80,
+      "tags": [
+        "stage",
+        "filter"
+      ],
+      "text": "这里先定古蜀坐标。你可以从时代、遗址或工艺进入，系统会把命中的文物整理成一条可以继续向下走的展线。",
+      "contentHash": "7624caa566",
+      "voices": [
+        "default",
+        "zh_female",
+        "sweet"
+      ],
+      "audioUrl": "/audio/trail-guide/scene-anchor.default.v1.default.879d2ee5dc.wav",
+      "sources": {
+        "default": {
+          "wav": "/audio/trail-guide/scene-anchor.default.v1.default.879d2ee5dc.wav"
+        },
+        "zh_female": {
+          "wav": "/audio/trail-guide/scene-anchor.default.v1.zh_female.978e1dbc33.wav"
+        },
+        "sweet": {
+          "wav": "/audio/trail-guide/scene-anchor.default.v1.sweet.344519ac6a.wav"
+        }
+      },
+      "ready": true,
+      "readyVoices": [
+        "default",
+        "zh_female",
+        "sweet"
+      ]
+    },
+    {
+      "key": "scene-anchor.default.v2",
+      "presetKey": "scene-anchor.default",
+      "variant": "v2",
+      "intent": "scene-anchor",
+      "priority": 80,
+      "tags": [
+        "stage",
+        "filter"
+      ],
+      "text": "先别急着看单件展品。把时代、遗址和工艺定下来，玄喵会帮你建立一个观察三星堆的坐标系。",
+      "contentHash": "60f8c3c729",
+      "voices": [
+        "default",
+        "zh_female",
+        "sweet"
+      ],
+      "audioUrl": "/audio/trail-guide/scene-anchor.default.v2.default.c46894d476.wav",
+      "sources": {
+        "default": {
+          "wav": "/audio/trail-guide/scene-anchor.default.v2.default.c46894d476.wav"
+        },
+        "zh_female": {
+          "wav": "/audio/trail-guide/scene-anchor.default.v2.zh_female.9d8fd437e2.wav"
+        },
+        "sweet": {
+          "wav": "/audio/trail-guide/scene-anchor.default.v2.sweet.e86f5a0220.wav"
+        }
+      },
+      "ready": true,
+      "readyVoices": [
+        "default",
+        "zh_female",
+        "sweet"
+      ]
+    },
+    {
+      "key": "scene-anchor.default.v3",
+      "presetKey": "scene-anchor.default",
+      "variant": "v3",
+      "intent": "scene-anchor",
+      "priority": 80,
+      "tags": [
+        "stage",
+        "filter"
+      ],
+      "text": "这一幕负责建立入口。筛选不是检索表单，而是在帮你决定先从时间、空间还是技术线索理解古蜀文明。",
+      "contentHash": "e4be04f58f",
+      "voices": [
+        "default",
+        "zh_female",
+        "sweet"
+      ],
+      "audioUrl": "/audio/trail-guide/scene-anchor.default.v3.default.c2654d4955.wav",
+      "sources": {
+        "default": {
+          "wav": "/audio/trail-guide/scene-anchor.default.v3.default.c2654d4955.wav"
+        },
+        "zh_female": {
+          "wav": "/audio/trail-guide/scene-anchor.default.v3.zh_female.536f9dc59b.wav"
+        },
+        "sweet": {
+          "wav": "/audio/trail-guide/scene-anchor.default.v3.sweet.8d20f32344.wav"
+        }
+      },
+      "ready": true,
+      "readyVoices": [
+        "default",
+        "zh_female",
+        "sweet"
+      ]
+    },
+    {
+      "key": "artifact-list.default.v1",
+      "presetKey": "artifact-list.default",
+      "variant": "v1",
+      "intent": "artifact-list",
+      "priority": 70,
+      "tags": [
+        "stage",
+        "artifact-list"
+      ],
+      "text": "这一步先选一件代表文物。看它的年代、出土地和工艺，再进入三维展品现场，观察会更有方向。",
+      "contentHash": "3aa670afdc",
+      "voices": [
+        "default",
+        "zh_female",
+        "sweet"
+      ],
+      "audioUrl": "/audio/trail-guide/artifact-list.default.v1.default.ce620e4142.wav",
+      "sources": {
+        "default": {
+          "wav": "/audio/trail-guide/artifact-list.default.v1.default.ce620e4142.wav"
+        },
+        "zh_female": {
+          "wav": "/audio/trail-guide/artifact-list.default.v1.zh_female.d68c2658e0.wav"
+        },
+        "sweet": {
+          "wav": "/audio/trail-guide/artifact-list.default.v1.sweet.5651d70069.wav"
+        }
+      },
+      "ready": true,
+      "readyVoices": [
+        "default",
+        "zh_female",
+        "sweet"
+      ]
+    },
+    {
+      "key": "artifact-list.default.v2",
+      "presetKey": "artifact-list.default",
+      "variant": "v2",
+      "intent": "artifact-list",
+      "priority": 70,
+      "tags": [
+        "stage",
+        "artifact-list"
+      ],
+      "text": "文物驻足不是简单浏览卡片。你可以先比较摘要、类别和三维状态，再决定哪一件最值得深入。",
+      "contentHash": "5321adee11",
+      "voices": [
+        "default",
+        "zh_female",
+        "sweet"
+      ],
+      "audioUrl": "/audio/trail-guide/artifact-list.default.v2.default.920db1914c.wav",
+      "sources": {
+        "default": {
+          "wav": "/audio/trail-guide/artifact-list.default.v2.default.920db1914c.wav"
+        },
+        "zh_female": {
+          "wav": "/audio/trail-guide/artifact-list.default.v2.zh_female.72f40f5d9b.wav"
+        },
+        "sweet": {
+          "wav": "/audio/trail-guide/artifact-list.default.v2.sweet.3680701972.wav"
+        }
+      },
+      "ready": true,
+      "readyVoices": [
+        "default",
+        "zh_female",
+        "sweet"
+      ]
+    },
+    {
+      "key": "artifact-list.default.v3",
+      "presetKey": "artifact-list.default",
+      "variant": "v3",
+      "intent": "artifact-list",
+      "priority": 70,
+      "tags": [
+        "stage",
+        "artifact-list"
+      ],
+      "text": "如果命中文物较多，优先选择有三维模型和清晰工艺线索的展品，这样后面的图谱关系会更容易展开。",
+      "contentHash": "0cf9fa8451",
+      "voices": [
+        "default",
+        "zh_female",
+        "sweet"
+      ],
+      "audioUrl": "/audio/trail-guide/artifact-list.default.v3.default.42dcac0bb8.wav",
+      "sources": {
+        "default": {
+          "wav": "/audio/trail-guide/artifact-list.default.v3.default.42dcac0bb8.wav"
+        },
+        "zh_female": {
+          "wav": "/audio/trail-guide/artifact-list.default.v3.zh_female.e63fa9f4c9.wav"
+        },
+        "sweet": {
+          "wav": "/audio/trail-guide/artifact-list.default.v3.sweet.622ac0dfc1.wav"
+        }
+      },
+      "ready": true,
+      "readyVoices": [
+        "default",
+        "zh_female",
+        "sweet"
+      ]
+    },
+    {
+      "key": "stage-viewer.default.v1",
+      "presetKey": "stage-viewer.default",
+      "variant": "v1",
+      "intent": "stage-viewer",
+      "priority": 70,
+      "tags": [
+        "stage",
+        "3d",
+        "graph"
+      ],
+      "text": "现在进入展品现场。左侧看三维造型，右侧看关系图谱，两边合起来才像一次完整观察。",
+      "contentHash": "9522510439",
+      "voices": [
+        "default",
+        "zh_female",
+        "sweet"
+      ],
+      "audioUrl": "/audio/trail-guide/stage-viewer.default.v1.default.728e98545f.wav",
+      "sources": {
+        "default": {
+          "wav": "/audio/trail-guide/stage-viewer.default.v1.default.728e98545f.wav"
+        },
+        "zh_female": {
+          "wav": "/audio/trail-guide/stage-viewer.default.v1.zh_female.6ffd234be7.wav"
+        },
+        "sweet": {
+          "wav": "/audio/trail-guide/stage-viewer.default.v1.sweet.c0cbb3e68f.wav"
+        }
+      },
+      "ready": true,
+      "readyVoices": [
+        "default",
+        "zh_female",
+        "sweet"
+      ]
+    },
+    {
+      "key": "stage-viewer.default.v2",
+      "presetKey": "stage-viewer.default",
+      "variant": "v2",
+      "intent": "stage-viewer",
+      "priority": 70,
+      "tags": [
+        "stage",
+        "3d",
+        "graph"
+      ],
+      "text": "先用三维模型看轮廓、比例和细节，再用图谱看遗址、时代、工艺和象征意义之间的关系。",
+      "contentHash": "ad89ba384e",
+      "voices": [
+        "default",
+        "zh_female",
+        "sweet"
+      ],
+      "audioUrl": "/audio/trail-guide/stage-viewer.default.v2.default.dc84e6337a.wav",
+      "sources": {
+        "default": {
+          "wav": "/audio/trail-guide/stage-viewer.default.v2.default.dc84e6337a.wav"
+        },
+        "zh_female": {
+          "wav": "/audio/trail-guide/stage-viewer.default.v2.zh_female.c02ab69b3b.wav"
+        },
+        "sweet": {
+          "wav": "/audio/trail-guide/stage-viewer.default.v2.sweet.d9e3c43b80.wav"
+        }
+      },
+      "ready": true,
+      "readyVoices": [
+        "default",
+        "sweet"
+      ]
+    },
+    {
+      "key": "stage-viewer.default.v3",
+      "presetKey": "stage-viewer.default",
+      "variant": "v3",
+      "intent": "stage-viewer",
+      "priority": 70,
+      "tags": [
+        "stage",
+        "3d",
+        "graph"
+      ],
+      "text": "这一幕适合慢一点看。拖拽模型确认器物形态，再点开图谱节点，理解它为什么不只是一个孤立展品。",
+      "contentHash": "c2eeb4e697",
+      "voices": [
+        "default",
+        "zh_female",
+        "sweet"
+      ],
+      "audioUrl": "/audio/trail-guide/stage-viewer.default.v3.default.4598086f63.wav",
+      "sources": {
+        "default": {
+          "wav": "/audio/trail-guide/stage-viewer.default.v3.default.4598086f63.wav"
+        },
+        "zh_female": {
+          "wav": "/audio/trail-guide/stage-viewer.default.v3.zh_female.0a64db8071.wav"
+        },
+        "sweet": {
+          "wav": "/audio/trail-guide/stage-viewer.default.v3.sweet.fb47954afe.wav"
+        }
+      },
+      "ready": true,
+      "readyVoices": [
+        "default",
+        "zh_female",
+        "sweet"
+      ]
+    },
+    {
+      "key": "guide-chat.default.v1",
+      "presetKey": "guide-chat.default",
+      "variant": "v1",
+      "intent": "guide-chat",
+      "priority": 70,
+      "tags": [
+        "stage",
+        "chat"
+      ],
+      "text": "这里是玄喵讲解区。你可以继续追问，让玄喵把展线里的文物线索讲成一段完整故事。",
+      "contentHash": "61ce00960e",
+      "voices": [
+        "default",
+        "zh_female",
+        "sweet"
+      ],
+      "audioUrl": "/audio/trail-guide/guide-chat.default.v1.default.cf2e14e730.wav",
+      "sources": {
+        "default": {
+          "wav": "/audio/trail-guide/guide-chat.default.v1.default.cf2e14e730.wav"
+        },
+        "zh_female": {
+          "wav": "/audio/trail-guide/guide-chat.default.v1.zh_female.8cd2069202.wav"
+        },
+        "sweet": {
+          "wav": "/audio/trail-guide/guide-chat.default.v1.sweet.c638ef4844.wav"
+        }
+      },
+      "ready": true,
+      "readyVoices": [
+        "default",
+        "zh_female",
+        "sweet"
+      ]
+    },
+    {
+      "key": "guide-chat.default.v2",
+      "presetKey": "guide-chat.default",
+      "variant": "v2",
+      "intent": "guide-chat",
+      "priority": 70,
+      "tags": [
+        "stage",
+        "chat"
+      ],
+      "text": "如果刚才看完模型和图谱，可以问玄喵这是什么、为什么重要、它和哪类文物有关。",
+      "contentHash": "39f3f8e70f",
+      "voices": [
+        "default",
+        "zh_female",
+        "sweet"
+      ],
+      "audioUrl": "/audio/trail-guide/guide-chat.default.v2.default.5a57da8537.wav",
+      "sources": {
+        "default": {
+          "wav": "/audio/trail-guide/guide-chat.default.v2.default.5a57da8537.wav"
+        },
+        "zh_female": {
+          "wav": "/audio/trail-guide/guide-chat.default.v2.zh_female.d369e14c06.wav"
+        },
+        "sweet": {
+          "wav": "/audio/trail-guide/guide-chat.default.v2.sweet.5d3b28f956.wav"
+        }
+      },
+      "ready": true,
+      "readyVoices": [
+        "default",
+        "zh_female",
+        "sweet"
+      ]
+    },
+    {
+      "key": "guide-chat.default.v3",
+      "presetKey": "guide-chat.default",
+      "variant": "v3",
+      "intent": "guide-chat",
+      "priority": 70,
+      "tags": [
+        "stage",
+        "chat"
+      ],
+      "text": "讲解区适合把观察变成理解。你不用背知识点，只要沿着工艺、象征或时代继续提问。",
+      "contentHash": "dd3377d622",
+      "voices": [
+        "default",
+        "zh_female",
+        "sweet"
+      ],
+      "audioUrl": "/audio/trail-guide/guide-chat.default.v3.default.b0eb3bf8de.wav",
+      "sources": {
+        "default": {
+          "wav": "/audio/trail-guide/guide-chat.default.v3.default.b0eb3bf8de.wav"
+        },
+        "zh_female": {
+          "wav": "/audio/trail-guide/guide-chat.default.v3.zh_female.c0e7104e15.wav"
+        },
+        "sweet": {
+          "wav": "/audio/trail-guide/guide-chat.default.v3.sweet.11d40ddd56.wav"
+        }
+      },
+      "ready": true,
+      "readyVoices": [
+        "default"
+      ]
+    },
+    {
+      "key": "graph-type.default.v1",
+      "presetKey": "graph-type.default",
+      "variant": "v1",
+      "intent": "graph-node",
+      "priority": 60,
+      "tags": [
+        "graph"
+      ],
+      "type": "default",
+      "text": "你点到了图谱里的一个新线索。先看它和当前文物的关系，再决定要不要继续展开。",
+      "contentHash": "a9c65e3d36",
+      "voices": [
+        "default",
+        "zh_female",
+        "sweet"
+      ],
+      "audioUrl": "/audio/trail-guide/graph-type.default.v1.default.a258afe124.wav",
+      "sources": {
+        "default": {
+          "wav": "/audio/trail-guide/graph-type.default.v1.default.a258afe124.wav"
+        },
+        "zh_female": {
+          "wav": "/audio/trail-guide/graph-type.default.v1.zh_female.6ede6fc2d5.wav"
+        },
+        "sweet": {
+          "wav": "/audio/trail-guide/graph-type.default.v1.sweet.ef4e2bfec5.wav"
+        }
+      },
+      "ready": false,
+      "readyVoices": []
+    },
+    {
+      "key": "graph-type.default.v2",
+      "presetKey": "graph-type.default",
+      "variant": "v2",
+      "intent": "graph-node",
+      "priority": 60,
+      "tags": [
+        "graph"
+      ],
+      "type": "default",
+      "text": "图谱节点不是标签堆叠。每一次点击，都在把文物放回更大的考古、工艺或观念网络里。",
+      "contentHash": "282a4a1fab",
+      "voices": [
+        "default",
+        "zh_female",
+        "sweet"
+      ],
+      "audioUrl": "/audio/trail-guide/graph-type.default.v2.default.6806149c59.wav",
+      "sources": {
+        "default": {
+          "wav": "/audio/trail-guide/graph-type.default.v2.default.6806149c59.wav"
+        },
+        "zh_female": {
+          "wav": "/audio/trail-guide/graph-type.default.v2.zh_female.966729fd9b.wav"
+        },
+        "sweet": {
+          "wav": "/audio/trail-guide/graph-type.default.v2.sweet.1f1023c978.wav"
+        }
+      },
+      "ready": false,
+      "readyVoices": []
+    },
+    {
+      "key": "graph-type.artifact.v1",
+      "presetKey": "graph-type.artifact",
+      "variant": "v1",
+      "intent": "graph-node",
+      "priority": 62,
+      "tags": [
+        "graph",
+        "artifact"
+      ],
+      "type": "artifact",
+      "text": "你点到的是相关文物。先比较它和当前文物的造型、工艺、使用场景，再判断它们是否属于同一类礼仪表达。",
+      "contentHash": "9cf016b6d6",
+      "voices": [
+        "default",
+        "zh_female",
+        "sweet"
+      ],
+      "audioUrl": "/audio/trail-guide/graph-type.artifact.v1.default.5a5a77281f.wav",
+      "sources": {
+        "default": {
+          "wav": "/audio/trail-guide/graph-type.artifact.v1.default.5a5a77281f.wav"
+        },
+        "zh_female": {
+          "wav": "/audio/trail-guide/graph-type.artifact.v1.zh_female.eeb376df75.wav"
+        },
+        "sweet": {
+          "wav": "/audio/trail-guide/graph-type.artifact.v1.sweet.581c3d128d.wav"
+        }
+      },
+      "ready": false,
+      "readyVoices": []
+    },
+    {
+      "key": "graph-type.artifact.v2",
+      "presetKey": "graph-type.artifact",
+      "variant": "v2",
+      "intent": "graph-node",
+      "priority": 62,
+      "tags": [
+        "graph",
+        "artifact"
+      ],
+      "type": "artifact",
+      "text": "相关文物不是旁支，它能帮助你看到同一时期器物之间的组合关系，也能提示下一步该看哪件展品。",
+      "contentHash": "e9096d877e",
+      "voices": [
+        "default",
+        "zh_female",
+        "sweet"
+      ],
+      "audioUrl": "/audio/trail-guide/graph-type.artifact.v2.default.dbf9bf1c34.wav",
+      "sources": {
+        "default": {
+          "wav": "/audio/trail-guide/graph-type.artifact.v2.default.dbf9bf1c34.wav"
+        },
+        "zh_female": {
+          "wav": "/audio/trail-guide/graph-type.artifact.v2.zh_female.6db86cf9fe.wav"
+        },
+        "sweet": {
+          "wav": "/audio/trail-guide/graph-type.artifact.v2.sweet.ecbba0ca1a.wav"
+        }
+      },
+      "ready": false,
+      "readyVoices": []
+    },
+    {
+      "key": "graph-type.site.v1",
+      "presetKey": "graph-type.site",
+      "variant": "v1",
+      "intent": "graph-node",
+      "priority": 62,
+      "tags": [
+        "graph",
+        "site"
+      ],
+      "type": "site",
+      "text": "你点到的是遗址线索。遗址把文物放回空间坐标里，能解释它为什么和祭祀坑、聚落或区域文化有关。",
+      "contentHash": "ca7f02cb68",
+      "voices": [
+        "default",
+        "zh_female",
+        "sweet"
+      ],
+      "audioUrl": "/audio/trail-guide/graph-type.site.v1.default.ee8418ba98.wav",
+      "sources": {
+        "default": {
+          "wav": "/audio/trail-guide/graph-type.site.v1.default.ee8418ba98.wav"
+        },
+        "zh_female": {
+          "wav": "/audio/trail-guide/graph-type.site.v1.zh_female.510d03e716.wav"
+        },
+        "sweet": {
+          "wav": "/audio/trail-guide/graph-type.site.v1.sweet.63b380eabe.wav"
+        }
+      },
+      "ready": false,
+      "readyVoices": []
+    },
+    {
+      "key": "graph-type.site.v2",
+      "presetKey": "graph-type.site",
+      "variant": "v2",
+      "intent": "graph-node",
+      "priority": 62,
+      "tags": [
+        "graph",
+        "site"
+      ],
+      "type": "site",
+      "text": "先看遗址，再看器物，会更容易理解文物不是孤立展品，而是一次考古发现中的关系节点。",
+      "contentHash": "3f6e7f5fb6",
+      "voices": [
+        "default",
+        "zh_female",
+        "sweet"
+      ],
+      "audioUrl": "/audio/trail-guide/graph-type.site.v2.default.124b495033.wav",
+      "sources": {
+        "default": {
+          "wav": "/audio/trail-guide/graph-type.site.v2.default.124b495033.wav"
+        },
+        "zh_female": {
+          "wav": "/audio/trail-guide/graph-type.site.v2.zh_female.e12721b5f1.wav"
+        },
+        "sweet": {
+          "wav": "/audio/trail-guide/graph-type.site.v2.sweet.f762071c7b.wav"
+        }
+      },
+      "ready": false,
+      "readyVoices": []
+    },
+    {
+      "key": "graph-type.era.v1",
+      "presetKey": "graph-type.era",
+      "variant": "v1",
+      "intent": "graph-node",
+      "priority": 62,
+      "tags": [
+        "graph",
+        "era"
+      ],
+      "type": "era",
+      "text": "你点到的是时代线索。年代不是背景说明，它会影响器物形态、工艺选择和礼制表达的变化。",
+      "contentHash": "935980c4bb",
+      "voices": [
+        "default",
+        "zh_female",
+        "sweet"
+      ],
+      "audioUrl": "/audio/trail-guide/graph-type.era.v1.default.f7488c47a2.wav",
+      "sources": {
+        "default": {
+          "wav": "/audio/trail-guide/graph-type.era.v1.default.f7488c47a2.wav"
+        },
+        "zh_female": {
+          "wav": "/audio/trail-guide/graph-type.era.v1.zh_female.bd14f117c0.wav"
+        },
+        "sweet": {
+          "wav": "/audio/trail-guide/graph-type.era.v1.sweet.d3187e814d.wav"
+        }
+      },
+      "ready": false,
+      "readyVoices": []
+    },
+    {
+      "key": "graph-type.era.v2",
+      "presetKey": "graph-type.era",
+      "variant": "v2",
+      "intent": "graph-node",
+      "priority": 62,
+      "tags": [
+        "graph",
+        "era"
+      ],
+      "type": "era",
+      "text": "顺着时代继续看，可以把三星堆和后续金沙之间的延续、转化与差异慢慢分辨出来。",
+      "contentHash": "f8eae56597",
+      "voices": [
+        "default",
+        "zh_female",
+        "sweet"
+      ],
+      "audioUrl": "/audio/trail-guide/graph-type.era.v2.default.8fc5ba633d.wav",
+      "sources": {
+        "default": {
+          "wav": "/audio/trail-guide/graph-type.era.v2.default.8fc5ba633d.wav"
+        },
+        "zh_female": {
+          "wav": "/audio/trail-guide/graph-type.era.v2.zh_female.227d1628c0.wav"
+        },
+        "sweet": {
+          "wav": "/audio/trail-guide/graph-type.era.v2.sweet.ea9783aa91.wav"
+        }
+      },
+      "ready": false,
+      "readyVoices": []
+    },
+    {
+      "key": "graph-type.craft.v1",
+      "presetKey": "graph-type.craft",
+      "variant": "v1",
+      "intent": "graph-node",
+      "priority": 62,
+      "tags": [
+        "graph",
+        "craft"
+      ],
+      "type": "craft",
+      "text": "你点到的是工艺线索。它解释的不是怎么做这么简单，而是技术能力如何支撑大型礼器和复杂造型。",
+      "contentHash": "c1735e602d",
+      "voices": [
+        "default",
+        "zh_female",
+        "sweet"
+      ],
+      "audioUrl": "/audio/trail-guide/graph-type.craft.v1.default.90da2ec466.wav",
+      "sources": {
+        "default": {
+          "wav": "/audio/trail-guide/graph-type.craft.v1.default.90da2ec466.wav"
+        },
+        "zh_female": {
+          "wav": "/audio/trail-guide/graph-type.craft.v1.zh_female.ced8daad4f.wav"
+        },
+        "sweet": {
+          "wav": "/audio/trail-guide/graph-type.craft.v1.sweet.53127686fb.wav"
+        }
+      },
+      "ready": false,
+      "readyVoices": []
+    },
+    {
+      "key": "graph-type.craft.v2",
+      "presetKey": "graph-type.craft",
+      "variant": "v2",
+      "intent": "graph-node",
+      "priority": 62,
+      "tags": [
+        "graph",
+        "craft"
+      ],
+      "type": "craft",
+      "text": "顺着工艺看，能看到古蜀匠人如何处理铸造、嵌接、锤揲或纹饰，让材料进入仪式秩序。",
+      "contentHash": "a008483b90",
+      "voices": [
+        "default",
+        "zh_female",
+        "sweet"
+      ],
+      "audioUrl": "/audio/trail-guide/graph-type.craft.v2.default.7ccdde62da.wav",
+      "sources": {
+        "default": {
+          "wav": "/audio/trail-guide/graph-type.craft.v2.default.7ccdde62da.wav"
+        },
+        "zh_female": {
+          "wav": "/audio/trail-guide/graph-type.craft.v2.zh_female.4b214cf528.wav"
+        },
+        "sweet": {
+          "wav": "/audio/trail-guide/graph-type.craft.v2.sweet.ac80e71933.wav"
+        }
+      },
+      "ready": false,
+      "readyVoices": []
+    },
+    {
+      "key": "graph-type.material.v1",
+      "presetKey": "graph-type.material",
+      "variant": "v1",
+      "intent": "graph-node",
+      "priority": 62,
+      "tags": [
+        "graph",
+        "material"
+      ],
+      "type": "material",
+      "text": "你点到的是材质线索。青铜、黄金和玉石并不只是材料差异，也常常连接身份、权力和祭祀等级。",
+      "contentHash": "573f9477b0",
+      "voices": [
+        "default",
+        "zh_female",
+        "sweet"
+      ],
+      "audioUrl": "/audio/trail-guide/graph-type.material.v1.default.086a71789a.wav",
+      "sources": {
+        "default": {
+          "wav": "/audio/trail-guide/graph-type.material.v1.default.086a71789a.wav"
+        },
+        "zh_female": {
+          "wav": "/audio/trail-guide/graph-type.material.v1.zh_female.4ad94dea9d.wav"
+        },
+        "sweet": {
+          "wav": "/audio/trail-guide/graph-type.material.v1.sweet.d36303efd1.wav"
+        }
+      },
+      "ready": false,
+      "readyVoices": []
+    },
+    {
+      "key": "graph-type.material.v2",
+      "presetKey": "graph-type.material",
+      "variant": "v2",
+      "intent": "graph-node",
+      "priority": 62,
+      "tags": [
+        "graph",
+        "material"
+      ],
+      "type": "material",
+      "text": "材质会改变文物的观看方式。金器偏向身份与神性表达，青铜器则常承担更复杂的礼仪结构。",
+      "contentHash": "571453ed81",
+      "voices": [
+        "default",
+        "zh_female",
+        "sweet"
+      ],
+      "audioUrl": "/audio/trail-guide/graph-type.material.v2.default.238234be3d.wav",
+      "sources": {
+        "default": {
+          "wav": "/audio/trail-guide/graph-type.material.v2.default.238234be3d.wav"
+        },
+        "zh_female": {
+          "wav": "/audio/trail-guide/graph-type.material.v2.zh_female.c8fda02060.wav"
+        },
+        "sweet": {
+          "wav": "/audio/trail-guide/graph-type.material.v2.sweet.8ecb50c57c.wav"
+        }
+      },
+      "ready": false,
+      "readyVoices": []
+    },
+    {
+      "key": "graph-type.meaning.v1",
+      "presetKey": "graph-type.meaning",
+      "variant": "v1",
+      "intent": "graph-node",
+      "priority": 62,
+      "tags": [
+        "graph",
+        "meaning"
+      ],
+      "type": "meaning",
+      "text": "你点到的是象征线索。这里要看的不是单个图案，而是它如何连接神权、王权、祖先崇拜或宇宙观。",
+      "contentHash": "b00c4f6860",
+      "voices": [
+        "default",
+        "zh_female",
+        "sweet"
+      ],
+      "audioUrl": "/audio/trail-guide/graph-type.meaning.v1.default.27a18a7ef5.wav",
+      "sources": {
+        "default": {
+          "wav": "/audio/trail-guide/graph-type.meaning.v1.default.27a18a7ef5.wav"
+        },
+        "zh_female": {
+          "wav": "/audio/trail-guide/graph-type.meaning.v1.zh_female.38376c67d6.wav"
+        },
+        "sweet": {
+          "wav": "/audio/trail-guide/graph-type.meaning.v1.sweet.80847d63e0.wav"
+        }
+      },
+      "ready": false,
+      "readyVoices": []
+    },
+    {
+      "key": "graph-type.meaning.v2",
+      "presetKey": "graph-type.meaning",
+      "variant": "v2",
+      "intent": "graph-node",
+      "priority": 62,
+      "tags": [
+        "graph",
+        "meaning"
+      ],
+      "type": "meaning",
+      "text": "象征意义能把器物从造型带入思想层面。继续看它，玄喵会把可见形象和不可见观念接起来。",
+      "contentHash": "dd75253233",
+      "voices": [
+        "default",
+        "zh_female",
+        "sweet"
+      ],
+      "audioUrl": "/audio/trail-guide/graph-type.meaning.v2.default.da1529bcf4.wav",
+      "sources": {
+        "default": {
+          "wav": "/audio/trail-guide/graph-type.meaning.v2.default.da1529bcf4.wav"
+        },
+        "zh_female": {
+          "wav": "/audio/trail-guide/graph-type.meaning.v2.zh_female.828f68b487.wav"
+        },
+        "sweet": {
+          "wav": "/audio/trail-guide/graph-type.meaning.v2.sweet.b656e0be6c.wav"
+        }
+      },
+      "ready": false,
+      "readyVoices": []
+    },
+    {
+      "key": "graph-type.motif.v1",
+      "presetKey": "graph-type.motif",
+      "variant": "v1",
+      "intent": "graph-node",
+      "priority": 62,
+      "tags": [
+        "graph",
+        "motif"
+      ],
+      "type": "motif",
+      "text": "你点到的是母题线索。纹样和造型不是装饰而已，它们往往承载古蜀人对神灵、祖先和自然的想象。",
+      "contentHash": "3819db9097",
+      "voices": [
+        "default",
+        "zh_female",
+        "sweet"
+      ],
+      "audioUrl": "/audio/trail-guide/graph-type.motif.v1.default.64d16698d4.wav",
+      "sources": {
+        "default": {
+          "wav": "/audio/trail-guide/graph-type.motif.v1.default.64d16698d4.wav"
+        },
+        "zh_female": {
+          "wav": "/audio/trail-guide/graph-type.motif.v1.zh_female.55ad94f93b.wav"
+        },
+        "sweet": {
+          "wav": "/audio/trail-guide/graph-type.motif.v1.sweet.49b95fe040.wav"
+        }
+      },
+      "ready": false,
+      "readyVoices": []
+    },
+    {
+      "key": "graph-type.motif.v2",
+      "presetKey": "graph-type.motif",
+      "variant": "v2",
+      "intent": "graph-node",
+      "priority": 62,
+      "tags": [
+        "graph",
+        "motif"
+      ],
+      "type": "motif",
+      "text": "母题适合横向比较。你可以观察相似纹样如何出现在不同器物上，并形成重复出现的视觉秩序。",
+      "contentHash": "947356b9c4",
+      "voices": [
+        "default",
+        "zh_female",
+        "sweet"
+      ],
+      "audioUrl": "/audio/trail-guide/graph-type.motif.v2.default.5f8ffcfc6d.wav",
+      "sources": {
+        "default": {
+          "wav": "/audio/trail-guide/graph-type.motif.v2.default.5f8ffcfc6d.wav"
+        },
+        "zh_female": {
+          "wav": "/audio/trail-guide/graph-type.motif.v2.zh_female.526dd8da51.wav"
+        },
+        "sweet": {
+          "wav": "/audio/trail-guide/graph-type.motif.v2.sweet.de1daedfff.wav"
+        }
+      },
+      "ready": false,
+      "readyVoices": []
+    },
+    {
+      "key": "graph-type.ritual.v1",
+      "presetKey": "graph-type.ritual",
+      "variant": "v1",
+      "intent": "graph-node",
+      "priority": 62,
+      "tags": [
+        "graph",
+        "ritual"
+      ],
+      "type": "ritual",
+      "text": "你点到的是仪式线索。顺着它继续看，会更容易理解祭祀、通神和王权表达怎样共同构成礼仪现场。",
+      "contentHash": "3461a29000",
+      "voices": [
+        "default",
+        "zh_female",
+        "sweet"
+      ],
+      "audioUrl": "/audio/trail-guide/graph-type.ritual.v1.default.e1ed2526a1.wav",
+      "sources": {
+        "default": {
+          "wav": "/audio/trail-guide/graph-type.ritual.v1.default.e1ed2526a1.wav"
+        },
+        "zh_female": {
+          "wav": "/audio/trail-guide/graph-type.ritual.v1.zh_female.726502e603.wav"
+        },
+        "sweet": {
+          "wav": "/audio/trail-guide/graph-type.ritual.v1.sweet.410d0ce28d.wav"
+        }
+      },
+      "ready": false,
+      "readyVoices": []
+    },
+    {
+      "key": "graph-type.ritual.v2",
+      "presetKey": "graph-type.ritual",
+      "variant": "v2",
+      "intent": "graph-node",
+      "priority": 62,
+      "tags": [
+        "graph",
+        "ritual"
+      ],
+      "type": "ritual",
+      "text": "仪式语境能解释文物为什么重要。它提醒我们，很多器物真正的功能是在行动和场景中完成的。",
+      "contentHash": "132087b726",
+      "voices": [
+        "default",
+        "zh_female",
+        "sweet"
+      ],
+      "audioUrl": "/audio/trail-guide/graph-type.ritual.v2.default.5c17ec520b.wav",
+      "sources": {
+        "default": {
+          "wav": "/audio/trail-guide/graph-type.ritual.v2.default.5c17ec520b.wav"
+        },
+        "zh_female": {
+          "wav": "/audio/trail-guide/graph-type.ritual.v2.zh_female.d3f2408455.wav"
+        },
+        "sweet": {
+          "wav": "/audio/trail-guide/graph-type.ritual.v2.sweet.cad8eefde5.wav"
+        }
+      },
+      "ready": false,
+      "readyVoices": []
+    },
+    {
+      "key": "artifact-list.HI-2025-006.v1",
+      "presetKey": "artifact-list.HI-2025-006",
+      "variant": "v1",
+      "intent": "artifact-list",
+      "priority": 90,
+      "tags": [
+        "artifact",
+        "observe"
+      ],
+      "entityId": "HI-2025-006",
+      "text": "建议先停在青铜神树前。中国现存最大单件青铜文物，象征古蜀宇宙观与通天神树。它属于青铜器，出自三星堆遗址，可以作为理解古蜀晚期的重要切口。",
+      "contentHash": "2bda0c9fc6",
+      "voices": [
+        "default",
+        "zh_female",
+        "sweet"
+      ],
+      "audioUrl": "/audio/trail-guide/artifact-list.HI-2025-006.v1.default.38fa94afaf.wav",
+      "sources": {
+        "default": {
+          "wav": "/audio/trail-guide/artifact-list.HI-2025-006.v1.default.38fa94afaf.wav"
+        },
+        "zh_female": {
+          "wav": "/audio/trail-guide/artifact-list.HI-2025-006.v1.zh_female.81d3286905.wav"
+        },
+        "sweet": {
+          "wav": "/audio/trail-guide/artifact-list.HI-2025-006.v1.sweet.4afa5273fc.wav"
+        }
+      },
+      "ready": false,
+      "readyVoices": []
+    },
+    {
+      "key": "artifact-list.HI-2025-006.v2",
+      "presetKey": "artifact-list.HI-2025-006",
+      "variant": "v2",
+      "intent": "artifact-list",
+      "priority": 90,
+      "tags": [
+        "artifact",
+        "observe"
+      ],
+      "entityId": "HI-2025-006",
+      "text": "青铜神树适合先看整体身份。它的类别是青铜器，核心工艺包括分段铸造、嵌铸工艺、铆接工艺，这些信息会影响后面的三维观察。",
+      "contentHash": "3da4ed0e13",
+      "voices": [
+        "default",
+        "zh_female",
+        "sweet"
+      ],
+      "audioUrl": "/audio/trail-guide/artifact-list.HI-2025-006.v2.default.884dec811f.wav",
+      "sources": {
+        "default": {
+          "wav": "/audio/trail-guide/artifact-list.HI-2025-006.v2.default.884dec811f.wav"
+        },
+        "zh_female": {
+          "wav": "/audio/trail-guide/artifact-list.HI-2025-006.v2.zh_female.7033b5d249.wav"
+        },
+        "sweet": {
+          "wav": "/audio/trail-guide/artifact-list.HI-2025-006.v2.sweet.eab520f4cf.wav"
+        }
+      },
+      "ready": false,
+      "readyVoices": []
+    },
+    {
+      "key": "artifact-list.HI-2025-006.v3",
+      "presetKey": "artifact-list.HI-2025-006",
+      "variant": "v3",
+      "intent": "artifact-list",
+      "priority": 90,
+      "tags": [
+        "artifact",
+        "observe"
+      ],
+      "entityId": "HI-2025-006",
+      "text": "从青铜神树开始，可以把注意力放在造型、工艺和象征三件事上。通高3.96米，由底座、树身、神龙三部分组成，代表古蜀人天地相通、人神共居的宇宙观。",
+      "contentHash": "61bd30290f",
+      "voices": [
+        "default",
+        "zh_female",
+        "sweet"
+      ],
+      "audioUrl": "/audio/trail-guide/artifact-list.HI-2025-006.v3.default.eaec94f05a.wav",
+      "sources": {
+        "default": {
+          "wav": "/audio/trail-guide/artifact-list.HI-2025-006.v3.default.eaec94f05a.wav"
+        },
+        "zh_female": {
+          "wav": "/audio/trail-guide/artifact-list.HI-2025-006.v3.zh_female.fb592cd78a.wav"
+        },
+        "sweet": {
+          "wav": "/audio/trail-guide/artifact-list.HI-2025-006.v3.sweet.c258e562ec.wav"
+        }
+      },
+      "ready": false,
+      "readyVoices": []
+    },
+    {
+      "key": "stage-viewer.HI-2025-006.v1",
+      "presetKey": "stage-viewer.HI-2025-006",
+      "variant": "v1",
+      "intent": "stage-viewer",
+      "priority": 92,
+      "tags": [
+        "artifact",
+        "3d"
+      ],
+      "entityId": "HI-2025-006",
+      "text": "现在看青铜神树。先拖拽模型确认轮廓、比例和关键部位，再看右侧图谱里的三星堆遗址、古蜀晚期和分段铸造、嵌铸工艺、铆接工艺。",
+      "contentHash": "d40e201ff6",
+      "voices": [
+        "default",
+        "zh_female",
+        "sweet"
+      ],
+      "audioUrl": "/audio/trail-guide/stage-viewer.HI-2025-006.v1.default.feabc08a04.wav",
+      "sources": {
+        "default": {
+          "wav": "/audio/trail-guide/stage-viewer.HI-2025-006.v1.default.feabc08a04.wav"
+        },
+        "zh_female": {
+          "wav": "/audio/trail-guide/stage-viewer.HI-2025-006.v1.zh_female.877174f5ec.wav"
+        },
+        "sweet": {
+          "wav": "/audio/trail-guide/stage-viewer.HI-2025-006.v1.sweet.d7458154dd.wav"
+        }
+      },
+      "ready": false,
+      "readyVoices": []
+    },
+    {
+      "key": "stage-viewer.HI-2025-006.v2",
+      "presetKey": "stage-viewer.HI-2025-006",
+      "variant": "v2",
+      "intent": "stage-viewer",
+      "priority": 92,
+      "tags": [
+        "artifact",
+        "3d"
+      ],
+      "entityId": "HI-2025-006",
+      "text": "观察青铜神树时，先看它作为青铜器的形态特征，再顺着图谱追踪工艺、遗址和象征意义。",
+      "contentHash": "ffe6b82aa6",
+      "voices": [
+        "default",
+        "zh_female",
+        "sweet"
+      ],
+      "audioUrl": "/audio/trail-guide/stage-viewer.HI-2025-006.v2.default.1a6e109d93.wav",
+      "sources": {
+        "default": {
+          "wav": "/audio/trail-guide/stage-viewer.HI-2025-006.v2.default.1a6e109d93.wav"
+        },
+        "zh_female": {
+          "wav": "/audio/trail-guide/stage-viewer.HI-2025-006.v2.zh_female.584a83051d.wav"
+        },
+        "sweet": {
+          "wav": "/audio/trail-guide/stage-viewer.HI-2025-006.v2.sweet.f67a2ada63.wav"
+        }
+      },
+      "ready": false,
+      "readyVoices": []
+    },
+    {
+      "key": "stage-viewer.HI-2025-006.v3",
+      "presetKey": "stage-viewer.HI-2025-006",
+      "variant": "v3",
+      "intent": "stage-viewer",
+      "priority": 92,
+      "tags": [
+        "artifact",
+        "3d"
+      ],
+      "entityId": "HI-2025-006",
+      "text": "青铜神树的三维展示适合配合图谱一起看。左侧看可见形态，右侧看它和通天神树、天地相通、神权祭祀、宇宙观象征之间的关系。",
+      "contentHash": "44981b1a02",
+      "voices": [
+        "default",
+        "zh_female",
+        "sweet"
+      ],
+      "audioUrl": "/audio/trail-guide/stage-viewer.HI-2025-006.v3.default.5ce18786d8.wav",
+      "sources": {
+        "default": {
+          "wav": "/audio/trail-guide/stage-viewer.HI-2025-006.v3.default.5ce18786d8.wav"
+        },
+        "zh_female": {
+          "wav": "/audio/trail-guide/stage-viewer.HI-2025-006.v3.zh_female.4b8332404e.wav"
+        },
+        "sweet": {
+          "wav": "/audio/trail-guide/stage-viewer.HI-2025-006.v3.sweet.afad79cb6b.wav"
+        }
+      },
+      "ready": false,
+      "readyVoices": []
+    },
+    {
+      "key": "guide-chat.HI-2025-006.v1",
+      "presetKey": "guide-chat.HI-2025-006",
+      "variant": "v1",
+      "intent": "guide-chat",
+      "priority": 88,
+      "tags": [
+        "artifact",
+        "chat"
+      ],
+      "entityId": "HI-2025-006",
+      "text": "这里可以继续问玄喵。围绕青铜神树，你可以问它为什么重要、用了什么工艺，或和哪件文物有关。",
+      "contentHash": "2cd6055570",
+      "voices": [
+        "default",
+        "zh_female",
+        "sweet"
+      ],
+      "audioUrl": "/audio/trail-guide/guide-chat.HI-2025-006.v1.default.c6ca83a512.wav",
+      "sources": {
+        "default": {
+          "wav": "/audio/trail-guide/guide-chat.HI-2025-006.v1.default.c6ca83a512.wav"
+        },
+        "zh_female": {
+          "wav": "/audio/trail-guide/guide-chat.HI-2025-006.v1.zh_female.b4b6f89ff3.wav"
+        },
+        "sweet": {
+          "wav": "/audio/trail-guide/guide-chat.HI-2025-006.v1.sweet.55747fc63b.wav"
+        }
+      },
+      "ready": false,
+      "readyVoices": []
+    },
+    {
+      "key": "guide-chat.HI-2025-006.v2",
+      "presetKey": "guide-chat.HI-2025-006",
+      "variant": "v2",
+      "intent": "guide-chat",
+      "priority": 88,
+      "tags": [
+        "artifact",
+        "chat"
+      ],
+      "entityId": "HI-2025-006",
+      "text": "如果想深入青铜神树，可以追问三个方向：它是什么，它为什么重要，它如何连接通天神树、天地相通、神权祭祀、宇宙观象征。",
+      "contentHash": "c8fa501a44",
+      "voices": [
+        "default",
+        "zh_female",
+        "sweet"
+      ],
+      "audioUrl": "/audio/trail-guide/guide-chat.HI-2025-006.v2.default.abc7b43706.wav",
+      "sources": {
+        "default": {
+          "wav": "/audio/trail-guide/guide-chat.HI-2025-006.v2.default.abc7b43706.wav"
+        },
+        "zh_female": {
+          "wav": "/audio/trail-guide/guide-chat.HI-2025-006.v2.zh_female.aaa6f33e4e.wav"
+        },
+        "sweet": {
+          "wav": "/audio/trail-guide/guide-chat.HI-2025-006.v2.sweet.ba15b46e4e.wav"
+        }
+      },
+      "ready": false,
+      "readyVoices": []
+    },
+    {
+      "key": "guide-chat.HI-2025-006.v3",
+      "presetKey": "guide-chat.HI-2025-006",
+      "variant": "v3",
+      "intent": "guide-chat",
+      "priority": 88,
+      "tags": [
+        "artifact",
+        "chat"
+      ],
+      "entityId": "HI-2025-006",
+      "text": "接下来可以让玄喵把青铜神树讲成一段故事，从三星堆遗址、古蜀晚期、分段铸造、嵌铸工艺、铆接工艺一路讲到象征意义。",
+      "contentHash": "1c2a4b1d52",
+      "voices": [
+        "default",
+        "zh_female",
+        "sweet"
+      ],
+      "audioUrl": "/audio/trail-guide/guide-chat.HI-2025-006.v3.default.7a7fd43ea8.wav",
+      "sources": {
+        "default": {
+          "wav": "/audio/trail-guide/guide-chat.HI-2025-006.v3.default.7a7fd43ea8.wav"
+        },
+        "zh_female": {
+          "wav": "/audio/trail-guide/guide-chat.HI-2025-006.v3.zh_female.b178f0cbfa.wav"
+        },
+        "sweet": {
+          "wav": "/audio/trail-guide/guide-chat.HI-2025-006.v3.sweet.8faafad788.wav"
+        }
+      },
+      "ready": false,
+      "readyVoices": []
+    },
+    {
+      "key": "artifact-craft.HI-2025-006.v1",
+      "presetKey": "artifact-craft.HI-2025-006",
+      "variant": "v1",
+      "intent": "artifact-craft",
+      "priority": 76,
+      "tags": [
+        "artifact",
+        "craft"
+      ],
+      "entityId": "HI-2025-006",
+      "text": "青铜神树的工艺重点可以从分段铸造、嵌铸工艺、铆接工艺切入。技术不是附属信息，它决定了器物能否形成复杂造型和稳定结构。",
+      "contentHash": "3b149b2576",
+      "voices": [
+        "default",
+        "zh_female",
+        "sweet"
+      ],
+      "audioUrl": "/audio/trail-guide/artifact-craft.HI-2025-006.v1.default.8e779a1edc.wav",
+      "sources": {
+        "default": {
+          "wav": "/audio/trail-guide/artifact-craft.HI-2025-006.v1.default.8e779a1edc.wav"
+        },
+        "zh_female": {
+          "wav": "/audio/trail-guide/artifact-craft.HI-2025-006.v1.zh_female.a75a16bc64.wav"
+        },
+        "sweet": {
+          "wav": "/audio/trail-guide/artifact-craft.HI-2025-006.v1.sweet.d82705bc40.wav"
+        }
+      },
+      "ready": false,
+      "readyVoices": []
+    },
+    {
+      "key": "artifact-craft.HI-2025-006.v2",
+      "presetKey": "artifact-craft.HI-2025-006",
+      "variant": "v2",
+      "intent": "artifact-craft",
+      "priority": 76,
+      "tags": [
+        "artifact",
+        "craft"
+      ],
+      "entityId": "HI-2025-006",
+      "text": "看青铜神树的工艺时，不只看材料怎么加工，还要看工艺如何服务于礼仪、身份和视觉震撼。",
+      "contentHash": "b686291b15",
+      "voices": [
+        "default",
+        "zh_female",
+        "sweet"
+      ],
+      "audioUrl": "/audio/trail-guide/artifact-craft.HI-2025-006.v2.default.dd8487672a.wav",
+      "sources": {
+        "default": {
+          "wav": "/audio/trail-guide/artifact-craft.HI-2025-006.v2.default.dd8487672a.wav"
+        },
+        "zh_female": {
+          "wav": "/audio/trail-guide/artifact-craft.HI-2025-006.v2.zh_female.8856c5675b.wav"
+        },
+        "sweet": {
+          "wav": "/audio/trail-guide/artifact-craft.HI-2025-006.v2.sweet.fcfd3be756.wav"
+        }
+      },
+      "ready": false,
+      "readyVoices": []
+    },
+    {
+      "key": "artifact-symbol.HI-2025-006.v1",
+      "presetKey": "artifact-symbol.HI-2025-006",
+      "variant": "v1",
+      "intent": "artifact-symbol",
+      "priority": 76,
+      "tags": [
+        "artifact",
+        "meaning"
+      ],
+      "entityId": "HI-2025-006",
+      "text": "青铜神树的象征意义集中在通天神树、天地相通、神权祭祀、宇宙观象征。这些词不是抽象概念，它们解释了古蜀人如何理解神灵、权力和宇宙秩序。",
+      "contentHash": "605da31dbb",
+      "voices": [
+        "default",
+        "zh_female",
+        "sweet"
+      ],
+      "audioUrl": "/audio/trail-guide/artifact-symbol.HI-2025-006.v1.default.68c89aa9c1.wav",
+      "sources": {
+        "default": {
+          "wav": "/audio/trail-guide/artifact-symbol.HI-2025-006.v1.default.68c89aa9c1.wav"
+        },
+        "zh_female": {
+          "wav": "/audio/trail-guide/artifact-symbol.HI-2025-006.v1.zh_female.a34b3f1e13.wav"
+        },
+        "sweet": {
+          "wav": "/audio/trail-guide/artifact-symbol.HI-2025-006.v1.sweet.2e300ae382.wav"
+        }
+      },
+      "ready": false,
+      "readyVoices": []
+    },
+    {
+      "key": "artifact-symbol.HI-2025-006.v2",
+      "presetKey": "artifact-symbol.HI-2025-006",
+      "variant": "v2",
+      "intent": "artifact-symbol",
+      "priority": 76,
+      "tags": [
+        "artifact",
+        "meaning"
+      ],
+      "entityId": "HI-2025-006",
+      "text": "如果只看造型，青铜神树会像一件奇特器物；把通天神树、天地相通、神权祭祀、宇宙观象征放进来，它才会回到古蜀信仰和仪式系统中。",
+      "contentHash": "9b394155d1",
+      "voices": [
+        "default",
+        "zh_female",
+        "sweet"
+      ],
+      "audioUrl": "/audio/trail-guide/artifact-symbol.HI-2025-006.v2.default.20e91a61e6.wav",
+      "sources": {
+        "default": {
+          "wav": "/audio/trail-guide/artifact-symbol.HI-2025-006.v2.default.20e91a61e6.wav"
+        },
+        "zh_female": {
+          "wav": "/audio/trail-guide/artifact-symbol.HI-2025-006.v2.zh_female.82f197114c.wav"
+        },
+        "sweet": {
+          "wav": "/audio/trail-guide/artifact-symbol.HI-2025-006.v2.sweet.bb57c79fe1.wav"
+        }
+      },
+      "ready": false,
+      "readyVoices": []
+    },
+    {
+      "key": "artifact-context.HI-2025-006.v1",
+      "presetKey": "artifact-context.HI-2025-006",
+      "variant": "v1",
+      "intent": "artifact-context",
+      "priority": 74,
+      "tags": [
+        "artifact",
+        "context"
+      ],
+      "entityId": "HI-2025-006",
+      "text": "青铜神树出自三星堆遗址，时代属于古蜀晚期。这个坐标能帮助你判断它和三星堆祭祀体系、权力表达之间的关系。",
+      "contentHash": "eb11822d51",
+      "voices": [
+        "default",
+        "zh_female",
+        "sweet"
+      ],
+      "audioUrl": "/audio/trail-guide/artifact-context.HI-2025-006.v1.default.68855f355e.wav",
+      "sources": {
+        "default": {
+          "wav": "/audio/trail-guide/artifact-context.HI-2025-006.v1.default.68855f355e.wav"
+        },
+        "zh_female": {
+          "wav": "/audio/trail-guide/artifact-context.HI-2025-006.v1.zh_female.eb5f110923.wav"
+        },
+        "sweet": {
+          "wav": "/audio/trail-guide/artifact-context.HI-2025-006.v1.sweet.92882c39de.wav"
+        }
+      },
+      "ready": false,
+      "readyVoices": []
+    },
+    {
+      "key": "artifact-context.HI-2025-006.v2",
+      "presetKey": "artifact-context.HI-2025-006",
+      "variant": "v2",
+      "intent": "artifact-context",
+      "priority": 74,
+      "tags": [
+        "artifact",
+        "context"
+      ],
+      "entityId": "HI-2025-006",
+      "text": "把青铜神树放回古蜀晚期看，它不只是单件展品，而是古蜀文明在技术、信仰和社会组织上的一次表达。",
+      "contentHash": "e6a2cc911e",
+      "voices": [
+        "default",
+        "zh_female",
+        "sweet"
+      ],
+      "audioUrl": "/audio/trail-guide/artifact-context.HI-2025-006.v2.default.b3d7c4f194.wav",
+      "sources": {
+        "default": {
+          "wav": "/audio/trail-guide/artifact-context.HI-2025-006.v2.default.b3d7c4f194.wav"
+        },
+        "zh_female": {
+          "wav": "/audio/trail-guide/artifact-context.HI-2025-006.v2.zh_female.1a7d5634ae.wav"
+        },
+        "sweet": {
+          "wav": "/audio/trail-guide/artifact-context.HI-2025-006.v2.sweet.a4b4948aea.wav"
+        }
+      },
+      "ready": false,
+      "readyVoices": []
+    },
+    {
+      "key": "artifact-next.HI-2025-006.v1",
+      "presetKey": "artifact-next.HI-2025-006",
+      "variant": "v1",
+      "intent": "artifact-next",
+      "priority": 72,
+      "tags": [
+        "artifact",
+        "next"
+      ],
+      "entityId": "HI-2025-006",
+      "text": "看完青铜神树后，可以继续点图谱节点，找同遗址、同工艺或同象征意义的文物，看看线索如何延伸。",
+      "contentHash": "4b93291823",
+      "voices": [
+        "default",
+        "zh_female",
+        "sweet"
+      ],
+      "audioUrl": "/audio/trail-guide/artifact-next.HI-2025-006.v1.default.62c0ec226e.wav",
+      "sources": {
+        "default": {
+          "wav": "/audio/trail-guide/artifact-next.HI-2025-006.v1.default.62c0ec226e.wav"
+        },
+        "zh_female": {
+          "wav": "/audio/trail-guide/artifact-next.HI-2025-006.v1.zh_female.159e92db56.wav"
+        },
+        "sweet": {
+          "wav": "/audio/trail-guide/artifact-next.HI-2025-006.v1.sweet.f5ee8927f7.wav"
+        }
+      },
+      "ready": false,
+      "readyVoices": []
+    },
+    {
+      "key": "artifact-next.HI-2025-006.v2",
+      "presetKey": "artifact-next.HI-2025-006",
+      "variant": "v2",
+      "intent": "artifact-next",
+      "priority": 72,
+      "tags": [
+        "artifact",
+        "next"
+      ],
+      "entityId": "HI-2025-006",
+      "text": "下一步建议从分段铸造、嵌铸工艺、铆接工艺或通天神树、天地相通、神权祭祀、宇宙观象征里选一个方向继续走，这样展线会从单件文物扩展成关系网络。",
+      "contentHash": "3d87b3dd20",
+      "voices": [
+        "default",
+        "zh_female",
+        "sweet"
+      ],
+      "audioUrl": "/audio/trail-guide/artifact-next.HI-2025-006.v2.default.a1662eea0c.wav",
+      "sources": {
+        "default": {
+          "wav": "/audio/trail-guide/artifact-next.HI-2025-006.v2.default.a1662eea0c.wav"
+        },
+        "zh_female": {
+          "wav": "/audio/trail-guide/artifact-next.HI-2025-006.v2.zh_female.516b2669c4.wav"
+        },
+        "sweet": {
+          "wav": "/audio/trail-guide/artifact-next.HI-2025-006.v2.sweet.996645a330.wav"
+        }
+      },
+      "ready": false,
+      "readyVoices": []
+    },
+    {
+      "key": "artifact-list.HI-2025-003.v1",
+      "presetKey": "artifact-list.HI-2025-003",
+      "variant": "v1",
+      "intent": "artifact-list",
+      "priority": 90,
+      "tags": [
+        "artifact",
+        "observe"
+      ],
+      "entityId": "HI-2025-003",
+      "text": "建议先停在青铜纵目面具前。三星堆最具标志性的神造像之一，以极度夸张的纵目造型著称。它属于青铜器，出自三星堆遗址，可以作为理解古蜀晚期的重要切口。",
+      "contentHash": "b3e415f74b",
+      "voices": [
+        "default",
+        "zh_female",
+        "sweet"
+      ],
+      "audioUrl": "/audio/trail-guide/artifact-list.HI-2025-003.v1.default.8850a02303.wav",
+      "sources": {
+        "default": {
+          "wav": "/audio/trail-guide/artifact-list.HI-2025-003.v1.default.8850a02303.wav"
+        },
+        "zh_female": {
+          "wav": "/audio/trail-guide/artifact-list.HI-2025-003.v1.zh_female.10a3aea223.wav"
+        },
+        "sweet": {
+          "wav": "/audio/trail-guide/artifact-list.HI-2025-003.v1.sweet.34b2eb1445.wav"
+        }
+      },
+      "ready": false,
+      "readyVoices": []
+    },
+    {
+      "key": "artifact-list.HI-2025-003.v2",
+      "presetKey": "artifact-list.HI-2025-003",
+      "variant": "v2",
+      "intent": "artifact-list",
+      "priority": 90,
+      "tags": [
+        "artifact",
+        "observe"
+      ],
+      "entityId": "HI-2025-003",
+      "text": "青铜纵目面具适合先看整体身份。它的类别是青铜器，核心工艺包括青铜铸造、表面纹饰处理，这些信息会影响后面的三维观察。",
+      "contentHash": "40d47bf33b",
+      "voices": [
+        "default",
+        "zh_female",
+        "sweet"
+      ],
+      "audioUrl": "/audio/trail-guide/artifact-list.HI-2025-003.v2.default.78e25e9e76.wav",
+      "sources": {
+        "default": {
+          "wav": "/audio/trail-guide/artifact-list.HI-2025-003.v2.default.78e25e9e76.wav"
+        },
+        "zh_female": {
+          "wav": "/audio/trail-guide/artifact-list.HI-2025-003.v2.zh_female.81cfc146cb.wav"
+        },
+        "sweet": {
+          "wav": "/audio/trail-guide/artifact-list.HI-2025-003.v2.sweet.f485600d48.wav"
+        }
+      },
+      "ready": false,
+      "readyVoices": []
+    },
+    {
+      "key": "artifact-list.HI-2025-003.v3",
+      "presetKey": "artifact-list.HI-2025-003",
+      "variant": "v3",
+      "intent": "artifact-list",
+      "priority": 90,
+      "tags": [
+        "artifact",
+        "observe"
+      ],
+      "entityId": "HI-2025-003",
+      "text": "从青铜纵目面具开始，可以把注意力放在造型、工艺和象征三件事上。眼球柱状外凸、双耳外展，对应古蜀祖先神崇拜与宗庙祭祀体系。",
+      "contentHash": "7a7c7e0d0b",
+      "voices": [
+        "default",
+        "zh_female",
+        "sweet"
+      ],
+      "audioUrl": "/audio/trail-guide/artifact-list.HI-2025-003.v3.default.e7932d1d9d.wav",
+      "sources": {
+        "default": {
+          "wav": "/audio/trail-guide/artifact-list.HI-2025-003.v3.default.e7932d1d9d.wav"
+        },
+        "zh_female": {
+          "wav": "/audio/trail-guide/artifact-list.HI-2025-003.v3.zh_female.93f8b755f8.wav"
+        },
+        "sweet": {
+          "wav": "/audio/trail-guide/artifact-list.HI-2025-003.v3.sweet.3e8c24b63a.wav"
+        }
+      },
+      "ready": false,
+      "readyVoices": []
+    },
+    {
+      "key": "stage-viewer.HI-2025-003.v1",
+      "presetKey": "stage-viewer.HI-2025-003",
+      "variant": "v1",
+      "intent": "stage-viewer",
+      "priority": 92,
+      "tags": [
+        "artifact",
+        "3d"
+      ],
+      "entityId": "HI-2025-003",
+      "text": "现在看青铜纵目面具。先拖拽模型确认轮廓、比例和关键部位，再看右侧图谱里的三星堆遗址、古蜀晚期和青铜铸造、表面纹饰处理。",
+      "contentHash": "d09d069de1",
+      "voices": [
+        "default",
+        "zh_female",
+        "sweet"
+      ],
+      "audioUrl": "/audio/trail-guide/stage-viewer.HI-2025-003.v1.default.345b0b46c2.wav",
+      "sources": {
+        "default": {
+          "wav": "/audio/trail-guide/stage-viewer.HI-2025-003.v1.default.345b0b46c2.wav"
+        },
+        "zh_female": {
+          "wav": "/audio/trail-guide/stage-viewer.HI-2025-003.v1.zh_female.0efd79c652.wav"
+        },
+        "sweet": {
+          "wav": "/audio/trail-guide/stage-viewer.HI-2025-003.v1.sweet.8f52162dbe.wav"
+        }
+      },
+      "ready": false,
+      "readyVoices": []
+    },
+    {
+      "key": "stage-viewer.HI-2025-003.v2",
+      "presetKey": "stage-viewer.HI-2025-003",
+      "variant": "v2",
+      "intent": "stage-viewer",
+      "priority": 92,
+      "tags": [
+        "artifact",
+        "3d"
+      ],
+      "entityId": "HI-2025-003",
+      "text": "观察青铜纵目面具时，先看它作为青铜器的形态特征，再顺着图谱追踪工艺、遗址和象征意义。",
+      "contentHash": "a90ec27ee9",
+      "voices": [
+        "default",
+        "zh_female",
+        "sweet"
+      ],
+      "audioUrl": "/audio/trail-guide/stage-viewer.HI-2025-003.v2.default.b10586941d.wav",
+      "sources": {
+        "default": {
+          "wav": "/audio/trail-guide/stage-viewer.HI-2025-003.v2.default.b10586941d.wav"
+        },
+        "zh_female": {
+          "wav": "/audio/trail-guide/stage-viewer.HI-2025-003.v2.zh_female.7332270362.wav"
+        },
+        "sweet": {
+          "wav": "/audio/trail-guide/stage-viewer.HI-2025-003.v2.sweet.d54a3c9281.wav"
+        }
+      },
+      "ready": false,
+      "readyVoices": []
+    },
+    {
+      "key": "stage-viewer.HI-2025-003.v3",
+      "presetKey": "stage-viewer.HI-2025-003",
+      "variant": "v3",
+      "intent": "stage-viewer",
+      "priority": 92,
+      "tags": [
+        "artifact",
+        "3d"
+      ],
+      "entityId": "HI-2025-003",
+      "text": "青铜纵目面具的三维展示适合配合图谱一起看。左侧看可见形态，右侧看它和祖先神崇拜、纵目神像、神权威慑、祭祀重器之间的关系。",
+      "contentHash": "f76183a683",
+      "voices": [
+        "default",
+        "zh_female",
+        "sweet"
+      ],
+      "audioUrl": "/audio/trail-guide/stage-viewer.HI-2025-003.v3.default.d46f82e94c.wav",
+      "sources": {
+        "default": {
+          "wav": "/audio/trail-guide/stage-viewer.HI-2025-003.v3.default.d46f82e94c.wav"
+        },
+        "zh_female": {
+          "wav": "/audio/trail-guide/stage-viewer.HI-2025-003.v3.zh_female.8e9065b665.wav"
+        },
+        "sweet": {
+          "wav": "/audio/trail-guide/stage-viewer.HI-2025-003.v3.sweet.7f2d2553ec.wav"
+        }
+      },
+      "ready": false,
+      "readyVoices": []
+    },
+    {
+      "key": "guide-chat.HI-2025-003.v1",
+      "presetKey": "guide-chat.HI-2025-003",
+      "variant": "v1",
+      "intent": "guide-chat",
+      "priority": 88,
+      "tags": [
+        "artifact",
+        "chat"
+      ],
+      "entityId": "HI-2025-003",
+      "text": "这里可以继续问玄喵。围绕青铜纵目面具，你可以问它为什么重要、用了什么工艺，或和哪件文物有关。",
+      "contentHash": "0da353010e",
+      "voices": [
+        "default",
+        "zh_female",
+        "sweet"
+      ],
+      "audioUrl": "/audio/trail-guide/guide-chat.HI-2025-003.v1.default.68bad35bb6.wav",
+      "sources": {
+        "default": {
+          "wav": "/audio/trail-guide/guide-chat.HI-2025-003.v1.default.68bad35bb6.wav"
+        },
+        "zh_female": {
+          "wav": "/audio/trail-guide/guide-chat.HI-2025-003.v1.zh_female.7c74e0b9d5.wav"
+        },
+        "sweet": {
+          "wav": "/audio/trail-guide/guide-chat.HI-2025-003.v1.sweet.d7dadd4ee4.wav"
+        }
+      },
+      "ready": false,
+      "readyVoices": []
+    },
+    {
+      "key": "guide-chat.HI-2025-003.v2",
+      "presetKey": "guide-chat.HI-2025-003",
+      "variant": "v2",
+      "intent": "guide-chat",
+      "priority": 88,
+      "tags": [
+        "artifact",
+        "chat"
+      ],
+      "entityId": "HI-2025-003",
+      "text": "如果想深入青铜纵目面具，可以追问三个方向：它是什么，它为什么重要，它如何连接祖先神崇拜、纵目神像、神权威慑、祭祀重器。",
+      "contentHash": "29537f2179",
+      "voices": [
+        "default",
+        "zh_female",
+        "sweet"
+      ],
+      "audioUrl": "/audio/trail-guide/guide-chat.HI-2025-003.v2.default.33fdc83091.wav",
+      "sources": {
+        "default": {
+          "wav": "/audio/trail-guide/guide-chat.HI-2025-003.v2.default.33fdc83091.wav"
+        },
+        "zh_female": {
+          "wav": "/audio/trail-guide/guide-chat.HI-2025-003.v2.zh_female.e9d479b4da.wav"
+        },
+        "sweet": {
+          "wav": "/audio/trail-guide/guide-chat.HI-2025-003.v2.sweet.8e72b3f386.wav"
+        }
+      },
+      "ready": false,
+      "readyVoices": []
+    },
+    {
+      "key": "guide-chat.HI-2025-003.v3",
+      "presetKey": "guide-chat.HI-2025-003",
+      "variant": "v3",
+      "intent": "guide-chat",
+      "priority": 88,
+      "tags": [
+        "artifact",
+        "chat"
+      ],
+      "entityId": "HI-2025-003",
+      "text": "接下来可以让玄喵把青铜纵目面具讲成一段故事，从三星堆遗址、古蜀晚期、青铜铸造、表面纹饰处理一路讲到象征意义。",
+      "contentHash": "673ea971dd",
+      "voices": [
+        "default",
+        "zh_female",
+        "sweet"
+      ],
+      "audioUrl": "/audio/trail-guide/guide-chat.HI-2025-003.v3.default.b136d5c8eb.wav",
+      "sources": {
+        "default": {
+          "wav": "/audio/trail-guide/guide-chat.HI-2025-003.v3.default.b136d5c8eb.wav"
+        },
+        "zh_female": {
+          "wav": "/audio/trail-guide/guide-chat.HI-2025-003.v3.zh_female.aed8362d35.wav"
+        },
+        "sweet": {
+          "wav": "/audio/trail-guide/guide-chat.HI-2025-003.v3.sweet.3b4681a671.wav"
+        }
+      },
+      "ready": false,
+      "readyVoices": []
+    },
+    {
+      "key": "artifact-craft.HI-2025-003.v1",
+      "presetKey": "artifact-craft.HI-2025-003",
+      "variant": "v1",
+      "intent": "artifact-craft",
+      "priority": 76,
+      "tags": [
+        "artifact",
+        "craft"
+      ],
+      "entityId": "HI-2025-003",
+      "text": "青铜纵目面具的工艺重点可以从青铜铸造、表面纹饰处理切入。技术不是附属信息，它决定了器物能否形成复杂造型和稳定结构。",
+      "contentHash": "cb9739f8c2",
+      "voices": [
+        "default",
+        "zh_female",
+        "sweet"
+      ],
+      "audioUrl": "/audio/trail-guide/artifact-craft.HI-2025-003.v1.default.c0ce3fa794.wav",
+      "sources": {
+        "default": {
+          "wav": "/audio/trail-guide/artifact-craft.HI-2025-003.v1.default.c0ce3fa794.wav"
+        },
+        "zh_female": {
+          "wav": "/audio/trail-guide/artifact-craft.HI-2025-003.v1.zh_female.a4b24aab19.wav"
+        },
+        "sweet": {
+          "wav": "/audio/trail-guide/artifact-craft.HI-2025-003.v1.sweet.b1a44a3aad.wav"
+        }
+      },
+      "ready": false,
+      "readyVoices": []
+    },
+    {
+      "key": "artifact-craft.HI-2025-003.v2",
+      "presetKey": "artifact-craft.HI-2025-003",
+      "variant": "v2",
+      "intent": "artifact-craft",
+      "priority": 76,
+      "tags": [
+        "artifact",
+        "craft"
+      ],
+      "entityId": "HI-2025-003",
+      "text": "看青铜纵目面具的工艺时，不只看材料怎么加工，还要看工艺如何服务于礼仪、身份和视觉震撼。",
+      "contentHash": "e718730345",
+      "voices": [
+        "default",
+        "zh_female",
+        "sweet"
+      ],
+      "audioUrl": "/audio/trail-guide/artifact-craft.HI-2025-003.v2.default.02e52edbac.wav",
+      "sources": {
+        "default": {
+          "wav": "/audio/trail-guide/artifact-craft.HI-2025-003.v2.default.02e52edbac.wav"
+        },
+        "zh_female": {
+          "wav": "/audio/trail-guide/artifact-craft.HI-2025-003.v2.zh_female.1d9c5003c1.wav"
+        },
+        "sweet": {
+          "wav": "/audio/trail-guide/artifact-craft.HI-2025-003.v2.sweet.e64e544c13.wav"
+        }
+      },
+      "ready": false,
+      "readyVoices": []
+    },
+    {
+      "key": "artifact-symbol.HI-2025-003.v1",
+      "presetKey": "artifact-symbol.HI-2025-003",
+      "variant": "v1",
+      "intent": "artifact-symbol",
+      "priority": 76,
+      "tags": [
+        "artifact",
+        "meaning"
+      ],
+      "entityId": "HI-2025-003",
+      "text": "青铜纵目面具的象征意义集中在祖先神崇拜、纵目神像、神权威慑、祭祀重器。这些词不是抽象概念，它们解释了古蜀人如何理解神灵、权力和宇宙秩序。",
+      "contentHash": "eaed85fc5f",
+      "voices": [
+        "default",
+        "zh_female",
+        "sweet"
+      ],
+      "audioUrl": "/audio/trail-guide/artifact-symbol.HI-2025-003.v1.default.b515ef6bd0.wav",
+      "sources": {
+        "default": {
+          "wav": "/audio/trail-guide/artifact-symbol.HI-2025-003.v1.default.b515ef6bd0.wav"
+        },
+        "zh_female": {
+          "wav": "/audio/trail-guide/artifact-symbol.HI-2025-003.v1.zh_female.10dc602ce5.wav"
+        },
+        "sweet": {
+          "wav": "/audio/trail-guide/artifact-symbol.HI-2025-003.v1.sweet.dfe3704203.wav"
+        }
+      },
+      "ready": false,
+      "readyVoices": []
+    },
+    {
+      "key": "artifact-symbol.HI-2025-003.v2",
+      "presetKey": "artifact-symbol.HI-2025-003",
+      "variant": "v2",
+      "intent": "artifact-symbol",
+      "priority": 76,
+      "tags": [
+        "artifact",
+        "meaning"
+      ],
+      "entityId": "HI-2025-003",
+      "text": "如果只看造型，青铜纵目面具会像一件奇特器物；把祖先神崇拜、纵目神像、神权威慑、祭祀重器放进来，它才会回到古蜀信仰和仪式系统中。",
+      "contentHash": "7bc90df775",
+      "voices": [
+        "default",
+        "zh_female",
+        "sweet"
+      ],
+      "audioUrl": "/audio/trail-guide/artifact-symbol.HI-2025-003.v2.default.0d3a350e01.wav",
+      "sources": {
+        "default": {
+          "wav": "/audio/trail-guide/artifact-symbol.HI-2025-003.v2.default.0d3a350e01.wav"
+        },
+        "zh_female": {
+          "wav": "/audio/trail-guide/artifact-symbol.HI-2025-003.v2.zh_female.84ea8a805e.wav"
+        },
+        "sweet": {
+          "wav": "/audio/trail-guide/artifact-symbol.HI-2025-003.v2.sweet.b87b95a693.wav"
+        }
+      },
+      "ready": false,
+      "readyVoices": []
+    },
+    {
+      "key": "artifact-context.HI-2025-003.v1",
+      "presetKey": "artifact-context.HI-2025-003",
+      "variant": "v1",
+      "intent": "artifact-context",
+      "priority": 74,
+      "tags": [
+        "artifact",
+        "context"
+      ],
+      "entityId": "HI-2025-003",
+      "text": "青铜纵目面具出自三星堆遗址，时代属于古蜀晚期。这个坐标能帮助你判断它和三星堆祭祀体系、权力表达之间的关系。",
+      "contentHash": "a0bf76aaea",
+      "voices": [
+        "default",
+        "zh_female",
+        "sweet"
+      ],
+      "audioUrl": "/audio/trail-guide/artifact-context.HI-2025-003.v1.default.be9a0110b1.wav",
+      "sources": {
+        "default": {
+          "wav": "/audio/trail-guide/artifact-context.HI-2025-003.v1.default.be9a0110b1.wav"
+        },
+        "zh_female": {
+          "wav": "/audio/trail-guide/artifact-context.HI-2025-003.v1.zh_female.df9ef0248b.wav"
+        },
+        "sweet": {
+          "wav": "/audio/trail-guide/artifact-context.HI-2025-003.v1.sweet.782f7e79c4.wav"
+        }
+      },
+      "ready": false,
+      "readyVoices": []
+    },
+    {
+      "key": "artifact-context.HI-2025-003.v2",
+      "presetKey": "artifact-context.HI-2025-003",
+      "variant": "v2",
+      "intent": "artifact-context",
+      "priority": 74,
+      "tags": [
+        "artifact",
+        "context"
+      ],
+      "entityId": "HI-2025-003",
+      "text": "把青铜纵目面具放回古蜀晚期看，它不只是单件展品，而是古蜀文明在技术、信仰和社会组织上的一次表达。",
+      "contentHash": "1bd5e352dd",
+      "voices": [
+        "default",
+        "zh_female",
+        "sweet"
+      ],
+      "audioUrl": "/audio/trail-guide/artifact-context.HI-2025-003.v2.default.a030c4833c.wav",
+      "sources": {
+        "default": {
+          "wav": "/audio/trail-guide/artifact-context.HI-2025-003.v2.default.a030c4833c.wav"
+        },
+        "zh_female": {
+          "wav": "/audio/trail-guide/artifact-context.HI-2025-003.v2.zh_female.58b23903b7.wav"
+        },
+        "sweet": {
+          "wav": "/audio/trail-guide/artifact-context.HI-2025-003.v2.sweet.8e8c3b4597.wav"
+        }
+      },
+      "ready": false,
+      "readyVoices": []
+    },
+    {
+      "key": "artifact-next.HI-2025-003.v1",
+      "presetKey": "artifact-next.HI-2025-003",
+      "variant": "v1",
+      "intent": "artifact-next",
+      "priority": 72,
+      "tags": [
+        "artifact",
+        "next"
+      ],
+      "entityId": "HI-2025-003",
+      "text": "看完青铜纵目面具后，可以继续点图谱节点，找同遗址、同工艺或同象征意义的文物，看看线索如何延伸。",
+      "contentHash": "3b8246c42e",
+      "voices": [
+        "default",
+        "zh_female",
+        "sweet"
+      ],
+      "audioUrl": "/audio/trail-guide/artifact-next.HI-2025-003.v1.default.9d607c2c32.wav",
+      "sources": {
+        "default": {
+          "wav": "/audio/trail-guide/artifact-next.HI-2025-003.v1.default.9d607c2c32.wav"
+        },
+        "zh_female": {
+          "wav": "/audio/trail-guide/artifact-next.HI-2025-003.v1.zh_female.ee62c118df.wav"
+        },
+        "sweet": {
+          "wav": "/audio/trail-guide/artifact-next.HI-2025-003.v1.sweet.e2091e2059.wav"
+        }
+      },
+      "ready": false,
+      "readyVoices": []
+    },
+    {
+      "key": "artifact-next.HI-2025-003.v2",
+      "presetKey": "artifact-next.HI-2025-003",
+      "variant": "v2",
+      "intent": "artifact-next",
+      "priority": 72,
+      "tags": [
+        "artifact",
+        "next"
+      ],
+      "entityId": "HI-2025-003",
+      "text": "下一步建议从青铜铸造、表面纹饰处理或祖先神崇拜、纵目神像、神权威慑、祭祀重器里选一个方向继续走，这样展线会从单件文物扩展成关系网络。",
+      "contentHash": "ad3b3945e6",
+      "voices": [
+        "default",
+        "zh_female",
+        "sweet"
+      ],
+      "audioUrl": "/audio/trail-guide/artifact-next.HI-2025-003.v2.default.5625d8e340.wav",
+      "sources": {
+        "default": {
+          "wav": "/audio/trail-guide/artifact-next.HI-2025-003.v2.default.5625d8e340.wav"
+        },
+        "zh_female": {
+          "wav": "/audio/trail-guide/artifact-next.HI-2025-003.v2.zh_female.1f0f22d6c9.wav"
+        },
+        "sweet": {
+          "wav": "/audio/trail-guide/artifact-next.HI-2025-003.v2.sweet.60328c7f02.wav"
+        }
+      },
+      "ready": false,
+      "readyVoices": []
+    },
+    {
+      "key": "artifact-list.HI-2025-005.v1",
+      "presetKey": "artifact-list.HI-2025-005",
+      "variant": "v1",
+      "intent": "artifact-list",
+      "priority": 90,
+      "tags": [
+        "artifact",
+        "observe"
+      ],
+      "entityId": "HI-2025-005",
+      "text": "建议先停在青铜大立人像前。世界同时期最大青铜立人像，是古蜀领袖形象的重要象征。它属于青铜器，出自三星堆遗址，可以作为理解古蜀晚期的重要切口。",
+      "contentHash": "f7b5ed68d8",
+      "voices": [
+        "default",
+        "zh_female",
+        "sweet"
+      ],
+      "audioUrl": "/audio/trail-guide/artifact-list.HI-2025-005.v1.default.95ef863889.wav",
+      "sources": {
+        "default": {
+          "wav": "/audio/trail-guide/artifact-list.HI-2025-005.v1.default.95ef863889.wav"
+        },
+        "zh_female": {
+          "wav": "/audio/trail-guide/artifact-list.HI-2025-005.v1.zh_female.cfc80f9818.wav"
+        },
+        "sweet": {
+          "wav": "/audio/trail-guide/artifact-list.HI-2025-005.v1.sweet.b86e1d8103.wav"
+        }
+      },
+      "ready": false,
+      "readyVoices": []
+    },
+    {
+      "key": "artifact-list.HI-2025-005.v2",
+      "presetKey": "artifact-list.HI-2025-005",
+      "variant": "v2",
+      "intent": "artifact-list",
+      "priority": 90,
+      "tags": [
+        "artifact",
+        "observe"
+      ],
+      "entityId": "HI-2025-005",
+      "text": "青铜大立人像适合先看整体身份。它的类别是青铜器，核心工艺包括分段浇铸、嵌铸工艺，这些信息会影响后面的三维观察。",
+      "contentHash": "83b10f0afe",
+      "voices": [
+        "default",
+        "zh_female",
+        "sweet"
+      ],
+      "audioUrl": "/audio/trail-guide/artifact-list.HI-2025-005.v2.default.de9ad55564.wav",
+      "sources": {
+        "default": {
+          "wav": "/audio/trail-guide/artifact-list.HI-2025-005.v2.default.de9ad55564.wav"
+        },
+        "zh_female": {
+          "wav": "/audio/trail-guide/artifact-list.HI-2025-005.v2.zh_female.a665ff33b4.wav"
+        },
+        "sweet": {
+          "wav": "/audio/trail-guide/artifact-list.HI-2025-005.v2.sweet.e01a69317a.wav"
+        }
+      },
+      "ready": false,
+      "readyVoices": []
+    },
+    {
+      "key": "artifact-list.HI-2025-005.v3",
+      "presetKey": "artifact-list.HI-2025-005",
+      "variant": "v3",
+      "intent": "artifact-list",
+      "priority": 90,
+      "tags": [
+        "artifact",
+        "observe"
+      ],
+      "entityId": "HI-2025-005",
+      "text": "从青铜大立人像开始，可以把注意力放在造型、工艺和象征三件事上。通高2.62米，头戴高冠，双手环握，体现古蜀国王兼大祭司的身份。",
+      "contentHash": "f4f13a8b94",
+      "voices": [
+        "default",
+        "zh_female",
+        "sweet"
+      ],
+      "audioUrl": "/audio/trail-guide/artifact-list.HI-2025-005.v3.default.5577ea2372.wav",
+      "sources": {
+        "default": {
+          "wav": "/audio/trail-guide/artifact-list.HI-2025-005.v3.default.5577ea2372.wav"
+        },
+        "zh_female": {
+          "wav": "/audio/trail-guide/artifact-list.HI-2025-005.v3.zh_female.419d62a212.wav"
+        },
+        "sweet": {
+          "wav": "/audio/trail-guide/artifact-list.HI-2025-005.v3.sweet.2d198a470d.wav"
+        }
+      },
+      "ready": false,
+      "readyVoices": []
+    },
+    {
+      "key": "stage-viewer.HI-2025-005.v1",
+      "presetKey": "stage-viewer.HI-2025-005",
+      "variant": "v1",
+      "intent": "stage-viewer",
+      "priority": 92,
+      "tags": [
+        "artifact",
+        "3d"
+      ],
+      "entityId": "HI-2025-005",
+      "text": "现在看青铜大立人像。先拖拽模型确认轮廓、比例和关键部位，再看右侧图谱里的三星堆遗址、古蜀晚期和分段浇铸、嵌铸工艺。",
+      "contentHash": "8a85a14ea9",
+      "voices": [
+        "default",
+        "zh_female",
+        "sweet"
+      ],
+      "audioUrl": "/audio/trail-guide/stage-viewer.HI-2025-005.v1.default.d70a9d83eb.wav",
+      "sources": {
+        "default": {
+          "wav": "/audio/trail-guide/stage-viewer.HI-2025-005.v1.default.d70a9d83eb.wav"
+        },
+        "zh_female": {
+          "wav": "/audio/trail-guide/stage-viewer.HI-2025-005.v1.zh_female.18e5b34597.wav"
+        },
+        "sweet": {
+          "wav": "/audio/trail-guide/stage-viewer.HI-2025-005.v1.sweet.81cf2f6bae.wav"
+        }
+      },
+      "ready": false,
+      "readyVoices": []
+    },
+    {
+      "key": "stage-viewer.HI-2025-005.v2",
+      "presetKey": "stage-viewer.HI-2025-005",
+      "variant": "v2",
+      "intent": "stage-viewer",
+      "priority": 92,
+      "tags": [
+        "artifact",
+        "3d"
+      ],
+      "entityId": "HI-2025-005",
+      "text": "观察青铜大立人像时，先看它作为青铜器的形态特征，再顺着图谱追踪工艺、遗址和象征意义。",
+      "contentHash": "1ee5caa893",
+      "voices": [
+        "default",
+        "zh_female",
+        "sweet"
+      ],
+      "audioUrl": "/audio/trail-guide/stage-viewer.HI-2025-005.v2.default.bafe52b172.wav",
+      "sources": {
+        "default": {
+          "wav": "/audio/trail-guide/stage-viewer.HI-2025-005.v2.default.bafe52b172.wav"
+        },
+        "zh_female": {
+          "wav": "/audio/trail-guide/stage-viewer.HI-2025-005.v2.zh_female.371f2252e9.wav"
+        },
+        "sweet": {
+          "wav": "/audio/trail-guide/stage-viewer.HI-2025-005.v2.sweet.75af2a55e0.wav"
+        }
+      },
+      "ready": false,
+      "readyVoices": []
+    },
+    {
+      "key": "stage-viewer.HI-2025-005.v3",
+      "presetKey": "stage-viewer.HI-2025-005",
+      "variant": "v3",
+      "intent": "stage-viewer",
+      "priority": 92,
+      "tags": [
+        "artifact",
+        "3d"
+      ],
+      "entityId": "HI-2025-005",
+      "text": "青铜大立人像的三维展示适合配合图谱一起看。左侧看可见形态，右侧看它和王权与神权合一、大祭司形象、最高权威象征之间的关系。",
+      "contentHash": "08a1edeeb3",
+      "voices": [
+        "default",
+        "zh_female",
+        "sweet"
+      ],
+      "audioUrl": "/audio/trail-guide/stage-viewer.HI-2025-005.v3.default.ac35f0dd62.wav",
+      "sources": {
+        "default": {
+          "wav": "/audio/trail-guide/stage-viewer.HI-2025-005.v3.default.ac35f0dd62.wav"
+        },
+        "zh_female": {
+          "wav": "/audio/trail-guide/stage-viewer.HI-2025-005.v3.zh_female.9ce87b6522.wav"
+        },
+        "sweet": {
+          "wav": "/audio/trail-guide/stage-viewer.HI-2025-005.v3.sweet.6ea5b44393.wav"
+        }
+      },
+      "ready": false,
+      "readyVoices": []
+    },
+    {
+      "key": "guide-chat.HI-2025-005.v1",
+      "presetKey": "guide-chat.HI-2025-005",
+      "variant": "v1",
+      "intent": "guide-chat",
+      "priority": 88,
+      "tags": [
+        "artifact",
+        "chat"
+      ],
+      "entityId": "HI-2025-005",
+      "text": "这里可以继续问玄喵。围绕青铜大立人像，你可以问它为什么重要、用了什么工艺，或和哪件文物有关。",
+      "contentHash": "0a7aec0f24",
+      "voices": [
+        "default",
+        "zh_female",
+        "sweet"
+      ],
+      "audioUrl": "/audio/trail-guide/guide-chat.HI-2025-005.v1.default.7cc2af5562.wav",
+      "sources": {
+        "default": {
+          "wav": "/audio/trail-guide/guide-chat.HI-2025-005.v1.default.7cc2af5562.wav"
+        },
+        "zh_female": {
+          "wav": "/audio/trail-guide/guide-chat.HI-2025-005.v1.zh_female.aca93586ee.wav"
+        },
+        "sweet": {
+          "wav": "/audio/trail-guide/guide-chat.HI-2025-005.v1.sweet.0296ac2303.wav"
+        }
+      },
+      "ready": false,
+      "readyVoices": []
+    },
+    {
+      "key": "guide-chat.HI-2025-005.v2",
+      "presetKey": "guide-chat.HI-2025-005",
+      "variant": "v2",
+      "intent": "guide-chat",
+      "priority": 88,
+      "tags": [
+        "artifact",
+        "chat"
+      ],
+      "entityId": "HI-2025-005",
+      "text": "如果想深入青铜大立人像，可以追问三个方向：它是什么，它为什么重要，它如何连接王权与神权合一、大祭司形象、最高权威象征。",
+      "contentHash": "688e4a21f1",
+      "voices": [
+        "default",
+        "zh_female",
+        "sweet"
+      ],
+      "audioUrl": "/audio/trail-guide/guide-chat.HI-2025-005.v2.default.0957609d0b.wav",
+      "sources": {
+        "default": {
+          "wav": "/audio/trail-guide/guide-chat.HI-2025-005.v2.default.0957609d0b.wav"
+        },
+        "zh_female": {
+          "wav": "/audio/trail-guide/guide-chat.HI-2025-005.v2.zh_female.740199c1ba.wav"
+        },
+        "sweet": {
+          "wav": "/audio/trail-guide/guide-chat.HI-2025-005.v2.sweet.8bfd05e157.wav"
+        }
+      },
+      "ready": false,
+      "readyVoices": []
+    },
+    {
+      "key": "guide-chat.HI-2025-005.v3",
+      "presetKey": "guide-chat.HI-2025-005",
+      "variant": "v3",
+      "intent": "guide-chat",
+      "priority": 88,
+      "tags": [
+        "artifact",
+        "chat"
+      ],
+      "entityId": "HI-2025-005",
+      "text": "接下来可以让玄喵把青铜大立人像讲成一段故事，从三星堆遗址、古蜀晚期、分段浇铸、嵌铸工艺一路讲到象征意义。",
+      "contentHash": "d51d453db0",
+      "voices": [
+        "default",
+        "zh_female",
+        "sweet"
+      ],
+      "audioUrl": "/audio/trail-guide/guide-chat.HI-2025-005.v3.default.338926e887.wav",
+      "sources": {
+        "default": {
+          "wav": "/audio/trail-guide/guide-chat.HI-2025-005.v3.default.338926e887.wav"
+        },
+        "zh_female": {
+          "wav": "/audio/trail-guide/guide-chat.HI-2025-005.v3.zh_female.65cd316ace.wav"
+        },
+        "sweet": {
+          "wav": "/audio/trail-guide/guide-chat.HI-2025-005.v3.sweet.6c61814a81.wav"
+        }
+      },
+      "ready": false,
+      "readyVoices": []
+    },
+    {
+      "key": "artifact-craft.HI-2025-005.v1",
+      "presetKey": "artifact-craft.HI-2025-005",
+      "variant": "v1",
+      "intent": "artifact-craft",
+      "priority": 76,
+      "tags": [
+        "artifact",
+        "craft"
+      ],
+      "entityId": "HI-2025-005",
+      "text": "青铜大立人像的工艺重点可以从分段浇铸、嵌铸工艺切入。技术不是附属信息，它决定了器物能否形成复杂造型和稳定结构。",
+      "contentHash": "a4411e5a88",
+      "voices": [
+        "default",
+        "zh_female",
+        "sweet"
+      ],
+      "audioUrl": "/audio/trail-guide/artifact-craft.HI-2025-005.v1.default.f415cf932c.wav",
+      "sources": {
+        "default": {
+          "wav": "/audio/trail-guide/artifact-craft.HI-2025-005.v1.default.f415cf932c.wav"
+        },
+        "zh_female": {
+          "wav": "/audio/trail-guide/artifact-craft.HI-2025-005.v1.zh_female.4c32022c0d.wav"
+        },
+        "sweet": {
+          "wav": "/audio/trail-guide/artifact-craft.HI-2025-005.v1.sweet.9de256d84a.wav"
+        }
+      },
+      "ready": false,
+      "readyVoices": []
+    },
+    {
+      "key": "artifact-craft.HI-2025-005.v2",
+      "presetKey": "artifact-craft.HI-2025-005",
+      "variant": "v2",
+      "intent": "artifact-craft",
+      "priority": 76,
+      "tags": [
+        "artifact",
+        "craft"
+      ],
+      "entityId": "HI-2025-005",
+      "text": "看青铜大立人像的工艺时，不只看材料怎么加工，还要看工艺如何服务于礼仪、身份和视觉震撼。",
+      "contentHash": "1c00c392ab",
+      "voices": [
+        "default",
+        "zh_female",
+        "sweet"
+      ],
+      "audioUrl": "/audio/trail-guide/artifact-craft.HI-2025-005.v2.default.67c7497e87.wav",
+      "sources": {
+        "default": {
+          "wav": "/audio/trail-guide/artifact-craft.HI-2025-005.v2.default.67c7497e87.wav"
+        },
+        "zh_female": {
+          "wav": "/audio/trail-guide/artifact-craft.HI-2025-005.v2.zh_female.facff98942.wav"
+        },
+        "sweet": {
+          "wav": "/audio/trail-guide/artifact-craft.HI-2025-005.v2.sweet.883ffb3da3.wav"
+        }
+      },
+      "ready": false,
+      "readyVoices": []
+    },
+    {
+      "key": "artifact-symbol.HI-2025-005.v1",
+      "presetKey": "artifact-symbol.HI-2025-005",
+      "variant": "v1",
+      "intent": "artifact-symbol",
+      "priority": 76,
+      "tags": [
+        "artifact",
+        "meaning"
+      ],
+      "entityId": "HI-2025-005",
+      "text": "青铜大立人像的象征意义集中在王权与神权合一、大祭司形象、最高权威象征。这些词不是抽象概念，它们解释了古蜀人如何理解神灵、权力和宇宙秩序。",
+      "contentHash": "cde7b86998",
+      "voices": [
+        "default",
+        "zh_female",
+        "sweet"
+      ],
+      "audioUrl": "/audio/trail-guide/artifact-symbol.HI-2025-005.v1.default.78e536b1e9.wav",
+      "sources": {
+        "default": {
+          "wav": "/audio/trail-guide/artifact-symbol.HI-2025-005.v1.default.78e536b1e9.wav"
+        },
+        "zh_female": {
+          "wav": "/audio/trail-guide/artifact-symbol.HI-2025-005.v1.zh_female.13ce59d7ad.wav"
+        },
+        "sweet": {
+          "wav": "/audio/trail-guide/artifact-symbol.HI-2025-005.v1.sweet.ba6becb114.wav"
+        }
+      },
+      "ready": false,
+      "readyVoices": []
+    },
+    {
+      "key": "artifact-symbol.HI-2025-005.v2",
+      "presetKey": "artifact-symbol.HI-2025-005",
+      "variant": "v2",
+      "intent": "artifact-symbol",
+      "priority": 76,
+      "tags": [
+        "artifact",
+        "meaning"
+      ],
+      "entityId": "HI-2025-005",
+      "text": "如果只看造型，青铜大立人像会像一件奇特器物；把王权与神权合一、大祭司形象、最高权威象征放进来，它才会回到古蜀信仰和仪式系统中。",
+      "contentHash": "53db25f8ed",
+      "voices": [
+        "default",
+        "zh_female",
+        "sweet"
+      ],
+      "audioUrl": "/audio/trail-guide/artifact-symbol.HI-2025-005.v2.default.2a2b34989d.wav",
+      "sources": {
+        "default": {
+          "wav": "/audio/trail-guide/artifact-symbol.HI-2025-005.v2.default.2a2b34989d.wav"
+        },
+        "zh_female": {
+          "wav": "/audio/trail-guide/artifact-symbol.HI-2025-005.v2.zh_female.32a8a6e292.wav"
+        },
+        "sweet": {
+          "wav": "/audio/trail-guide/artifact-symbol.HI-2025-005.v2.sweet.6349bc91ea.wav"
+        }
+      },
+      "ready": false,
+      "readyVoices": []
+    },
+    {
+      "key": "artifact-context.HI-2025-005.v1",
+      "presetKey": "artifact-context.HI-2025-005",
+      "variant": "v1",
+      "intent": "artifact-context",
+      "priority": 74,
+      "tags": [
+        "artifact",
+        "context"
+      ],
+      "entityId": "HI-2025-005",
+      "text": "青铜大立人像出自三星堆遗址，时代属于古蜀晚期。这个坐标能帮助你判断它和三星堆祭祀体系、权力表达之间的关系。",
+      "contentHash": "2ca1774bd3",
+      "voices": [
+        "default",
+        "zh_female",
+        "sweet"
+      ],
+      "audioUrl": "/audio/trail-guide/artifact-context.HI-2025-005.v1.default.6a02ff5bdb.wav",
+      "sources": {
+        "default": {
+          "wav": "/audio/trail-guide/artifact-context.HI-2025-005.v1.default.6a02ff5bdb.wav"
+        },
+        "zh_female": {
+          "wav": "/audio/trail-guide/artifact-context.HI-2025-005.v1.zh_female.a7ad286878.wav"
+        },
+        "sweet": {
+          "wav": "/audio/trail-guide/artifact-context.HI-2025-005.v1.sweet.0a82a53b98.wav"
+        }
+      },
+      "ready": false,
+      "readyVoices": []
+    },
+    {
+      "key": "artifact-context.HI-2025-005.v2",
+      "presetKey": "artifact-context.HI-2025-005",
+      "variant": "v2",
+      "intent": "artifact-context",
+      "priority": 74,
+      "tags": [
+        "artifact",
+        "context"
+      ],
+      "entityId": "HI-2025-005",
+      "text": "把青铜大立人像放回古蜀晚期看，它不只是单件展品，而是古蜀文明在技术、信仰和社会组织上的一次表达。",
+      "contentHash": "3dec0d9612",
+      "voices": [
+        "default",
+        "zh_female",
+        "sweet"
+      ],
+      "audioUrl": "/audio/trail-guide/artifact-context.HI-2025-005.v2.default.84f102ae73.wav",
+      "sources": {
+        "default": {
+          "wav": "/audio/trail-guide/artifact-context.HI-2025-005.v2.default.84f102ae73.wav"
+        },
+        "zh_female": {
+          "wav": "/audio/trail-guide/artifact-context.HI-2025-005.v2.zh_female.fbf5feca70.wav"
+        },
+        "sweet": {
+          "wav": "/audio/trail-guide/artifact-context.HI-2025-005.v2.sweet.0cb768de0b.wav"
+        }
+      },
+      "ready": false,
+      "readyVoices": []
+    },
+    {
+      "key": "artifact-next.HI-2025-005.v1",
+      "presetKey": "artifact-next.HI-2025-005",
+      "variant": "v1",
+      "intent": "artifact-next",
+      "priority": 72,
+      "tags": [
+        "artifact",
+        "next"
+      ],
+      "entityId": "HI-2025-005",
+      "text": "看完青铜大立人像后，可以继续点图谱节点，找同遗址、同工艺或同象征意义的文物，看看线索如何延伸。",
+      "contentHash": "46dc053f51",
+      "voices": [
+        "default",
+        "zh_female",
+        "sweet"
+      ],
+      "audioUrl": "/audio/trail-guide/artifact-next.HI-2025-005.v1.default.3851e4898d.wav",
+      "sources": {
+        "default": {
+          "wav": "/audio/trail-guide/artifact-next.HI-2025-005.v1.default.3851e4898d.wav"
+        },
+        "zh_female": {
+          "wav": "/audio/trail-guide/artifact-next.HI-2025-005.v1.zh_female.ed9aaa5a0a.wav"
+        },
+        "sweet": {
+          "wav": "/audio/trail-guide/artifact-next.HI-2025-005.v1.sweet.3f646b2c81.wav"
+        }
+      },
+      "ready": false,
+      "readyVoices": []
+    },
+    {
+      "key": "artifact-next.HI-2025-005.v2",
+      "presetKey": "artifact-next.HI-2025-005",
+      "variant": "v2",
+      "intent": "artifact-next",
+      "priority": 72,
+      "tags": [
+        "artifact",
+        "next"
+      ],
+      "entityId": "HI-2025-005",
+      "text": "下一步建议从分段浇铸、嵌铸工艺或王权与神权合一、大祭司形象、最高权威象征里选一个方向继续走，这样展线会从单件文物扩展成关系网络。",
+      "contentHash": "fd786ec99f",
+      "voices": [
+        "default",
+        "zh_female",
+        "sweet"
+      ],
+      "audioUrl": "/audio/trail-guide/artifact-next.HI-2025-005.v2.default.493f6fb9ab.wav",
+      "sources": {
+        "default": {
+          "wav": "/audio/trail-guide/artifact-next.HI-2025-005.v2.default.493f6fb9ab.wav"
+        },
+        "zh_female": {
+          "wav": "/audio/trail-guide/artifact-next.HI-2025-005.v2.zh_female.205de9aab4.wav"
+        },
+        "sweet": {
+          "wav": "/audio/trail-guide/artifact-next.HI-2025-005.v2.sweet.dd24c44583.wav"
+        }
+      },
+      "ready": false,
+      "readyVoices": []
+    },
+    {
+      "key": "artifact-list.HI-2025-004.v1",
+      "presetKey": "artifact-list.HI-2025-004",
+      "variant": "v1",
+      "intent": "artifact-list",
+      "priority": 90,
+      "tags": [
+        "artifact",
+        "observe"
+      ],
+      "entityId": "HI-2025-004",
+      "text": "建议先停在金杖前。古蜀王权象征物之一，以金箫包覆木杖并刻有神秘纹饰。它属于金器，出自三星堆遗址，可以作为理解古蜀晚期的重要切口。",
+      "contentHash": "2ca4b2a719",
+      "voices": [
+        "default",
+        "zh_female",
+        "sweet"
+      ],
+      "audioUrl": "/audio/trail-guide/artifact-list.HI-2025-004.v1.default.bdf4a4edb6.wav",
+      "sources": {
+        "default": {
+          "wav": "/audio/trail-guide/artifact-list.HI-2025-004.v1.default.bdf4a4edb6.wav"
+        },
+        "zh_female": {
+          "wav": "/audio/trail-guide/artifact-list.HI-2025-004.v1.zh_female.978975269f.wav"
+        },
+        "sweet": {
+          "wav": "/audio/trail-guide/artifact-list.HI-2025-004.v1.sweet.0b04ac2469.wav"
+        }
+      },
+      "ready": false,
+      "readyVoices": []
+    },
+    {
+      "key": "artifact-list.HI-2025-004.v2",
+      "presetKey": "artifact-list.HI-2025-004",
+      "variant": "v2",
+      "intent": "artifact-list",
+      "priority": 90,
+      "tags": [
+        "artifact",
+        "observe"
+      ],
+      "entityId": "HI-2025-004",
+      "text": "金杖适合先看整体身份。它的类别是金器，核心工艺包括金箫锤揲、纹饰刻画，这些信息会影响后面的三维观察。",
+      "contentHash": "8df4ffb0a2",
+      "voices": [
+        "default",
+        "zh_female",
+        "sweet"
+      ],
+      "audioUrl": "/audio/trail-guide/artifact-list.HI-2025-004.v2.default.4c3eee92ee.wav",
+      "sources": {
+        "default": {
+          "wav": "/audio/trail-guide/artifact-list.HI-2025-004.v2.default.4c3eee92ee.wav"
+        },
+        "zh_female": {
+          "wav": "/audio/trail-guide/artifact-list.HI-2025-004.v2.zh_female.222fb35593.wav"
+        },
+        "sweet": {
+          "wav": "/audio/trail-guide/artifact-list.HI-2025-004.v2.sweet.9894ecbb27.wav"
+        }
+      },
+      "ready": false,
+      "readyVoices": []
+    },
+    {
+      "key": "artifact-list.HI-2025-004.v3",
+      "presetKey": "artifact-list.HI-2025-004",
+      "variant": "v3",
+      "intent": "artifact-list",
+      "priority": 90,
+      "tags": [
+        "artifact",
+        "observe"
+      ],
+      "entityId": "HI-2025-004",
+      "text": "从金杖开始，可以把注意力放在造型、工艺和象征三件事上。一端刻有巫师头像、鱼、鸟、箭纹，被视为鱼凫王朝的权力和神权象征。",
+      "contentHash": "67cfdcd48d",
+      "voices": [
+        "default",
+        "zh_female",
+        "sweet"
+      ],
+      "audioUrl": "/audio/trail-guide/artifact-list.HI-2025-004.v3.default.46c03f6624.wav",
+      "sources": {
+        "default": {
+          "wav": "/audio/trail-guide/artifact-list.HI-2025-004.v3.default.46c03f6624.wav"
+        },
+        "zh_female": {
+          "wav": "/audio/trail-guide/artifact-list.HI-2025-004.v3.zh_female.49abf9c5dd.wav"
+        },
+        "sweet": {
+          "wav": "/audio/trail-guide/artifact-list.HI-2025-004.v3.sweet.32ded3309b.wav"
+        }
+      },
+      "ready": false,
+      "readyVoices": []
+    },
+    {
+      "key": "stage-viewer.HI-2025-004.v1",
+      "presetKey": "stage-viewer.HI-2025-004",
+      "variant": "v1",
+      "intent": "stage-viewer",
+      "priority": 92,
+      "tags": [
+        "artifact",
+        "3d"
+      ],
+      "entityId": "HI-2025-004",
+      "text": "现在看金杖。先拖拽模型确认轮廓、比例和关键部位，再看右侧图谱里的三星堆遗址、古蜀晚期和金箫锤揲、纹饰刻画。",
+      "contentHash": "5b86ec6520",
+      "voices": [
+        "default",
+        "zh_female",
+        "sweet"
+      ],
+      "audioUrl": "/audio/trail-guide/stage-viewer.HI-2025-004.v1.default.cfd4077347.wav",
+      "sources": {
+        "default": {
+          "wav": "/audio/trail-guide/stage-viewer.HI-2025-004.v1.default.cfd4077347.wav"
+        },
+        "zh_female": {
+          "wav": "/audio/trail-guide/stage-viewer.HI-2025-004.v1.zh_female.7bde70305b.wav"
+        },
+        "sweet": {
+          "wav": "/audio/trail-guide/stage-viewer.HI-2025-004.v1.sweet.abbf0dadb5.wav"
+        }
+      },
+      "ready": false,
+      "readyVoices": []
+    },
+    {
+      "key": "stage-viewer.HI-2025-004.v2",
+      "presetKey": "stage-viewer.HI-2025-004",
+      "variant": "v2",
+      "intent": "stage-viewer",
+      "priority": 92,
+      "tags": [
+        "artifact",
+        "3d"
+      ],
+      "entityId": "HI-2025-004",
+      "text": "观察金杖时，先看它作为金器的形态特征，再顺着图谱追踪工艺、遗址和象征意义。",
+      "contentHash": "484b4f4bd5",
+      "voices": [
+        "default",
+        "zh_female",
+        "sweet"
+      ],
+      "audioUrl": "/audio/trail-guide/stage-viewer.HI-2025-004.v2.default.2a2966d256.wav",
+      "sources": {
+        "default": {
+          "wav": "/audio/trail-guide/stage-viewer.HI-2025-004.v2.default.2a2966d256.wav"
+        },
+        "zh_female": {
+          "wav": "/audio/trail-guide/stage-viewer.HI-2025-004.v2.zh_female.d335ea4436.wav"
+        },
+        "sweet": {
+          "wav": "/audio/trail-guide/stage-viewer.HI-2025-004.v2.sweet.875e098be0.wav"
+        }
+      },
+      "ready": false,
+      "readyVoices": []
+    },
+    {
+      "key": "stage-viewer.HI-2025-004.v3",
+      "presetKey": "stage-viewer.HI-2025-004",
+      "variant": "v3",
+      "intent": "stage-viewer",
+      "priority": 92,
+      "tags": [
+        "artifact",
+        "3d"
+      ],
+      "entityId": "HI-2025-004",
+      "text": "金杖的三维展示适合配合图谱一起看。左侧看可见形态，右侧看它和王权权杖、通神法器、鱼凫王朝象征之间的关系。",
+      "contentHash": "b59c8ccc16",
+      "voices": [
+        "default",
+        "zh_female",
+        "sweet"
+      ],
+      "audioUrl": "/audio/trail-guide/stage-viewer.HI-2025-004.v3.default.59521f4163.wav",
+      "sources": {
+        "default": {
+          "wav": "/audio/trail-guide/stage-viewer.HI-2025-004.v3.default.59521f4163.wav"
+        },
+        "zh_female": {
+          "wav": "/audio/trail-guide/stage-viewer.HI-2025-004.v3.zh_female.4c1040e96d.wav"
+        },
+        "sweet": {
+          "wav": "/audio/trail-guide/stage-viewer.HI-2025-004.v3.sweet.6bafad2635.wav"
+        }
+      },
+      "ready": false,
+      "readyVoices": []
+    },
+    {
+      "key": "guide-chat.HI-2025-004.v1",
+      "presetKey": "guide-chat.HI-2025-004",
+      "variant": "v1",
+      "intent": "guide-chat",
+      "priority": 88,
+      "tags": [
+        "artifact",
+        "chat"
+      ],
+      "entityId": "HI-2025-004",
+      "text": "这里可以继续问玄喵。围绕金杖，你可以问它为什么重要、用了什么工艺，或和哪件文物有关。",
+      "contentHash": "d6d8654b87",
+      "voices": [
+        "default",
+        "zh_female",
+        "sweet"
+      ],
+      "audioUrl": "/audio/trail-guide/guide-chat.HI-2025-004.v1.default.51c67a94fa.wav",
+      "sources": {
+        "default": {
+          "wav": "/audio/trail-guide/guide-chat.HI-2025-004.v1.default.51c67a94fa.wav"
+        },
+        "zh_female": {
+          "wav": "/audio/trail-guide/guide-chat.HI-2025-004.v1.zh_female.7d4903b429.wav"
+        },
+        "sweet": {
+          "wav": "/audio/trail-guide/guide-chat.HI-2025-004.v1.sweet.9eb03b5d08.wav"
+        }
+      },
+      "ready": false,
+      "readyVoices": []
+    },
+    {
+      "key": "guide-chat.HI-2025-004.v2",
+      "presetKey": "guide-chat.HI-2025-004",
+      "variant": "v2",
+      "intent": "guide-chat",
+      "priority": 88,
+      "tags": [
+        "artifact",
+        "chat"
+      ],
+      "entityId": "HI-2025-004",
+      "text": "如果想深入金杖，可以追问三个方向：它是什么，它为什么重要，它如何连接王权权杖、通神法器、鱼凫王朝象征。",
+      "contentHash": "4cae0dd3d6",
+      "voices": [
+        "default",
+        "zh_female",
+        "sweet"
+      ],
+      "audioUrl": "/audio/trail-guide/guide-chat.HI-2025-004.v2.default.3646187a42.wav",
+      "sources": {
+        "default": {
+          "wav": "/audio/trail-guide/guide-chat.HI-2025-004.v2.default.3646187a42.wav"
+        },
+        "zh_female": {
+          "wav": "/audio/trail-guide/guide-chat.HI-2025-004.v2.zh_female.284a7ec1bc.wav"
+        },
+        "sweet": {
+          "wav": "/audio/trail-guide/guide-chat.HI-2025-004.v2.sweet.2a407426f7.wav"
+        }
+      },
+      "ready": false,
+      "readyVoices": []
+    },
+    {
+      "key": "guide-chat.HI-2025-004.v3",
+      "presetKey": "guide-chat.HI-2025-004",
+      "variant": "v3",
+      "intent": "guide-chat",
+      "priority": 88,
+      "tags": [
+        "artifact",
+        "chat"
+      ],
+      "entityId": "HI-2025-004",
+      "text": "接下来可以让玄喵把金杖讲成一段故事，从三星堆遗址、古蜀晚期、金箫锤揲、纹饰刻画一路讲到象征意义。",
+      "contentHash": "8876bd9711",
+      "voices": [
+        "default",
+        "zh_female",
+        "sweet"
+      ],
+      "audioUrl": "/audio/trail-guide/guide-chat.HI-2025-004.v3.default.daf8848dd7.wav",
+      "sources": {
+        "default": {
+          "wav": "/audio/trail-guide/guide-chat.HI-2025-004.v3.default.daf8848dd7.wav"
+        },
+        "zh_female": {
+          "wav": "/audio/trail-guide/guide-chat.HI-2025-004.v3.zh_female.d65f8cbdcc.wav"
+        },
+        "sweet": {
+          "wav": "/audio/trail-guide/guide-chat.HI-2025-004.v3.sweet.89908e7b93.wav"
+        }
+      },
+      "ready": false,
+      "readyVoices": []
+    },
+    {
+      "key": "artifact-craft.HI-2025-004.v1",
+      "presetKey": "artifact-craft.HI-2025-004",
+      "variant": "v1",
+      "intent": "artifact-craft",
+      "priority": 76,
+      "tags": [
+        "artifact",
+        "craft"
+      ],
+      "entityId": "HI-2025-004",
+      "text": "金杖的工艺重点可以从金箫锤揲、纹饰刻画切入。技术不是附属信息，它决定了器物能否形成复杂造型和稳定结构。",
+      "contentHash": "d9f9e18762",
+      "voices": [
+        "default",
+        "zh_female",
+        "sweet"
+      ],
+      "audioUrl": "/audio/trail-guide/artifact-craft.HI-2025-004.v1.default.facdfbe037.wav",
+      "sources": {
+        "default": {
+          "wav": "/audio/trail-guide/artifact-craft.HI-2025-004.v1.default.facdfbe037.wav"
+        },
+        "zh_female": {
+          "wav": "/audio/trail-guide/artifact-craft.HI-2025-004.v1.zh_female.ced621211b.wav"
+        },
+        "sweet": {
+          "wav": "/audio/trail-guide/artifact-craft.HI-2025-004.v1.sweet.0ba4b336a3.wav"
+        }
+      },
+      "ready": false,
+      "readyVoices": []
+    },
+    {
+      "key": "artifact-craft.HI-2025-004.v2",
+      "presetKey": "artifact-craft.HI-2025-004",
+      "variant": "v2",
+      "intent": "artifact-craft",
+      "priority": 76,
+      "tags": [
+        "artifact",
+        "craft"
+      ],
+      "entityId": "HI-2025-004",
+      "text": "看金杖的工艺时，不只看材料怎么加工，还要看工艺如何服务于礼仪、身份和视觉震撼。",
+      "contentHash": "1d7c41c0f5",
+      "voices": [
+        "default",
+        "zh_female",
+        "sweet"
+      ],
+      "audioUrl": "/audio/trail-guide/artifact-craft.HI-2025-004.v2.default.93528668b4.wav",
+      "sources": {
+        "default": {
+          "wav": "/audio/trail-guide/artifact-craft.HI-2025-004.v2.default.93528668b4.wav"
+        },
+        "zh_female": {
+          "wav": "/audio/trail-guide/artifact-craft.HI-2025-004.v2.zh_female.b8605bad78.wav"
+        },
+        "sweet": {
+          "wav": "/audio/trail-guide/artifact-craft.HI-2025-004.v2.sweet.ed08cc338c.wav"
+        }
+      },
+      "ready": false,
+      "readyVoices": []
+    },
+    {
+      "key": "artifact-symbol.HI-2025-004.v1",
+      "presetKey": "artifact-symbol.HI-2025-004",
+      "variant": "v1",
+      "intent": "artifact-symbol",
+      "priority": 76,
+      "tags": [
+        "artifact",
+        "meaning"
+      ],
+      "entityId": "HI-2025-004",
+      "text": "金杖的象征意义集中在王权权杖、通神法器、鱼凫王朝象征。这些词不是抽象概念，它们解释了古蜀人如何理解神灵、权力和宇宙秩序。",
+      "contentHash": "b98990c640",
+      "voices": [
+        "default",
+        "zh_female",
+        "sweet"
+      ],
+      "audioUrl": "/audio/trail-guide/artifact-symbol.HI-2025-004.v1.default.6a212ea778.wav",
+      "sources": {
+        "default": {
+          "wav": "/audio/trail-guide/artifact-symbol.HI-2025-004.v1.default.6a212ea778.wav"
+        },
+        "zh_female": {
+          "wav": "/audio/trail-guide/artifact-symbol.HI-2025-004.v1.zh_female.4bb0d40d6b.wav"
+        },
+        "sweet": {
+          "wav": "/audio/trail-guide/artifact-symbol.HI-2025-004.v1.sweet.d55aea94d5.wav"
+        }
+      },
+      "ready": false,
+      "readyVoices": []
+    },
+    {
+      "key": "artifact-symbol.HI-2025-004.v2",
+      "presetKey": "artifact-symbol.HI-2025-004",
+      "variant": "v2",
+      "intent": "artifact-symbol",
+      "priority": 76,
+      "tags": [
+        "artifact",
+        "meaning"
+      ],
+      "entityId": "HI-2025-004",
+      "text": "如果只看造型，金杖会像一件奇特器物；把王权权杖、通神法器、鱼凫王朝象征放进来，它才会回到古蜀信仰和仪式系统中。",
+      "contentHash": "aad876ac8b",
+      "voices": [
+        "default",
+        "zh_female",
+        "sweet"
+      ],
+      "audioUrl": "/audio/trail-guide/artifact-symbol.HI-2025-004.v2.default.b93d96b901.wav",
+      "sources": {
+        "default": {
+          "wav": "/audio/trail-guide/artifact-symbol.HI-2025-004.v2.default.b93d96b901.wav"
+        },
+        "zh_female": {
+          "wav": "/audio/trail-guide/artifact-symbol.HI-2025-004.v2.zh_female.070f53ef86.wav"
+        },
+        "sweet": {
+          "wav": "/audio/trail-guide/artifact-symbol.HI-2025-004.v2.sweet.799107e8db.wav"
+        }
+      },
+      "ready": false,
+      "readyVoices": []
+    },
+    {
+      "key": "artifact-context.HI-2025-004.v1",
+      "presetKey": "artifact-context.HI-2025-004",
+      "variant": "v1",
+      "intent": "artifact-context",
+      "priority": 74,
+      "tags": [
+        "artifact",
+        "context"
+      ],
+      "entityId": "HI-2025-004",
+      "text": "金杖出自三星堆遗址，时代属于古蜀晚期。这个坐标能帮助你判断它和三星堆祭祀体系、权力表达之间的关系。",
+      "contentHash": "d89e187e73",
+      "voices": [
+        "default",
+        "zh_female",
+        "sweet"
+      ],
+      "audioUrl": "/audio/trail-guide/artifact-context.HI-2025-004.v1.default.151f2a01ca.wav",
+      "sources": {
+        "default": {
+          "wav": "/audio/trail-guide/artifact-context.HI-2025-004.v1.default.151f2a01ca.wav"
+        },
+        "zh_female": {
+          "wav": "/audio/trail-guide/artifact-context.HI-2025-004.v1.zh_female.240e1e1138.wav"
+        },
+        "sweet": {
+          "wav": "/audio/trail-guide/artifact-context.HI-2025-004.v1.sweet.d4fa731c57.wav"
+        }
+      },
+      "ready": false,
+      "readyVoices": []
+    },
+    {
+      "key": "artifact-context.HI-2025-004.v2",
+      "presetKey": "artifact-context.HI-2025-004",
+      "variant": "v2",
+      "intent": "artifact-context",
+      "priority": 74,
+      "tags": [
+        "artifact",
+        "context"
+      ],
+      "entityId": "HI-2025-004",
+      "text": "把金杖放回古蜀晚期看，它不只是单件展品，而是古蜀文明在技术、信仰和社会组织上的一次表达。",
+      "contentHash": "ad650a284e",
+      "voices": [
+        "default",
+        "zh_female",
+        "sweet"
+      ],
+      "audioUrl": "/audio/trail-guide/artifact-context.HI-2025-004.v2.default.1f4d7f9684.wav",
+      "sources": {
+        "default": {
+          "wav": "/audio/trail-guide/artifact-context.HI-2025-004.v2.default.1f4d7f9684.wav"
+        },
+        "zh_female": {
+          "wav": "/audio/trail-guide/artifact-context.HI-2025-004.v2.zh_female.25b32bfc9b.wav"
+        },
+        "sweet": {
+          "wav": "/audio/trail-guide/artifact-context.HI-2025-004.v2.sweet.70fa7d7d23.wav"
+        }
+      },
+      "ready": false,
+      "readyVoices": []
+    },
+    {
+      "key": "artifact-next.HI-2025-004.v1",
+      "presetKey": "artifact-next.HI-2025-004",
+      "variant": "v1",
+      "intent": "artifact-next",
+      "priority": 72,
+      "tags": [
+        "artifact",
+        "next"
+      ],
+      "entityId": "HI-2025-004",
+      "text": "看完金杖后，可以继续点图谱节点，找同遗址、同工艺或同象征意义的文物，看看线索如何延伸。",
+      "contentHash": "58a3d7f295",
+      "voices": [
+        "default",
+        "zh_female",
+        "sweet"
+      ],
+      "audioUrl": "/audio/trail-guide/artifact-next.HI-2025-004.v1.default.3d3faf0cc5.wav",
+      "sources": {
+        "default": {
+          "wav": "/audio/trail-guide/artifact-next.HI-2025-004.v1.default.3d3faf0cc5.wav"
+        },
+        "zh_female": {
+          "wav": "/audio/trail-guide/artifact-next.HI-2025-004.v1.zh_female.e1b3852850.wav"
+        },
+        "sweet": {
+          "wav": "/audio/trail-guide/artifact-next.HI-2025-004.v1.sweet.c4da565c59.wav"
+        }
+      },
+      "ready": false,
+      "readyVoices": []
+    },
+    {
+      "key": "artifact-next.HI-2025-004.v2",
+      "presetKey": "artifact-next.HI-2025-004",
+      "variant": "v2",
+      "intent": "artifact-next",
+      "priority": 72,
+      "tags": [
+        "artifact",
+        "next"
+      ],
+      "entityId": "HI-2025-004",
+      "text": "下一步建议从金箫锤揲、纹饰刻画或王权权杖、通神法器、鱼凫王朝象征里选一个方向继续走，这样展线会从单件文物扩展成关系网络。",
+      "contentHash": "4f93252980",
+      "voices": [
+        "default",
+        "zh_female",
+        "sweet"
+      ],
+      "audioUrl": "/audio/trail-guide/artifact-next.HI-2025-004.v2.default.6ca225d372.wav",
+      "sources": {
+        "default": {
+          "wav": "/audio/trail-guide/artifact-next.HI-2025-004.v2.default.6ca225d372.wav"
+        },
+        "zh_female": {
+          "wav": "/audio/trail-guide/artifact-next.HI-2025-004.v2.zh_female.6e3a8dab47.wav"
+        },
+        "sweet": {
+          "wav": "/audio/trail-guide/artifact-next.HI-2025-004.v2.sweet.3260673f8e.wav"
+        }
+      },
+      "ready": false,
+      "readyVoices": []
+    },
+    {
+      "key": "artifact-list.HI-2025-002.v1",
+      "presetKey": "artifact-list.HI-2025-002",
+      "variant": "v1",
+      "intent": "artifact-list",
+      "priority": 90,
+      "tags": [
+        "artifact",
+        "observe"
+      ],
+      "entityId": "HI-2025-002",
+      "text": "建议先停在完整金面具前。三星堆迄今最完整、最大型金面具，体现古蜀黄金崇拜。它属于金器，出自三星堆遗址，可以作为理解古蜀晚期的重要切口。",
+      "contentHash": "583d2e6ca1",
+      "voices": [
+        "default",
+        "zh_female",
+        "sweet"
+      ],
+      "audioUrl": "/audio/trail-guide/artifact-list.HI-2025-002.v1.default.8b0ed0ce3a.wav",
+      "sources": {
+        "default": {
+          "wav": "/audio/trail-guide/artifact-list.HI-2025-002.v1.default.8b0ed0ce3a.wav"
+        },
+        "zh_female": {
+          "wav": "/audio/trail-guide/artifact-list.HI-2025-002.v1.zh_female.2f1d742db5.wav"
+        },
+        "sweet": {
+          "wav": "/audio/trail-guide/artifact-list.HI-2025-002.v1.sweet.670df5bb8c.wav"
+        }
+      },
+      "ready": false,
+      "readyVoices": []
+    },
+    {
+      "key": "artifact-list.HI-2025-002.v2",
+      "presetKey": "artifact-list.HI-2025-002",
+      "variant": "v2",
+      "intent": "artifact-list",
+      "priority": 90,
+      "tags": [
+        "artifact",
+        "observe"
+      ],
+      "entityId": "HI-2025-002",
+      "text": "完整金面具适合先看整体身份。它的类别是金器，核心工艺包括锤揲成型、面具塑形，这些信息会影响后面的三维观察。",
+      "contentHash": "67cc244d78",
+      "voices": [
+        "default",
+        "zh_female",
+        "sweet"
+      ],
+      "audioUrl": "/audio/trail-guide/artifact-list.HI-2025-002.v2.default.6d60dd4f64.wav",
+      "sources": {
+        "default": {
+          "wav": "/audio/trail-guide/artifact-list.HI-2025-002.v2.default.6d60dd4f64.wav"
+        },
+        "zh_female": {
+          "wav": "/audio/trail-guide/artifact-list.HI-2025-002.v2.zh_female.76300f1079.wav"
+        },
+        "sweet": {
+          "wav": "/audio/trail-guide/artifact-list.HI-2025-002.v2.sweet.d8e905604b.wav"
+        }
+      },
+      "ready": false,
+      "readyVoices": []
+    },
+    {
+      "key": "artifact-list.HI-2025-002.v3",
+      "presetKey": "artifact-list.HI-2025-002",
+      "variant": "v3",
+      "intent": "artifact-list",
+      "priority": 90,
+      "tags": [
+        "artifact",
+        "observe"
+      ],
+      "entityId": "HI-2025-002",
+      "text": "从完整金面具开始，可以把注意力放在造型、工艺和象征三件事上。覆盖青铜人头像面部，象征高等级贵族或神巫身份，也体现了古蜀高超金工水平。",
+      "contentHash": "44f27a0759",
+      "voices": [
+        "default",
+        "zh_female",
+        "sweet"
+      ],
+      "audioUrl": "/audio/trail-guide/artifact-list.HI-2025-002.v3.default.601e4bbd0c.wav",
+      "sources": {
+        "default": {
+          "wav": "/audio/trail-guide/artifact-list.HI-2025-002.v3.default.601e4bbd0c.wav"
+        },
+        "zh_female": {
+          "wav": "/audio/trail-guide/artifact-list.HI-2025-002.v3.zh_female.325544ccd0.wav"
+        },
+        "sweet": {
+          "wav": "/audio/trail-guide/artifact-list.HI-2025-002.v3.sweet.3bf923420a.wav"
+        }
+      },
+      "ready": false,
+      "readyVoices": []
+    },
+    {
+      "key": "stage-viewer.HI-2025-002.v1",
+      "presetKey": "stage-viewer.HI-2025-002",
+      "variant": "v1",
+      "intent": "stage-viewer",
+      "priority": 92,
+      "tags": [
+        "artifact",
+        "3d"
+      ],
+      "entityId": "HI-2025-002",
+      "text": "现在看完整金面具。先拖拽模型确认轮廓、比例和关键部位，再看右侧图谱里的三星堆遗址、古蜀晚期和锤揲成型、面具塑形。",
+      "contentHash": "0176b0540f",
+      "voices": [
+        "default",
+        "zh_female",
+        "sweet"
+      ],
+      "audioUrl": "/audio/trail-guide/stage-viewer.HI-2025-002.v1.default.58d6b71a27.wav",
+      "sources": {
+        "default": {
+          "wav": "/audio/trail-guide/stage-viewer.HI-2025-002.v1.default.58d6b71a27.wav"
+        },
+        "zh_female": {
+          "wav": "/audio/trail-guide/stage-viewer.HI-2025-002.v1.zh_female.e38b4808a1.wav"
+        },
+        "sweet": {
+          "wav": "/audio/trail-guide/stage-viewer.HI-2025-002.v1.sweet.34361c3eb7.wav"
+        }
+      },
+      "ready": false,
+      "readyVoices": []
+    },
+    {
+      "key": "stage-viewer.HI-2025-002.v2",
+      "presetKey": "stage-viewer.HI-2025-002",
+      "variant": "v2",
+      "intent": "stage-viewer",
+      "priority": 92,
+      "tags": [
+        "artifact",
+        "3d"
+      ],
+      "entityId": "HI-2025-002",
+      "text": "观察完整金面具时，先看它作为金器的形态特征，再顺着图谱追踪工艺、遗址和象征意义。",
+      "contentHash": "0599e4eb8b",
+      "voices": [
+        "default",
+        "zh_female",
+        "sweet"
+      ],
+      "audioUrl": "/audio/trail-guide/stage-viewer.HI-2025-002.v2.default.4691be4c77.wav",
+      "sources": {
+        "default": {
+          "wav": "/audio/trail-guide/stage-viewer.HI-2025-002.v2.default.4691be4c77.wav"
+        },
+        "zh_female": {
+          "wav": "/audio/trail-guide/stage-viewer.HI-2025-002.v2.zh_female.9389a7dc58.wav"
+        },
+        "sweet": {
+          "wav": "/audio/trail-guide/stage-viewer.HI-2025-002.v2.sweet.f5449ba9f4.wav"
+        }
+      },
+      "ready": false,
+      "readyVoices": []
+    },
+    {
+      "key": "stage-viewer.HI-2025-002.v3",
+      "presetKey": "stage-viewer.HI-2025-002",
+      "variant": "v3",
+      "intent": "stage-viewer",
+      "priority": 92,
+      "tags": [
+        "artifact",
+        "3d"
+      ],
+      "entityId": "HI-2025-002",
+      "text": "完整金面具的三维展示适合配合图谱一起看。左侧看可见形态，右侧看它和神性、高等级身份、黄金崇拜、不朽象征之间的关系。",
+      "contentHash": "591ec48674",
+      "voices": [
+        "default",
+        "zh_female",
+        "sweet"
+      ],
+      "audioUrl": "/audio/trail-guide/stage-viewer.HI-2025-002.v3.default.c4bec3eb32.wav",
+      "sources": {
+        "default": {
+          "wav": "/audio/trail-guide/stage-viewer.HI-2025-002.v3.default.c4bec3eb32.wav"
+        },
+        "zh_female": {
+          "wav": "/audio/trail-guide/stage-viewer.HI-2025-002.v3.zh_female.0b7f8a07d0.wav"
+        },
+        "sweet": {
+          "wav": "/audio/trail-guide/stage-viewer.HI-2025-002.v3.sweet.d709c98fd4.wav"
+        }
+      },
+      "ready": false,
+      "readyVoices": []
+    },
+    {
+      "key": "guide-chat.HI-2025-002.v1",
+      "presetKey": "guide-chat.HI-2025-002",
+      "variant": "v1",
+      "intent": "guide-chat",
+      "priority": 88,
+      "tags": [
+        "artifact",
+        "chat"
+      ],
+      "entityId": "HI-2025-002",
+      "text": "这里可以继续问玄喵。围绕完整金面具，你可以问它为什么重要、用了什么工艺，或和哪件文物有关。",
+      "contentHash": "8f0c9c5fcd",
+      "voices": [
+        "default",
+        "zh_female",
+        "sweet"
+      ],
+      "audioUrl": "/audio/trail-guide/guide-chat.HI-2025-002.v1.default.d8b62fcf98.wav",
+      "sources": {
+        "default": {
+          "wav": "/audio/trail-guide/guide-chat.HI-2025-002.v1.default.d8b62fcf98.wav"
+        },
+        "zh_female": {
+          "wav": "/audio/trail-guide/guide-chat.HI-2025-002.v1.zh_female.ea9511d4c5.wav"
+        },
+        "sweet": {
+          "wav": "/audio/trail-guide/guide-chat.HI-2025-002.v1.sweet.0e0fdcb388.wav"
+        }
+      },
+      "ready": false,
+      "readyVoices": []
+    },
+    {
+      "key": "guide-chat.HI-2025-002.v2",
+      "presetKey": "guide-chat.HI-2025-002",
+      "variant": "v2",
+      "intent": "guide-chat",
+      "priority": 88,
+      "tags": [
+        "artifact",
+        "chat"
+      ],
+      "entityId": "HI-2025-002",
+      "text": "如果想深入完整金面具，可以追问三个方向：它是什么，它为什么重要，它如何连接神性、高等级身份、黄金崇拜、不朽象征。",
+      "contentHash": "ff540d29e6",
+      "voices": [
+        "default",
+        "zh_female",
+        "sweet"
+      ],
+      "audioUrl": "/audio/trail-guide/guide-chat.HI-2025-002.v2.default.806d5da0bf.wav",
+      "sources": {
+        "default": {
+          "wav": "/audio/trail-guide/guide-chat.HI-2025-002.v2.default.806d5da0bf.wav"
+        },
+        "zh_female": {
+          "wav": "/audio/trail-guide/guide-chat.HI-2025-002.v2.zh_female.62da9f92ab.wav"
+        },
+        "sweet": {
+          "wav": "/audio/trail-guide/guide-chat.HI-2025-002.v2.sweet.f97342851d.wav"
+        }
+      },
+      "ready": false,
+      "readyVoices": []
+    },
+    {
+      "key": "guide-chat.HI-2025-002.v3",
+      "presetKey": "guide-chat.HI-2025-002",
+      "variant": "v3",
+      "intent": "guide-chat",
+      "priority": 88,
+      "tags": [
+        "artifact",
+        "chat"
+      ],
+      "entityId": "HI-2025-002",
+      "text": "接下来可以让玄喵把完整金面具讲成一段故事，从三星堆遗址、古蜀晚期、锤揲成型、面具塑形一路讲到象征意义。",
+      "contentHash": "cbb7ce6ba0",
+      "voices": [
+        "default",
+        "zh_female",
+        "sweet"
+      ],
+      "audioUrl": "/audio/trail-guide/guide-chat.HI-2025-002.v3.default.9ebd6097ce.wav",
+      "sources": {
+        "default": {
+          "wav": "/audio/trail-guide/guide-chat.HI-2025-002.v3.default.9ebd6097ce.wav"
+        },
+        "zh_female": {
+          "wav": "/audio/trail-guide/guide-chat.HI-2025-002.v3.zh_female.8a716ad25a.wav"
+        },
+        "sweet": {
+          "wav": "/audio/trail-guide/guide-chat.HI-2025-002.v3.sweet.3e23e63538.wav"
+        }
+      },
+      "ready": false,
+      "readyVoices": []
+    },
+    {
+      "key": "artifact-craft.HI-2025-002.v1",
+      "presetKey": "artifact-craft.HI-2025-002",
+      "variant": "v1",
+      "intent": "artifact-craft",
+      "priority": 76,
+      "tags": [
+        "artifact",
+        "craft"
+      ],
+      "entityId": "HI-2025-002",
+      "text": "完整金面具的工艺重点可以从锤揲成型、面具塑形切入。技术不是附属信息，它决定了器物能否形成复杂造型和稳定结构。",
+      "contentHash": "7b40d0a603",
+      "voices": [
+        "default",
+        "zh_female",
+        "sweet"
+      ],
+      "audioUrl": "/audio/trail-guide/artifact-craft.HI-2025-002.v1.default.32cbb9a846.wav",
+      "sources": {
+        "default": {
+          "wav": "/audio/trail-guide/artifact-craft.HI-2025-002.v1.default.32cbb9a846.wav"
+        },
+        "zh_female": {
+          "wav": "/audio/trail-guide/artifact-craft.HI-2025-002.v1.zh_female.61998c08e3.wav"
+        },
+        "sweet": {
+          "wav": "/audio/trail-guide/artifact-craft.HI-2025-002.v1.sweet.ce8d564899.wav"
+        }
+      },
+      "ready": false,
+      "readyVoices": []
+    },
+    {
+      "key": "artifact-craft.HI-2025-002.v2",
+      "presetKey": "artifact-craft.HI-2025-002",
+      "variant": "v2",
+      "intent": "artifact-craft",
+      "priority": 76,
+      "tags": [
+        "artifact",
+        "craft"
+      ],
+      "entityId": "HI-2025-002",
+      "text": "看完整金面具的工艺时，不只看材料怎么加工，还要看工艺如何服务于礼仪、身份和视觉震撼。",
+      "contentHash": "a7301664b5",
+      "voices": [
+        "default",
+        "zh_female",
+        "sweet"
+      ],
+      "audioUrl": "/audio/trail-guide/artifact-craft.HI-2025-002.v2.default.14dbf0a3e2.wav",
+      "sources": {
+        "default": {
+          "wav": "/audio/trail-guide/artifact-craft.HI-2025-002.v2.default.14dbf0a3e2.wav"
+        },
+        "zh_female": {
+          "wav": "/audio/trail-guide/artifact-craft.HI-2025-002.v2.zh_female.54eb0d78cd.wav"
+        },
+        "sweet": {
+          "wav": "/audio/trail-guide/artifact-craft.HI-2025-002.v2.sweet.fe3b632db3.wav"
+        }
+      },
+      "ready": false,
+      "readyVoices": []
+    },
+    {
+      "key": "artifact-symbol.HI-2025-002.v1",
+      "presetKey": "artifact-symbol.HI-2025-002",
+      "variant": "v1",
+      "intent": "artifact-symbol",
+      "priority": 76,
+      "tags": [
+        "artifact",
+        "meaning"
+      ],
+      "entityId": "HI-2025-002",
+      "text": "完整金面具的象征意义集中在神性、高等级身份、黄金崇拜、不朽象征。这些词不是抽象概念，它们解释了古蜀人如何理解神灵、权力和宇宙秩序。",
+      "contentHash": "9c274cf5fc",
+      "voices": [
+        "default",
+        "zh_female",
+        "sweet"
+      ],
+      "audioUrl": "/audio/trail-guide/artifact-symbol.HI-2025-002.v1.default.bab96ec1b0.wav",
+      "sources": {
+        "default": {
+          "wav": "/audio/trail-guide/artifact-symbol.HI-2025-002.v1.default.bab96ec1b0.wav"
+        },
+        "zh_female": {
+          "wav": "/audio/trail-guide/artifact-symbol.HI-2025-002.v1.zh_female.bfe19bd3ee.wav"
+        },
+        "sweet": {
+          "wav": "/audio/trail-guide/artifact-symbol.HI-2025-002.v1.sweet.37eb826251.wav"
+        }
+      },
+      "ready": false,
+      "readyVoices": []
+    },
+    {
+      "key": "artifact-symbol.HI-2025-002.v2",
+      "presetKey": "artifact-symbol.HI-2025-002",
+      "variant": "v2",
+      "intent": "artifact-symbol",
+      "priority": 76,
+      "tags": [
+        "artifact",
+        "meaning"
+      ],
+      "entityId": "HI-2025-002",
+      "text": "如果只看造型，完整金面具会像一件奇特器物；把神性、高等级身份、黄金崇拜、不朽象征放进来，它才会回到古蜀信仰和仪式系统中。",
+      "contentHash": "8a860035a0",
+      "voices": [
+        "default",
+        "zh_female",
+        "sweet"
+      ],
+      "audioUrl": "/audio/trail-guide/artifact-symbol.HI-2025-002.v2.default.4ec192c136.wav",
+      "sources": {
+        "default": {
+          "wav": "/audio/trail-guide/artifact-symbol.HI-2025-002.v2.default.4ec192c136.wav"
+        },
+        "zh_female": {
+          "wav": "/audio/trail-guide/artifact-symbol.HI-2025-002.v2.zh_female.617d864ca4.wav"
+        },
+        "sweet": {
+          "wav": "/audio/trail-guide/artifact-symbol.HI-2025-002.v2.sweet.4207c57e95.wav"
+        }
+      },
+      "ready": false,
+      "readyVoices": []
+    },
+    {
+      "key": "artifact-context.HI-2025-002.v1",
+      "presetKey": "artifact-context.HI-2025-002",
+      "variant": "v1",
+      "intent": "artifact-context",
+      "priority": 74,
+      "tags": [
+        "artifact",
+        "context"
+      ],
+      "entityId": "HI-2025-002",
+      "text": "完整金面具出自三星堆遗址，时代属于古蜀晚期。这个坐标能帮助你判断它和三星堆祭祀体系、权力表达之间的关系。",
+      "contentHash": "53dd0a89b4",
+      "voices": [
+        "default",
+        "zh_female",
+        "sweet"
+      ],
+      "audioUrl": "/audio/trail-guide/artifact-context.HI-2025-002.v1.default.d459d1f990.wav",
+      "sources": {
+        "default": {
+          "wav": "/audio/trail-guide/artifact-context.HI-2025-002.v1.default.d459d1f990.wav"
+        },
+        "zh_female": {
+          "wav": "/audio/trail-guide/artifact-context.HI-2025-002.v1.zh_female.4816b77c70.wav"
+        },
+        "sweet": {
+          "wav": "/audio/trail-guide/artifact-context.HI-2025-002.v1.sweet.c4cb860d90.wav"
+        }
+      },
+      "ready": false,
+      "readyVoices": []
+    },
+    {
+      "key": "artifact-context.HI-2025-002.v2",
+      "presetKey": "artifact-context.HI-2025-002",
+      "variant": "v2",
+      "intent": "artifact-context",
+      "priority": 74,
+      "tags": [
+        "artifact",
+        "context"
+      ],
+      "entityId": "HI-2025-002",
+      "text": "把完整金面具放回古蜀晚期看，它不只是单件展品，而是古蜀文明在技术、信仰和社会组织上的一次表达。",
+      "contentHash": "d88c03ff22",
+      "voices": [
+        "default",
+        "zh_female",
+        "sweet"
+      ],
+      "audioUrl": "/audio/trail-guide/artifact-context.HI-2025-002.v2.default.94caa79956.wav",
+      "sources": {
+        "default": {
+          "wav": "/audio/trail-guide/artifact-context.HI-2025-002.v2.default.94caa79956.wav"
+        },
+        "zh_female": {
+          "wav": "/audio/trail-guide/artifact-context.HI-2025-002.v2.zh_female.0ebac277bf.wav"
+        },
+        "sweet": {
+          "wav": "/audio/trail-guide/artifact-context.HI-2025-002.v2.sweet.4178c82ac6.wav"
+        }
+      },
+      "ready": false,
+      "readyVoices": []
+    },
+    {
+      "key": "artifact-next.HI-2025-002.v1",
+      "presetKey": "artifact-next.HI-2025-002",
+      "variant": "v1",
+      "intent": "artifact-next",
+      "priority": 72,
+      "tags": [
+        "artifact",
+        "next"
+      ],
+      "entityId": "HI-2025-002",
+      "text": "看完完整金面具后，可以继续点图谱节点，找同遗址、同工艺或同象征意义的文物，看看线索如何延伸。",
+      "contentHash": "30ae052fe9",
+      "voices": [
+        "default",
+        "zh_female",
+        "sweet"
+      ],
+      "audioUrl": "/audio/trail-guide/artifact-next.HI-2025-002.v1.default.aa72cc0827.wav",
+      "sources": {
+        "default": {
+          "wav": "/audio/trail-guide/artifact-next.HI-2025-002.v1.default.aa72cc0827.wav"
+        },
+        "zh_female": {
+          "wav": "/audio/trail-guide/artifact-next.HI-2025-002.v1.zh_female.ca16cce612.wav"
+        },
+        "sweet": {
+          "wav": "/audio/trail-guide/artifact-next.HI-2025-002.v1.sweet.3d8906e4d2.wav"
+        }
+      },
+      "ready": false,
+      "readyVoices": []
+    },
+    {
+      "key": "artifact-next.HI-2025-002.v2",
+      "presetKey": "artifact-next.HI-2025-002",
+      "variant": "v2",
+      "intent": "artifact-next",
+      "priority": 72,
+      "tags": [
+        "artifact",
+        "next"
+      ],
+      "entityId": "HI-2025-002",
+      "text": "下一步建议从锤揲成型、面具塑形或神性、高等级身份、黄金崇拜、不朽象征里选一个方向继续走，这样展线会从单件文物扩展成关系网络。",
+      "contentHash": "d704c85bda",
+      "voices": [
+        "default",
+        "zh_female",
+        "sweet"
+      ],
+      "audioUrl": "/audio/trail-guide/artifact-next.HI-2025-002.v2.default.e46489c133.wav",
+      "sources": {
+        "default": {
+          "wav": "/audio/trail-guide/artifact-next.HI-2025-002.v2.default.e46489c133.wav"
+        },
+        "zh_female": {
+          "wav": "/audio/trail-guide/artifact-next.HI-2025-002.v2.zh_female.7391000b4c.wav"
+        },
+        "sweet": {
+          "wav": "/audio/trail-guide/artifact-next.HI-2025-002.v2.sweet.40c72c765a.wav"
+        }
+      },
+      "ready": false,
+      "readyVoices": []
+    },
+    {
+      "key": "scene-anchor.default",
+      "intent": "scene-anchor",
+      "text": "这里先定古蜀坐标。可以从时代、遗址或工艺里选一个入口，下方会把命中文物收束成一条展线。",
+      "audioUrl": "/audio/trail-guide/scene-anchor.default.wav",
+      "presetKey": "scene-anchor.default",
+      "variant": "legacy",
+      "priority": 20,
+      "sources": {
+        "default": {
+          "wav": "/audio/trail-guide/scene-anchor.default.wav"
+        }
+      },
+      "ready": true,
+      "readyVoices": [
+        "default"
+      ],
+      "legacy": true
+    },
+    {
+      "key": "artifact-list.default",
+      "intent": "artifact-list",
+      "text": "这一步先选一件代表文物。看完它的年代、遗址和工艺，再进入三维展品现场。",
+      "audioUrl": "/audio/trail-guide/artifact-list.default.wav",
+      "presetKey": "artifact-list.default",
+      "variant": "legacy",
+      "priority": 20,
+      "sources": {
+        "default": {
+          "wav": "/audio/trail-guide/artifact-list.default.wav"
+        }
+      },
+      "ready": true,
+      "readyVoices": [
+        "default"
+      ],
+      "legacy": true
+    },
+    {
+      "key": "stage-viewer.default",
+      "intent": "stage-viewer",
+      "text": "现在进入展品现场。左侧看三维造型，右侧看关系图谱，两边合起来才像一次完整观察。",
+      "audioUrl": "/audio/trail-guide/stage-viewer.default.wav",
+      "presetKey": "stage-viewer.default",
+      "variant": "legacy",
+      "priority": 20,
+      "sources": {
+        "default": {
+          "wav": "/audio/trail-guide/stage-viewer.default.wav"
+        }
+      },
+      "ready": true,
+      "readyVoices": [
+        "default"
+      ],
+      "legacy": true
+    },
+    {
+      "key": "guide-chat.default",
+      "intent": "guide-chat",
+      "text": "这里是玄喵讲解区。你可以继续追问，让玄喵把展线里的文物线索讲成一段故事。",
+      "audioUrl": "/audio/trail-guide/guide-chat.default.wav",
+      "presetKey": "guide-chat.default",
+      "variant": "legacy",
+      "priority": 20,
+      "sources": {
+        "default": {
+          "wav": "/audio/trail-guide/guide-chat.default.wav"
+        }
+      },
+      "ready": true,
+      "readyVoices": [
+        "default"
+      ],
+      "legacy": true
+    },
+    {
+      "key": "graph-type.default",
+      "intent": "graph-node",
+      "type": "default",
+      "text": "你点到了图谱里的一个新线索。先看它和当前文物的关系，再决定要不要继续展开。",
+      "audioUrl": "/audio/trail-guide/graph-type.default.wav",
+      "presetKey": "graph-type.default",
+      "variant": "legacy",
+      "priority": 20,
+      "sources": {
+        "default": {
+          "wav": "/audio/trail-guide/graph-type.default.wav"
+        }
+      },
+      "ready": true,
+      "readyVoices": [
+        "default"
+      ],
+      "legacy": true
+    },
+    {
+      "key": "graph-type.artifact",
+      "intent": "graph-node",
+      "type": "artifact",
+      "text": "你点到的是相关文物。可以把它和当前文物放在一起看，比较造型、工艺和使用场景。",
+      "audioUrl": "/audio/trail-guide/graph-type.artifact.wav",
+      "presetKey": "graph-type.artifact",
+      "variant": "legacy",
+      "priority": 20,
+      "sources": {
+        "default": {
+          "wav": "/audio/trail-guide/graph-type.artifact.wav"
+        }
+      },
+      "ready": true,
+      "readyVoices": [
+        "default"
+      ],
+      "legacy": true
+    },
+    {
+      "key": "graph-type.site",
+      "intent": "graph-node",
+      "type": "site",
+      "text": "你点到的是遗址线索。遗址能把文物放回空间坐标里，帮助你理解它从哪里被发现。",
+      "audioUrl": "/audio/trail-guide/graph-type.site.wav",
+      "presetKey": "graph-type.site",
+      "variant": "legacy",
+      "priority": 20,
+      "sources": {
+        "default": {
+          "wav": "/audio/trail-guide/graph-type.site.wav"
+        }
+      },
+      "ready": true,
+      "readyVoices": [
+        "default"
+      ],
+      "legacy": true
+    },
+    {
+      "key": "graph-type.era",
+      "intent": "graph-node",
+      "type": "era",
+      "text": "你点到的是时代线索。先看年代，再看器物变化，会更容易理解古蜀文明的延续。",
+      "audioUrl": "/audio/trail-guide/graph-type.era.wav",
+      "presetKey": "graph-type.era",
+      "variant": "legacy",
+      "priority": 20,
+      "sources": {
+        "default": {
+          "wav": "/audio/trail-guide/graph-type.era.wav"
+        }
+      },
+      "ready": true,
+      "readyVoices": [
+        "default"
+      ],
+      "legacy": true
+    },
+    {
+      "key": "graph-type.craft",
+      "intent": "graph-node",
+      "type": "craft",
+      "text": "你点到的是工艺线索。顺着工艺看，可以看到三星堆匠人如何把材料变成礼制与想象。",
+      "audioUrl": "/audio/trail-guide/graph-type.craft.wav",
+      "presetKey": "graph-type.craft",
+      "variant": "legacy",
+      "priority": 20,
+      "sources": {
+        "default": {
+          "wav": "/audio/trail-guide/graph-type.craft.wav"
+        }
+      },
+      "ready": true,
+      "readyVoices": [
+        "default"
+      ],
+      "legacy": true
+    },
+    {
+      "key": "graph-type.material",
+      "intent": "graph-node",
+      "type": "material",
+      "text": "你点到的是材质线索。青铜、黄金和玉石的选择，往往也连着身份、仪式和技术能力。",
+      "audioUrl": "/audio/trail-guide/graph-type.material.wav",
+      "presetKey": "graph-type.material",
+      "variant": "legacy",
+      "priority": 20,
+      "sources": {
+        "default": {
+          "wav": "/audio/trail-guide/graph-type.material.wav"
+        }
+      },
+      "ready": true,
+      "readyVoices": [
+        "default"
+      ],
+      "legacy": true
+    },
+    {
+      "key": "graph-type.meaning",
+      "intent": "graph-node",
+      "type": "meaning",
+      "text": "你点到的是象征线索。它会把器物背后的神权、王权和宇宙观慢慢牵出来。",
+      "audioUrl": "/audio/trail-guide/graph-type.meaning.wav",
+      "presetKey": "graph-type.meaning",
+      "variant": "legacy",
+      "priority": 20,
+      "sources": {
+        "default": {
+          "wav": "/audio/trail-guide/graph-type.meaning.wav"
+        }
+      },
+      "ready": true,
+      "readyVoices": [
+        "default"
+      ],
+      "legacy": true
+    },
+    {
+      "key": "graph-type.motif",
+      "intent": "graph-node",
+      "type": "motif",
+      "text": "你点到的是母题线索。纹样和造型不是装饰而已，它们经常承载古蜀人的观看方式。",
+      "audioUrl": "/audio/trail-guide/graph-type.motif.wav",
+      "presetKey": "graph-type.motif",
+      "variant": "legacy",
+      "priority": 20,
+      "sources": {
+        "default": {
+          "wav": "/audio/trail-guide/graph-type.motif.wav"
+        }
+      },
+      "ready": true,
+      "readyVoices": [
+        "default"
+      ],
+      "legacy": true
+    },
+    {
+      "key": "graph-type.ritual",
+      "intent": "graph-node",
+      "type": "ritual",
+      "text": "你点到的是仪式线索。顺着它继续看，会更容易理解祭祀、通神和王权表达。",
+      "audioUrl": "/audio/trail-guide/graph-type.ritual.wav",
+      "presetKey": "graph-type.ritual",
+      "variant": "legacy",
+      "priority": 20,
+      "sources": {
+        "default": {
+          "wav": "/audio/trail-guide/graph-type.ritual.wav"
+        }
+      },
+      "ready": true,
+      "readyVoices": [
+        "default"
+      ],
+      "legacy": true
+    },
+    {
+      "key": "artifact-list.HI-2025-006",
+      "intent": "artifact-list",
+      "entityId": "HI-2025-006",
+      "text": "建议先停在青铜神树前。它的看点是：中国现存最大单件青铜文物，象征古蜀宇宙观与通天神树。。",
+      "audioUrl": "/audio/trail-guide/artifact-list.HI-2025-006.wav",
+      "presetKey": "artifact-list.HI-2025-006",
+      "variant": "legacy",
+      "priority": 20,
+      "sources": {
+        "default": {
+          "wav": "/audio/trail-guide/artifact-list.HI-2025-006.wav"
+        }
+      },
+      "ready": true,
+      "readyVoices": [
+        "default"
+      ],
+      "legacy": true
+    },
+    {
+      "key": "stage-viewer.HI-2025-006",
+      "intent": "stage-viewer",
+      "entityId": "HI-2025-006",
+      "text": "现在看青铜神树。先拖拽模型观察轮廓和细部，再看右侧图谱里的三星堆遗址、古蜀晚期和分段铸造、嵌铸工艺、铆接工艺。",
+      "audioUrl": "/audio/trail-guide/stage-viewer.HI-2025-006.wav",
+      "presetKey": "stage-viewer.HI-2025-006",
+      "variant": "legacy",
+      "priority": 20,
+      "sources": {
+        "default": {
+          "wav": "/audio/trail-guide/stage-viewer.HI-2025-006.wav"
+        }
+      },
+      "ready": true,
+      "readyVoices": [
+        "default"
+      ],
+      "legacy": true
+    },
+    {
+      "key": "guide-chat.HI-2025-006",
+      "intent": "guide-chat",
+      "entityId": "HI-2025-006",
+      "text": "这里可以继续问玄喵。围绕青铜神树，你可以问它为什么重要、用了什么工艺，或和哪件文物有关。",
+      "audioUrl": "/audio/trail-guide/guide-chat.HI-2025-006.wav",
+      "presetKey": "guide-chat.HI-2025-006",
+      "variant": "legacy",
+      "priority": 20,
+      "sources": {
+        "default": {
+          "wav": "/audio/trail-guide/guide-chat.HI-2025-006.wav"
+        }
+      },
+      "ready": true,
+      "readyVoices": [
+        "default"
+      ],
+      "legacy": true
+    },
+    {
+      "key": "artifact-list.HI-2025-003",
+      "intent": "artifact-list",
+      "entityId": "HI-2025-003",
+      "text": "建议先停在青铜纵目面具前。它的看点是：三星堆最具标志性的神造像之一，以极度夸张的纵目造型著称。。",
+      "audioUrl": "/audio/trail-guide/artifact-list.HI-2025-003.wav",
+      "presetKey": "artifact-list.HI-2025-003",
+      "variant": "legacy",
+      "priority": 20,
+      "sources": {
+        "default": {
+          "wav": "/audio/trail-guide/artifact-list.HI-2025-003.wav"
+        }
+      },
+      "ready": true,
+      "readyVoices": [
+        "default"
+      ],
+      "legacy": true
+    },
+    {
+      "key": "stage-viewer.HI-2025-003",
+      "intent": "stage-viewer",
+      "entityId": "HI-2025-003",
+      "text": "现在看青铜纵目面具。先拖拽模型观察轮廓和细部，再看右侧图谱里的三星堆遗址、古蜀晚期和青铜铸造、表面纹饰处理。",
+      "audioUrl": "/audio/trail-guide/stage-viewer.HI-2025-003.wav",
+      "presetKey": "stage-viewer.HI-2025-003",
+      "variant": "legacy",
+      "priority": 20,
+      "sources": {
+        "default": {
+          "wav": "/audio/trail-guide/stage-viewer.HI-2025-003.wav"
+        }
+      },
+      "ready": true,
+      "readyVoices": [
+        "default"
+      ],
+      "legacy": true
+    },
+    {
+      "key": "guide-chat.HI-2025-003",
+      "intent": "guide-chat",
+      "entityId": "HI-2025-003",
+      "text": "这里可以继续问玄喵。围绕青铜纵目面具，你可以问它为什么重要、用了什么工艺，或和哪件文物有关。",
+      "audioUrl": "/audio/trail-guide/guide-chat.HI-2025-003.wav",
+      "presetKey": "guide-chat.HI-2025-003",
+      "variant": "legacy",
+      "priority": 20,
+      "sources": {
+        "default": {
+          "wav": "/audio/trail-guide/guide-chat.HI-2025-003.wav"
+        }
+      },
+      "ready": true,
+      "readyVoices": [
+        "default"
+      ],
+      "legacy": true
+    },
+    {
+      "key": "artifact-list.HI-2025-005",
+      "intent": "artifact-list",
+      "entityId": "HI-2025-005",
+      "text": "建议先停在青铜大立人像前。它的看点是：世界同时期最大青铜立人像，是古蜀领袖形象的重要象征。。",
+      "audioUrl": "/audio/trail-guide/artifact-list.HI-2025-005.wav",
+      "presetKey": "artifact-list.HI-2025-005",
+      "variant": "legacy",
+      "priority": 20,
+      "sources": {
+        "default": {
+          "wav": "/audio/trail-guide/artifact-list.HI-2025-005.wav"
+        }
+      },
+      "ready": true,
+      "readyVoices": [
+        "default"
+      ],
+      "legacy": true
+    },
+    {
+      "key": "stage-viewer.HI-2025-005",
+      "intent": "stage-viewer",
+      "entityId": "HI-2025-005",
+      "text": "现在看青铜大立人像。先拖拽模型观察轮廓和细部，再看右侧图谱里的三星堆遗址、古蜀晚期和分段浇铸、嵌铸工艺。",
+      "audioUrl": "/audio/trail-guide/stage-viewer.HI-2025-005.wav",
+      "presetKey": "stage-viewer.HI-2025-005",
+      "variant": "legacy",
+      "priority": 20,
+      "sources": {
+        "default": {
+          "wav": "/audio/trail-guide/stage-viewer.HI-2025-005.wav"
+        }
+      },
+      "ready": true,
+      "readyVoices": [
+        "default"
+      ],
+      "legacy": true
+    },
+    {
+      "key": "guide-chat.HI-2025-005",
+      "intent": "guide-chat",
+      "entityId": "HI-2025-005",
+      "text": "这里可以继续问玄喵。围绕青铜大立人像，你可以问它为什么重要、用了什么工艺，或和哪件文物有关。",
+      "audioUrl": "/audio/trail-guide/guide-chat.HI-2025-005.wav",
+      "presetKey": "guide-chat.HI-2025-005",
+      "variant": "legacy",
+      "priority": 20,
+      "sources": {
+        "default": {
+          "wav": "/audio/trail-guide/guide-chat.HI-2025-005.wav"
+        }
+      },
+      "ready": true,
+      "readyVoices": [
+        "default"
+      ],
+      "legacy": true
+    },
+    {
+      "key": "artifact-list.HI-2025-004",
+      "intent": "artifact-list",
+      "entityId": "HI-2025-004",
+      "text": "建议先停在金杖前。它的看点是：古蜀王权象征物之一，以金箫包覆木杖并刻有神秘纹饰。。",
+      "audioUrl": "/audio/trail-guide/artifact-list.HI-2025-004.wav",
+      "presetKey": "artifact-list.HI-2025-004",
+      "variant": "legacy",
+      "priority": 20,
+      "sources": {
+        "default": {
+          "wav": "/audio/trail-guide/artifact-list.HI-2025-004.wav"
+        }
+      },
+      "ready": true,
+      "readyVoices": [
+        "default"
+      ],
+      "legacy": true
+    },
+    {
+      "key": "stage-viewer.HI-2025-004",
+      "intent": "stage-viewer",
+      "entityId": "HI-2025-004",
+      "text": "现在看金杖。先拖拽模型观察轮廓和细部，再看右侧图谱里的三星堆遗址、古蜀晚期和金箫锤揲、纹饰刻画。",
+      "audioUrl": "/audio/trail-guide/stage-viewer.HI-2025-004.wav",
+      "presetKey": "stage-viewer.HI-2025-004",
+      "variant": "legacy",
+      "priority": 20,
+      "sources": {
+        "default": {
+          "wav": "/audio/trail-guide/stage-viewer.HI-2025-004.wav"
+        }
+      },
+      "ready": true,
+      "readyVoices": [
+        "default"
+      ],
+      "legacy": true
+    },
+    {
+      "key": "guide-chat.HI-2025-004",
+      "intent": "guide-chat",
+      "entityId": "HI-2025-004",
+      "text": "这里可以继续问玄喵。围绕金杖，你可以问它为什么重要、用了什么工艺，或和哪件文物有关。",
+      "audioUrl": "/audio/trail-guide/guide-chat.HI-2025-004.wav",
+      "presetKey": "guide-chat.HI-2025-004",
+      "variant": "legacy",
+      "priority": 20,
+      "sources": {
+        "default": {
+          "wav": "/audio/trail-guide/guide-chat.HI-2025-004.wav"
+        }
+      },
+      "ready": true,
+      "readyVoices": [
+        "default"
+      ],
+      "legacy": true
+    },
+    {
+      "key": "artifact-list.HI-2025-002",
+      "intent": "artifact-list",
+      "entityId": "HI-2025-002",
+      "text": "建议先停在完整金面具前。它的看点是：三星堆迄今最完整、最大型金面具，体现古蜀黄金崇拜。。",
+      "audioUrl": "/audio/trail-guide/artifact-list.HI-2025-002.wav",
+      "presetKey": "artifact-list.HI-2025-002",
+      "variant": "legacy",
+      "priority": 20,
+      "sources": {
+        "default": {
+          "wav": "/audio/trail-guide/artifact-list.HI-2025-002.wav"
+        }
+      },
+      "ready": true,
+      "readyVoices": [
+        "default"
+      ],
+      "legacy": true
+    },
+    {
+      "key": "stage-viewer.HI-2025-002",
+      "intent": "stage-viewer",
+      "entityId": "HI-2025-002",
+      "text": "现在看完整金面具。先拖拽模型观察轮廓和细部，再看右侧图谱里的三星堆遗址、古蜀晚期和锤揲成型、面具塑形。",
+      "audioUrl": "/audio/trail-guide/stage-viewer.HI-2025-002.wav",
+      "presetKey": "stage-viewer.HI-2025-002",
+      "variant": "legacy",
+      "priority": 20,
+      "sources": {
+        "default": {
+          "wav": "/audio/trail-guide/stage-viewer.HI-2025-002.wav"
+        }
+      },
+      "ready": true,
+      "readyVoices": [
+        "default"
+      ],
+      "legacy": true
+    },
+    {
+      "key": "guide-chat.HI-2025-002",
+      "intent": "guide-chat",
+      "entityId": "HI-2025-002",
+      "text": "这里可以继续问玄喵。围绕完整金面具，你可以问它为什么重要、用了什么工艺，或和哪件文物有关。",
+      "audioUrl": "/audio/trail-guide/guide-chat.HI-2025-002.wav",
+      "presetKey": "guide-chat.HI-2025-002",
+      "variant": "legacy",
+      "priority": 20,
+      "sources": {
+        "default": {
+          "wav": "/audio/trail-guide/guide-chat.HI-2025-002.wav"
+        }
+      },
+      "ready": true,
+      "readyVoices": [
+        "default"
+      ],
+      "legacy": true
+    }
+  ]
+}

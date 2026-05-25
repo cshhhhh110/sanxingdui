@@ -7,7 +7,8 @@
     "build": "vite build --mode production",
     "build:staging": "vite build --mode staging",
     "preview": "vite preview",
-    "lint": "eslint . --ext .vue,.js,.jsx,.cjs,.mjs --fix --ignore-path .gitignore"
+    "lint": "eslint . --ext .vue,.js,.jsx,.cjs,.mjs --fix --ignore-path .gitignore",
+    "voice-guide:generate": "node scripts/generate-trail-voice-guide.mjs"
   },
   "dependencies": {
     "@ant-design/icons-vue": "^7.0.1",

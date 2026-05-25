@@ -8,19 +8,25 @@ const TTS_BASE = import.meta.env.VITE_APP_BASE_API || '/api'
  * @param {string} text - 要合成的文本
  * @param {string} voice - 音色名，默认 default
  * @param {number} speed - 语速，默认 1.0
+ * @param {Object} config - 可选 axios 请求配置
  * @returns {Promise<string>} blob URL 供 Audio 播放
  */
-export async function synthesizeSpeech(text, voice = 'default', speed = 1.0) {
+export async function synthesizeSpeech(text, voice = 'default', speed = 1.0, config = {}) {
   const token = useUserStore()?.token
   const headers = { 'Content-Type': 'application/json' }
   if (token) {
     headers['Authorization'] = `Bearer ${token}`
   }
+  const { headers: extraHeaders = {}, ...requestConfig } = config || {}
 
   const response = await axios.post(
     `${TTS_BASE}/tts/speech`,
     { text, voice, speed },
-    { headers, responseType: 'blob' }
+    {
+      ...requestConfig,
+      headers: { ...headers, ...extraHeaders },
+      responseType: 'blob'
+    }
   )
 
   return URL.createObjectURL(response.data)

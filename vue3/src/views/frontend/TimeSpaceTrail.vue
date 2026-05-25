@@ -1,5 +1,36 @@
 <template>
   <main class="time-space-trail" :class="{ 'time-space-trail--compact': activeScene > 1, 'time-space-trail--immersive': activeScene === 3 }">
+    <section class="voice-guide-panel" :class="{ 'voice-guide-panel--active': voiceGuideEnabled, 'voice-guide-panel--loading': voiceGuideLoading }" aria-label="玄喵语音向导">
+      <div class="voice-guide-panel__mark" aria-hidden="true">
+        <i :class="voiceGuideLoading ? 'fas fa-spinner fa-spin' : voiceGuidePlaying ? 'fas fa-volume-high' : 'fas fa-headphones'"></i>
+      </div>
+      <div class="voice-guide-panel__copy">
+        <div class="voice-guide-panel__head">
+          <strong>玄喵语音向导</strong>
+          <span>{{ voiceGuideStatusText }}</span>
+        </div>
+        <p>{{ currentNarrationText || '开启后，玄喵会根据你所在的展线阶段进行克制讲解。' }}</p>
+      </div>
+      <div class="voice-guide-panel__actions">
+        <button
+          v-if="!voiceGuideEnabled"
+          class="voice-guide-button voice-guide-button--primary showcase-button-hover"
+          type="button"
+          @click="enableVoiceGuide"
+        >
+          开启语音向导
+        </button>
+        <template v-else>
+          <button class="voice-guide-button showcase-button-hover" type="button" @click="toggleVoiceGuidePause">
+            {{ voiceGuidePaused ? '继续' : '暂停' }}
+          </button>
+          <button class="voice-guide-button voice-guide-button--ghost showcase-button-hover" type="button" @click="closeVoiceGuide">
+            关闭
+          </button>
+        </template>
+      </div>
+    </section>
+
     <section v-if="activeScene === 1" class="trail-hero">
       <div class="hero-copy showcase-enter" style="--delay: 0s">
         <p class="hero-kicker">玄喵引路</p>
@@ -662,6 +693,7 @@ import { RoomEnvironment } from 'three/examples/jsm/environments/RoomEnvironment
 import { useUserStore } from '@/store/user'
 import { searchSpacetimeArtifacts, getArtifactGraph, getArtifactGraphNeighbors, getSpacetimeArtifactDetail } from '@/api/SpacetimeApi'
 import { createSession as createSessionApi, getChatStreamUrl } from '@/api/AiChatApi'
+import { synthesizeSpeech, revokeSpeechUrl } from '@/api/TtsApi'
 import { matchFixedAnswer } from '@/config/chatReplyConfig'
 import { buildFallbackReply, buildRagPrompt, searchKnowledge } from '@/utils/knowledgeSearch'
 import { formatYearRange } from '@/data/competitionArtifacts'
@@ -691,6 +723,12 @@ const TYPE_DESCRIPTIONS = {
 }
 
 const DEFAULT_TYPE_FILTERS = ['artifact', 'site', 'era', 'craft', 'material', 'meaning']
+const VOICE_GUIDE_CACHE_LIMIT = 8
+const VOICE_GUIDE_RECENT_LIMIT = 10
+const VOICE_GUIDE_TTS_TIMEOUT = 7000
+const VOICE_GUIDE_LOADING_TEXT = '玄喵正在组织讲解…'
+const VOICE_GUIDE_TEXT_FALLBACK = '语音稍慢，已先显示文字提示'
+const VOICE_GUIDE_MANIFEST_URL = '/data/trail-voice-guide.manifest.json'
 
 const TYPE_COLORS = {
   artifact: { fill: '#d2ac54', stroke: '#f3dfb4', label: '#142117' },
@@ -774,6 +812,15 @@ const currentSessionId = ref(null)
 const lastAutoAskedEntityId = ref('')
 const guideUserQuestionCount = ref(0)
 const showQuizPromo = ref(false)
+const voiceGuideEnabled = ref(false)
+const voiceGuidePaused = ref(false)
+const voiceGuidePlaying = ref(false)
+const voiceGuideLoading = ref(false)
+const voiceGuideRequestId = ref(0)
+const currentNarrationText = ref('')
+const lastNarrationKey = ref('')
+const lastNarrationIntent = ref('')
+const voiceGuideError = ref('')
 
 const QUIZ_PROMO_SESSION_KEY = 'sanxingdui.trail.quizPromo.seen'
 const QUIZ_PROMO_TRIGGER_ROUNDS = 2
@@ -792,6 +839,19 @@ let pmremGenerator = null
 let filterTimer = null
 let chatAbortController = null
 let previousBodyOverflow = ''
+let voiceGuideTimer = null
+let voiceGuideAudio = null
+let voiceGuideAudioUrl = ''
+let pendingVoiceGuideNarration = null
+let voiceGuideAbortController = null
+const voiceGuideAudioCache = new Map()
+const recentNarrationKeys = new Set()
+const recentNarrationKeyQueue = []
+const prebuiltVoiceGuideEntries = new Map()
+const voiceGuideActiveContext = {
+  scene: 0,
+  entityId: ''
+}
 
 const visibleArtifacts = computed(() => {
   if (!meaningFocus.value) {
@@ -1036,9 +1096,19 @@ const graphTypeFilters = computed(() => {
   }))
 })
 
+const voiceGuideStatusText = computed(() => {
+  if (!voiceGuideEnabled.value) return '未开启'
+  if (voiceGuideError.value) return '文字提示'
+  if (voiceGuidePaused.value) return '已暂停'
+  if (voiceGuideLoading.value) return '准备中'
+  if (voiceGuidePlaying.value) return '讲解中'
+  return '待命中'
+})
+
 onMounted(async () => {
   window.addEventListener('keydown', handleViewerKeydown)
   hydrateQuizPromoState()
+  void loadVoiceGuideManifest()
   await loadArtifacts()
   mountResizeObserver()
 })
@@ -1053,6 +1123,9 @@ onBeforeUnmount(() => {
   destroyThreeStage()
   destroyGraph()
   chatAbortController?.abort?.()
+  cancelVoiceGuideRequest()
+  stopVoiceGuideAudio()
+  clearVoiceGuideAudioCache()
 })
 
 watch([activeEra, activeSite, activeCraft], () => {
@@ -1082,6 +1155,21 @@ watch(
     stageReadyEntityId.value = ''
     graphReadyEntityId.value = ''
   }
+)
+
+watch(
+  [
+    activeScene,
+    stageVisible,
+    guideExpanded,
+    selectedNodeId,
+    () => selectedArtifactDetail.value?.entityId,
+    () => visibleArtifacts.value.length
+  ],
+  () => {
+    scheduleVoiceGuideNarration()
+  },
+  { flush: 'post' }
 )
 
 async function loadArtifacts() {
@@ -1330,6 +1418,502 @@ function scrollToGuide() {
   guideExpanded.value = true
   activeScene.value = 4
   scrollMessagesToBottom()
+}
+
+function enableVoiceGuide() {
+  voiceGuideEnabled.value = true
+  voiceGuidePaused.value = false
+  voiceGuideError.value = ''
+  voiceGuideLoading.value = true
+  currentNarrationText.value = VOICE_GUIDE_LOADING_TEXT
+  scheduleVoiceGuideNarration(true)
+}
+
+function toggleVoiceGuidePause() {
+  if (!voiceGuideEnabled.value) return
+  voiceGuidePaused.value = !voiceGuidePaused.value
+
+  if (voiceGuidePaused.value) {
+    cancelVoiceGuideRequest()
+    stopVoiceGuideAudio()
+    return
+  }
+
+  scheduleVoiceGuideNarration(true)
+}
+
+function closeVoiceGuide() {
+  voiceGuideEnabled.value = false
+  voiceGuidePaused.value = false
+  voiceGuidePlaying.value = false
+  voiceGuideLoading.value = false
+  voiceGuideError.value = ''
+  currentNarrationText.value = ''
+  lastNarrationKey.value = ''
+  lastNarrationIntent.value = ''
+  cancelVoiceGuideRequest()
+  stopVoiceGuideAudio()
+}
+
+function scheduleVoiceGuideNarration(force = false) {
+  try {
+    if (!voiceGuideEnabled.value || voiceGuidePaused.value) return
+    const narration = buildVoiceGuideNarration()
+    if (!narration?.key || !narration.text) {
+      voiceGuideLoading.value = false
+      return
+    }
+    if (!force && recentNarrationKeys.has(narration.key)) {
+      voiceGuideLoading.value = false
+      return
+    }
+
+    const samePlayingContext =
+      voiceGuidePlaying.value &&
+      narration.scene === voiceGuideActiveContext.scene &&
+      narration.entityId === voiceGuideActiveContext.entityId
+
+    if (!samePlayingContext || force) {
+      voiceGuideLoading.value = true
+      voiceGuideError.value = ''
+      if (!voiceGuidePlaying.value || force) {
+        currentNarrationText.value = VOICE_GUIDE_LOADING_TEXT
+      }
+    }
+
+    if (voiceGuideTimer) window.clearTimeout(voiceGuideTimer)
+    const delay = force ? 0 : narration.intent === 'graph-node' ? 760 : 360
+    voiceGuideTimer = window.setTimeout(() => {
+      void playVoiceGuideNarration(narration, force)
+    }, delay)
+  } catch (error) {
+    settleVoiceGuideTextFallback('语音向导暂时没组织好，已先显示文字提示', error)
+  }
+}
+
+async function playCurrentVoiceGuideNarration(force = false) {
+  if (!voiceGuideEnabled.value || voiceGuidePaused.value) return
+  try {
+    const narration = buildVoiceGuideNarration()
+    if (!narration?.key || !narration.text) return
+    await playVoiceGuideNarration(narration, force)
+  } catch (error) {
+    settleVoiceGuideTextFallback('语音向导暂时没组织好，已先显示文字提示', error)
+  }
+}
+
+async function playVoiceGuideNarration(narration, force = false) {
+  if (!voiceGuideEnabled.value || voiceGuidePaused.value) return
+  if (!narration?.key || !narration.text) return
+  if (!force && recentNarrationKeys.has(narration.key)) {
+    voiceGuideLoading.value = false
+    return
+  }
+
+  const samePlayingContext =
+    voiceGuidePlaying.value &&
+    narration.scene === voiceGuideActiveContext.scene &&
+    narration.entityId === voiceGuideActiveContext.entityId
+
+  if (samePlayingContext && !force) {
+    pendingVoiceGuideNarration = narration
+    voiceGuideLoading.value = false
+    return
+  }
+
+  const requestId = voiceGuideRequestId.value + 1
+  voiceGuideRequestId.value = requestId
+  rememberVoiceGuideNarration(narration.key)
+  lastNarrationKey.value = narration.key
+  lastNarrationIntent.value = narration.intent || ''
+  currentNarrationText.value = narration.text
+  voiceGuideError.value = ''
+  voiceGuideLoading.value = true
+  pendingVoiceGuideNarration = null
+  stopVoiceGuideAudio()
+
+  try {
+    const cacheKey = getVoiceGuideCacheKey(narration)
+    const prebuiltEntry = narration.skipPreset ? null : resolvePrebuiltVoiceGuideEntry(narration)
+    const resolvedCacheKey = prebuiltEntry
+      ? `preset:${prebuiltEntry.key}:${prebuiltEntry.contentHash || prebuiltEntry.audioUrl}`
+      : cacheKey
+    let audioUrl = voiceGuideAudioCache.get(resolvedCacheKey)
+    let usedPrebuilt = false
+    if (!audioUrl) {
+      if (prebuiltEntry?.audioUrl) {
+        audioUrl = prebuiltEntry.audioUrl
+        usedPrebuilt = true
+        if (prebuiltEntry.text) {
+          currentNarrationText.value = prebuiltEntry.text
+        }
+      } else {
+        audioUrl = await synthesizeVoiceGuideSpeech(narration.text)
+        if (!isVoiceGuideRequestCurrent(requestId, narration)) {
+          revokeSpeechUrl(audioUrl)
+          return
+        }
+      }
+      voiceGuideAudioCache.set(resolvedCacheKey, audioUrl)
+      pruneVoiceGuideAudioCache()
+    }
+
+    if (!isVoiceGuideRequestCurrent(requestId, narration)) return
+
+    voiceGuideLoading.value = false
+    voiceGuideAudioUrl = audioUrl
+    voiceGuideAudio = new Audio(audioUrl)
+    voiceGuideAudio.onended = () => {
+      voiceGuidePlaying.value = false
+      voiceGuideAudio = null
+      voiceGuideAudioUrl = ''
+      const pending = pendingVoiceGuideNarration
+      pendingVoiceGuideNarration = null
+      if (pending && voiceGuideEnabled.value && !voiceGuidePaused.value) {
+        void playVoiceGuideNarration(pending)
+      }
+    }
+    voiceGuideAudio.onerror = () => {
+      voiceGuidePlaying.value = false
+      voiceGuideLoading.value = false
+      voiceGuideAudio = null
+      voiceGuideAudioUrl = ''
+      if (usedPrebuilt) {
+        voiceGuideAudioCache.delete(resolvedCacheKey)
+        void playVoiceGuideNarration({ ...narration, skipPreset: true }, true)
+        return
+      }
+      voiceGuideError.value = '语音暂不可用，已显示文字提示'
+    }
+
+    voiceGuideActiveContext.scene = narration.scene
+    voiceGuideActiveContext.entityId = narration.entityId
+    voiceGuidePlaying.value = true
+    await voiceGuideAudio.play()
+  } catch (error) {
+    if (isVoiceGuideRequestCurrent(requestId, narration)) {
+      stopVoiceGuideAudio()
+      voiceGuideLoading.value = false
+      const isTimeout = error?.name === 'AbortError' || error?.message === 'VOICE_GUIDE_TTS_TIMEOUT'
+      voiceGuideError.value = isTimeout ? VOICE_GUIDE_TEXT_FALLBACK : '语音暂不可用，已显示文字提示'
+    }
+  }
+}
+
+async function synthesizeVoiceGuideSpeech(text) {
+  voiceGuideAbortController?.abort?.()
+  const controller = new AbortController()
+  voiceGuideAbortController = controller
+
+  let timeoutId = null
+  const timeoutPromise = new Promise((_, reject) => {
+    timeoutId = window.setTimeout(() => {
+      controller.abort()
+      reject(new Error('VOICE_GUIDE_TTS_TIMEOUT'))
+    }, VOICE_GUIDE_TTS_TIMEOUT)
+  })
+
+  try {
+    return await Promise.race([
+      synthesizeSpeech(text, 'default', 1.0, { signal: controller.signal }),
+      timeoutPromise
+    ])
+  } finally {
+    if (timeoutId) window.clearTimeout(timeoutId)
+    if (voiceGuideAbortController === controller) {
+      voiceGuideAbortController = null
+    }
+  }
+}
+
+async function loadVoiceGuideManifest() {
+  try {
+    const response = await fetch(VOICE_GUIDE_MANIFEST_URL, { cache: 'no-cache' })
+    if (!response.ok) return
+    const manifest = await response.json()
+    const entries = Array.isArray(manifest?.entries) ? manifest.entries : []
+    prebuiltVoiceGuideEntries.clear()
+    entries.forEach((entry) => {
+      if (entry?.key && hasPrebuiltAudio(entry) && entry.ready !== false) {
+        const presetKey = entry.presetKey || entry.key
+        const normalizedEntry = { ...entry }
+        if (!prebuiltVoiceGuideEntries.has(presetKey)) {
+          prebuiltVoiceGuideEntries.set(presetKey, [])
+        }
+        prebuiltVoiceGuideEntries.get(presetKey).push(normalizedEntry)
+      }
+    })
+    prebuiltVoiceGuideEntries.forEach((list) => {
+      list.sort((a, b) => (b.priority || 0) - (a.priority || 0))
+    })
+  } catch (error) {
+    console.warn('语音向导预制清单读取失败，将使用实时 TTS。', error)
+  }
+}
+
+function resolvePrebuiltVoiceGuideEntry(narration) {
+  const keys = Array.isArray(narration.presetKeys) ? narration.presetKeys : []
+  for (const key of keys) {
+    const entries = prebuiltVoiceGuideEntries.get(key) || []
+    const entry = pickPrebuiltVoiceVariant(entries, `${narration.key}-${key}`)
+    const audioUrl = getPrebuiltAudioUrl(entry)
+    if (audioUrl) return { ...entry, audioUrl }
+  }
+  return null
+}
+
+function getPrebuiltAudioUrl(entry) {
+  if (!entry) return ''
+  const preferredVoice = getVoiceGuidePreferredVoice()
+  const readyVoices = Array.isArray(entry.readyVoices) ? entry.readyVoices : []
+  const voiceCandidates = [
+    preferredVoice,
+    'default',
+    'zh_female',
+    'sweet',
+    ...readyVoices
+  ].filter(Boolean)
+  for (const voice of voiceCandidates) {
+    if (readyVoices.length && !readyVoices.includes(voice)) continue
+    const source = entry.sources?.[voice]?.wav
+    if (source) return source
+  }
+  return entry?.sources?.wav || entry?.audioUrl || ''
+}
+
+function hasPrebuiltAudio(entry) {
+  if (!entry) return false
+  if (entry.sources?.wav || entry.audioUrl) return true
+  return ['default', 'zh_female', 'sweet'].some((voice) => Boolean(entry.sources?.[voice]?.wav))
+}
+
+function getVoiceGuidePreferredVoice() {
+  try {
+    return localStorage.getItem('xuanmiao_voice') || 'default'
+  } catch (error) {
+    return 'default'
+  }
+}
+
+function pickPrebuiltVoiceVariant(entries, seed) {
+  if (!entries.length) return null
+  let hash = 0
+  const source = `${seed}-${lastNarrationIntent.value || 'start'}`
+  for (let index = 0; index < source.length; index += 1) {
+    hash = (hash * 33 + source.charCodeAt(index)) % 104729
+  }
+  return entries[hash % entries.length]
+}
+
+function stopVoiceGuideAudio() {
+  if (voiceGuideAudio) {
+    voiceGuideAudio.pause()
+    voiceGuideAudio.currentTime = 0
+    voiceGuideAudio = null
+  }
+  voiceGuidePlaying.value = false
+  voiceGuideAudioUrl = ''
+}
+
+function cancelVoiceGuideRequest() {
+  if (voiceGuideTimer) {
+    window.clearTimeout(voiceGuideTimer)
+    voiceGuideTimer = null
+  }
+  voiceGuideAbortController?.abort?.()
+  voiceGuideAbortController = null
+  pendingVoiceGuideNarration = null
+  voiceGuideLoading.value = false
+  voiceGuideRequestId.value += 1
+}
+
+function settleVoiceGuideTextFallback(message, error) {
+  console.warn('语音向导降级:', error)
+  voiceGuideLoading.value = false
+  voiceGuidePlaying.value = false
+  voiceGuideError.value = message
+  if (!currentNarrationText.value || currentNarrationText.value === VOICE_GUIDE_LOADING_TEXT) {
+    currentNarrationText.value = '你可以继续浏览展线，玄喵稍后再跟上讲解。'
+  }
+}
+
+function isVoiceGuideRequestCurrent(requestId, narration) {
+  return (
+    voiceGuideEnabled.value &&
+    !voiceGuidePaused.value &&
+    voiceGuideRequestId.value === requestId &&
+    lastNarrationKey.value === narration.key
+  )
+}
+
+function getVoiceGuideCacheKey(narration) {
+  return `${narration.key}::${narration.text}`
+}
+
+function pruneVoiceGuideAudioCache() {
+  while (voiceGuideAudioCache.size > VOICE_GUIDE_CACHE_LIMIT) {
+    const oldestKey = voiceGuideAudioCache.keys().next().value
+    const oldestUrl = voiceGuideAudioCache.get(oldestKey)
+    if (oldestUrl === voiceGuideAudioUrl) {
+      voiceGuideAudioCache.delete(oldestKey)
+      voiceGuideAudioCache.set(oldestKey, oldestUrl)
+      continue
+    }
+    revokeSpeechUrl(oldestUrl)
+    voiceGuideAudioCache.delete(oldestKey)
+  }
+}
+
+function clearVoiceGuideAudioCache() {
+  voiceGuideAudioCache.forEach((url) => revokeSpeechUrl(url))
+  voiceGuideAudioCache.clear()
+  voiceGuideAudioUrl = ''
+}
+
+function rememberVoiceGuideNarration(key) {
+  recentNarrationKeys.add(key)
+  recentNarrationKeyQueue.push(key)
+  while (recentNarrationKeyQueue.length > VOICE_GUIDE_RECENT_LIMIT) {
+    const oldestKey = recentNarrationKeyQueue.shift()
+    if (!recentNarrationKeyQueue.includes(oldestKey)) {
+      recentNarrationKeys.delete(oldestKey)
+    }
+  }
+}
+
+function buildVoiceGuideNarration() {
+  const entityId = selectedArtifactDetail.value?.entityId || selectedArtifact.value?.entityId || 'none'
+  const title = selectedArtifactDetail.value?.displayTitle || selectedArtifact.value?.displayTitle || ''
+  const context = getVoiceGuideArtifactContext()
+
+  if (activeScene.value === 1) {
+    const filterKey = `${activeEra.value || 'all'}-${activeSite.value || 'all'}-${activeCraft.value || 'all'}-${visibleArtifacts.value.length}`
+    const filterText = activeFilterChips.value.length
+      ? `现在的坐标是${activeFilterChips.value.map((item) => item.value).join('、')}。`
+      : '可以先从时代、遗址或工艺里选一个入口。'
+    return {
+      key: `scene-1-${filterKey}`,
+      intent: 'scene-anchor',
+      scene: 1,
+      entityId: 'filters',
+      presetKeys: ['scene-anchor.default'],
+      text: pickVoiceVariant(`scene-1-${filterKey}`, [
+        `这里先定古蜀坐标。${filterText}下方会把命中文物收束成一条展线。`,
+        `${filterText}你每换一次条件，展线都会重新整理，适合先找一条最想看的线索。`
+      ])
+    }
+  }
+
+  if (activeScene.value === 2) {
+    const count = visibleArtifacts.value.length
+    const targetTitle = selectedArtifact.value?.displayTitle || visibleArtifacts.value[0]?.displayTitle || '一件代表性文物'
+    const hint = context.summary ? `它的看点是：${context.summary}。` : `可以先看它的年代、遗址和工艺。`
+    return {
+      key: `scene-2-${count}-${selectedArtifact.value?.entityId || 'none'}`,
+      intent: 'artifact-list',
+      scene: 2,
+      entityId: selectedArtifact.value?.entityId || 'artifact-list',
+      presetKeys: [
+        `artifact-list.${selectedArtifact.value?.entityId || ''}`,
+        `artifact-context.${selectedArtifact.value?.entityId || ''}`,
+        'artifact-list.default'
+      ],
+      text: pickVoiceVariant(`scene-2-${targetTitle}-${count}`, [
+        `当前命中 ${count} 件文物。建议先停在 ${targetTitle} 前，${hint}`,
+        `这一步先选一件代表物。${targetTitle} 很适合开场，之后再进入 3D 和关系图谱。`
+      ])
+    }
+  }
+
+  if (activeScene.value === 3 && stageVisible.value && selectedNodeId.value && selectedNodeId.value !== graphPayload.value.centerNodeId) {
+    const nodeType = TYPE_LABELS[selectedGraphNode.value?.type] || '线索'
+    const nodeSummary = clipVoiceText(selectedNodeSummary.value, 36)
+    return {
+      key: `scene-3-node-${entityId}-${selectedNodeId.value}`,
+      intent: 'graph-node',
+      scene: 3,
+      entityId,
+      presetKeys: [
+        `graph-type.${selectedGraphNode.value?.type || ''}`,
+        'graph-type.default'
+      ],
+      text: pickVoiceVariant(`scene-3-node-${selectedNodeId.value}`, [
+        `你点到的是${nodeType}“${selectedNodeTitle.value}”。${nodeSummary}`,
+        `现在从“${selectedNodeTitle.value}”看回${title || '当前文物'}，重点是它们之间的关系，而不是孤立看一件器物。`
+      ])
+    }
+  }
+
+  if (activeScene.value === 3 && stageVisible.value) {
+    return {
+      key: `scene-3-stage-${entityId}`,
+      intent: 'stage-viewer',
+      scene: 3,
+      entityId,
+      presetKeys: [
+        `stage-viewer.${entityId}`,
+        `artifact-craft.${entityId}`,
+        `artifact-symbol.${entityId}`,
+        `artifact-context.${entityId}`,
+        'stage-viewer.default'
+      ],
+      text: title
+        ? pickVoiceVariant(`scene-3-stage-${entityId}`, [
+            `现在看 ${title}。先拖拽模型观察轮廓和细部，再看右侧图谱里的${context.site}、${context.era}和${context.craft}。`,
+            `${title} 已进入展品现场。左侧看造型，右侧看关系，两边合起来才像一次完整观察。`
+          ])
+        : '现在进入展品现场。可以先观察 3D 模型，再顺着右侧图谱理解它的文化关系。'
+    }
+  }
+
+  if (activeScene.value === 4) {
+    return {
+      key: `scene-4-guide-${entityId}-${guideExpanded.value ? 'open' : 'preview'}`,
+      intent: guideExpanded.value ? 'guide-chat-open' : 'guide-chat-preview',
+      scene: 4,
+      entityId,
+      presetKeys: [
+        `guide-chat.${entityId}`,
+        `artifact-next.${entityId}`,
+        `artifact-symbol.${entityId}`,
+        'guide-chat.default'
+      ],
+      text: title
+        ? pickVoiceVariant(`scene-4-guide-${entityId}-${guideExpanded.value}`, [
+            `这里可以继续问玄喵。围绕 ${title}，你可以问它为什么重要、用了什么工艺，或和哪件文物有关。`,
+            `讲解区已经准备好。接下来不必背知识点，只要追问 ${title} 的看点，玄喵会把线索串起来。`
+          ])
+        : '这里是玄喵讲解区。你可以继续提问，让玄喵把展线里的文物线索讲成一段故事。'
+    }
+  }
+
+  return null
+}
+
+function getVoiceGuideArtifactContext() {
+  const artifact = selectedArtifactDetail.value || selectedArtifact.value || {}
+  return {
+    site: artifact.siteLabel || '遗址',
+    era: artifact.eraLabel || artifact.yearLabel || '时代',
+    craft: artifact.craftLabel || '工艺',
+    summary: clipVoiceText(artifact.summary, 34)
+  }
+}
+
+function clipVoiceText(value, maxLength = 40) {
+  const text = String(value || '').replace(/\s+/g, ' ').trim()
+  if (!text) return ''
+  return text.length > maxLength ? `${text.slice(0, maxLength)}…` : text
+}
+
+function pickVoiceVariant(key, variants) {
+  if (!variants.length) return ''
+  let hash = 0
+  const source = `${key}-${lastNarrationIntent.value || 'start'}`
+  for (let index = 0; index < source.length; index += 1) {
+    hash = (hash * 31 + source.charCodeAt(index)) % 9973
+  }
+  return variants[hash % variants.length]
 }
 
 function toggleGuideExpanded(expanded) {
@@ -2442,9 +3026,11 @@ function goQuizChallenge() {
   --green-deep: #29483a;
   --gold: #b89243;
   --line: rgba(66, 102, 79, 0.14);
+  --voice-guide-top: 76px;
+  --voice-guide-space: 104px;
   position: relative;
   min-height: calc(100vh - 64px);
-  padding: 18px 28px 56px;
+  padding: var(--voice-guide-space) 28px 56px;
   color: var(--ink);
   background:
     radial-gradient(circle at 12% 0%, rgba(184, 146, 67, 0.18), transparent 22%),
@@ -2460,9 +3046,150 @@ function goQuizChallenge() {
 
 .trail-hero,
 .trail-stagebar,
-.trail-shell {
+.trail-shell,
+.voice-guide-panel {
   width: min(1400px, calc(100vw - 56px));
   margin: 0 auto;
+}
+
+.voice-guide-panel {
+  position: fixed;
+  top: var(--voice-guide-top);
+  left: max(28px, calc((100vw - 1120px) / 2));
+  right: max(28px, calc((100vw - 1120px) / 2));
+  z-index: 780;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  gap: 14px;
+  align-items: center;
+  width: auto;
+  margin-bottom: 16px;
+  padding: 12px 14px;
+  transform: none;
+  border: 1px solid rgba(184, 146, 67, 0.18);
+  border-radius: 20px;
+  background:
+    linear-gradient(135deg, rgba(255, 252, 243, 0.94), rgba(244, 239, 226, 0.9)),
+    var(--paper-soft);
+  box-shadow: 0 16px 34px rgba(78, 62, 31, 0.08);
+  backdrop-filter: blur(14px);
+}
+
+.voice-guide-panel--active {
+  border-color: rgba(66, 102, 79, 0.26);
+}
+
+.voice-guide-panel--loading .voice-guide-panel__mark {
+  background: linear-gradient(135deg, #b89243, var(--green));
+}
+
+.time-space-trail--immersive .voice-guide-panel {
+  background:
+    linear-gradient(135deg, rgba(14, 34, 26, 0.94), rgba(28, 50, 38, 0.9)),
+    #102018;
+  border-color: rgba(121, 196, 167, 0.18);
+  box-shadow: 0 18px 40px rgba(0, 0, 0, 0.2);
+}
+
+.voice-guide-panel__mark {
+  display: grid;
+  place-items: center;
+  width: 42px;
+  height: 42px;
+  border-radius: 16px;
+  color: #f8f2df;
+  background: linear-gradient(135deg, var(--green), var(--green-deep));
+  box-shadow: 0 12px 24px rgba(41, 72, 58, 0.2);
+}
+
+.voice-guide-panel__copy {
+  min-width: 0;
+}
+
+.voice-guide-panel__head {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  margin-bottom: 4px;
+}
+
+.voice-guide-panel__head strong {
+  font-size: 15px;
+  color: var(--ink);
+}
+
+.voice-guide-panel__head span {
+  flex: none;
+  padding: 3px 8px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 800;
+  color: var(--green-deep);
+  background: rgba(66, 102, 79, 0.1);
+}
+
+.voice-guide-panel__copy p {
+  margin: 0;
+  color: var(--ink-soft);
+  font-size: 13px;
+  line-height: 1.65;
+}
+
+.time-space-trail--immersive .voice-guide-panel__head strong {
+  color: #f4eddc;
+}
+
+.time-space-trail--immersive .voice-guide-panel__head span {
+  color: #d9f0e0;
+  background: rgba(121, 196, 167, 0.14);
+}
+
+.time-space-trail--immersive .voice-guide-panel__copy p {
+  color: rgba(233, 241, 233, 0.72);
+}
+
+.voice-guide-panel__actions {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  justify-content: flex-end;
+  min-width: 0;
+}
+
+.voice-guide-button {
+  flex: none;
+  min-height: 36px;
+  padding: 0 14px;
+  border: 1px solid rgba(66, 102, 79, 0.16);
+  border-radius: 999px;
+  color: var(--green-deep);
+  font-size: 13px;
+  font-weight: 800;
+  background: rgba(255, 255, 255, 0.72);
+  cursor: pointer;
+}
+
+.voice-guide-button--primary {
+  color: #fffaf0;
+  border-color: transparent;
+  background: linear-gradient(135deg, var(--green), var(--green-deep));
+  box-shadow: 0 12px 22px rgba(41, 72, 58, 0.18);
+}
+
+.voice-guide-button--ghost {
+  color: var(--ink-soft);
+  background: rgba(255, 255, 255, 0.48);
+}
+
+.time-space-trail--immersive .voice-guide-button {
+  color: #e6f2e7;
+  border-color: rgba(121, 196, 167, 0.16);
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.time-space-trail--immersive .voice-guide-button--primary {
+  color: #08110d;
+  background: linear-gradient(135deg, #d8bf72, #79c4a7);
 }
 
 .trail-nav {
@@ -2474,11 +3201,11 @@ function goQuizChallenge() {
 }
 
 .time-space-trail--compact {
-  padding-top: 10px;
+  padding-top: var(--voice-guide-space);
 }
 
 .time-space-trail--immersive {
-  padding: 0;
+  padding: var(--voice-guide-space) 0 0;
   background:
     radial-gradient(circle at 20% 0%, rgba(52, 97, 81, 0.16), transparent 42%),
     radial-gradient(circle at 100% 0%, rgba(182, 140, 52, 0.08), transparent 28%),
@@ -4486,14 +5213,38 @@ function goQuizChallenge() {
 
 @media (max-width: 760px) {
   .time-space-trail {
-    padding: 12px 14px 44px;
+    --voice-guide-top: 70px;
+    --voice-guide-space: 140px;
+    padding: var(--voice-guide-space) 14px 44px;
   }
 
   .trail-nav,
   .trail-hero,
   .trail-stagebar,
-  .trail-shell {
+  .trail-shell,
+  .voice-guide-panel {
     width: 100%;
+  }
+
+  .voice-guide-panel {
+    position: fixed;
+    top: var(--voice-guide-top);
+    left: 12px;
+    right: 12px;
+    width: auto;
+    grid-template-columns: 1fr;
+    gap: 10px;
+    padding: 14px;
+    transform: none;
+  }
+
+  .voice-guide-panel__mark {
+    display: none;
+  }
+
+  .voice-guide-panel__actions {
+    justify-content: flex-start;
+    flex-wrap: wrap;
   }
 
   .trail-hero {

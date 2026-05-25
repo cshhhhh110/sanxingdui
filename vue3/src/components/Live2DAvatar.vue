@@ -980,11 +980,12 @@ export default {
 
 <style>
 /* ========== 侧边栏布局 ========== */
+/* Keep the assistant above the fixed navbar (1000), but below fullscreen viewers and modal/guide overlays. */
 .live2d-wrapper {
   position: fixed;
   right: 0;
   bottom: 0;
-  z-index: 9999;
+  z-index: 1100;
 }
 
 /* 侧边唤出标签 */
@@ -1002,7 +1003,7 @@ export default {
   flex-direction: column;
   align-items: center;
   gap: 4px;
-  z-index: 10000;
+  z-index: 1110;
   transition: opacity 0.3s;
   box-shadow: -2px 0 12px rgba(139, 69, 19, 0.2);
 }
@@ -1255,7 +1256,7 @@ export default {
 #live2d-widget {
   bottom: 0px !important;
   right: 20px !important;
-  z-index: 9 !important;
+  z-index: 1100 !important;
 }
 
 #live2d-widget canvas {
@@ -1270,7 +1271,7 @@ export default {
   border: 2px solid #d4a574;
   border-radius: 16px;
   box-shadow: 0 12px 40px rgba(139, 69, 19, 0.2);
-  z-index: 999999;
+  z-index: 1300;
   opacity: 0;
   transform: translateY(10px) scale(0.95);
   pointer-events: none;
