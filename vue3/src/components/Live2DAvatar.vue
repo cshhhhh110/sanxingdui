@@ -1,9 +1,8 @@
 ﻿<template>
   <div class="live2d-wrapper" :class="{ open: isPanelOpen }">
     <!-- 渚ц竟鍞ゅ嚭鏍囩 -->
-    <div class="side-tab" @click="togglePanel" :class="{ 'has-msg': hasPendingMsg }">
-      <span class="tab-icon">喵</span>
-      <span class="tab-label">玄喵</span>
+    <div class="side-tab" @click="togglePanel" :class="{ 'has-msg': hasPendingMsg }" aria-label="打开玄喵" role="button" tabindex="0" @keydown.enter.prevent="togglePanel" @keydown.space.prevent="togglePanel">
+      <img :src="xuanmiaoPeekImage" alt="" />
     </div>
 
     <!-- 涓婚潰鏉?-->
@@ -113,11 +112,13 @@ import { getProductPage } from '../api/ShopProductApi.js';
 import { getEnabledCategories } from '../api/ShopCategoryApi.js';
 import { createOrder } from '../api/OrderApi.js';
 import { getUserDefaultAddress } from '../api/AddressApi.js';
+import xuanmiaoPeekImage from '../assets/sanxingdui-ai-chat/xuanmiao-peek-cutout.png';
 
 export default {
   name: 'Live2DAvatar',
   data() {
     return {
+      xuanmiaoPeekImage,
       // 渚ц竟鏍?
       isPanelOpen: true,   // 棣栨鍔犺浇灞曠ず鐜勫柕
       hasPendingMsg: false,
@@ -151,6 +152,7 @@ export default {
       currentAudioUrl: null,
       externalSpeechContext: null,
       ttsAbortController: null,
+      speechPlaybackToken: 0,
       playDelayTimer: null,
       fullTextToSpeak: '',
       displayedText: '',
@@ -1587,6 +1589,7 @@ export default {
       this.notifyExternalSpeech('stopped');
       this.clearAllTimers();
       this.stopAudio();
+      const playbackToken = this.speechPlaybackToken;
       this.externalSpeechContext = options.externalContext || null;
       this.isSpeaking = true;
       this.isStopped = false;
@@ -1611,21 +1614,28 @@ export default {
           });
           this.ttsAbortController = null;
         }
-        if (this.isDestroyed || !this.isSpeaking) {
+        const isCurrentSpeech = () => (
+          !this.isDestroyed &&
+          this.isSpeaking &&
+          this.speechPlaybackToken === playbackToken
+        );
+
+        if (!isCurrentSpeech()) {
           revokeSpeechUrl(audioUrl);
           return;
         }
 
         this.currentAudioUrl = audioUrl;
-        this.audioEl = new Audio(audioUrl);
+        const audioEl = new Audio(audioUrl);
+        this.audioEl = audioEl;
 
         let ttsReadyFired = false;
         const startPlaybackAndTyping = () => {
-          if (this.isDestroyed || ttsReadyFired || !this.isSpeaking) return;
+          if (!isCurrentSpeech() || this.audioEl !== audioEl || ttsReadyFired) return;
           ttsReadyFired = true;
 
           this.stopThinkingStatus();
-          const duration = this.audioEl.duration || 3;
+          const duration = audioEl.duration || 3;
           const charDelay = Math.max(45, Math.min(140, charDelayHint || (duration * 1000) / Math.max(finalText.length, 12)));
 
           this.displayedText = '';
@@ -1651,9 +1661,9 @@ export default {
 
           clearTimeout(this.playDelayTimer);
           this.playDelayTimer = setTimeout(() => {
-            if (this.isDestroyed || !this.isSpeaking || !this.audioEl) return;
-            this.audioEl.play().catch(() => {
-              if (this.isDestroyed) return;
+            if (!isCurrentSpeech() || this.audioEl !== audioEl) return;
+            audioEl.play().catch(() => {
+              if (!isCurrentSpeech() || this.audioEl !== audioEl) return;
               this.notifyExternalSpeech('error');
               this.continueTypingWithoutSpeech();
               this.startAutoHide();
@@ -1661,16 +1671,16 @@ export default {
           }, playDelayMs);
         };
 
-        this.audioEl.onloadedmetadata = startPlaybackAndTyping;
+        audioEl.onloadedmetadata = startPlaybackAndTyping;
         setTimeout(() => {
-          if (this.isDestroyed) return;
+          if (!isCurrentSpeech() || this.audioEl !== audioEl) return;
           if (!ttsReadyFired) {
             startPlaybackAndTyping();
           }
         }, 500);
 
-        this.audioEl.onended = () => {
-          if (this.isDestroyed || !this.isSpeaking) return;
+        audioEl.onended = () => {
+          if (!isCurrentSpeech() || this.audioEl !== audioEl) return;
           this.stopThinkingStatus();
           clearInterval(this.typewriterInterval);
           this.typewriterInterval = null;
@@ -1682,8 +1692,8 @@ export default {
           this.startAutoHide();
           this.notifyExternalSpeech('ended');
         };
-        this.audioEl.onerror = () => {
-          if (this.isDestroyed) return;
+        audioEl.onerror = () => {
+          if (!isCurrentSpeech() || this.audioEl !== audioEl) return;
           this.stopThinkingStatus();
           this.notifyExternalSpeech('error');
           this.continueTypingWithoutSpeech();
@@ -1727,6 +1737,7 @@ export default {
     },
 
     stopAudio() {
+      this.speechPlaybackToken += 1;
       if (this.ttsAbortController) {
         this.ttsAbortController.abort();
         this.ttsAbortController = null;
@@ -1851,43 +1862,48 @@ export default {
   right: 0;
   top: 40%;
   transform: translateY(-50%);
-  width: 32px;
-  padding: 10px 6px;
-  background: linear-gradient(135deg, #d4a574, #c49464);
-  border-radius: 8px 0 0 8px;
+  width: 86px;
+  height: 140px;
+  padding: 0;
+  overflow: hidden;
+  background: transparent;
+  border: 0;
+  border-radius: 0;
   cursor: pointer;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 4px;
+  display: block;
   z-index: 1110;
-  transition: opacity 0.3s;
-  box-shadow: -2px 0 12px rgba(139, 69, 19, 0.2);
+  transition: opacity 0.3s ease, transform 0.24s ease;
+  box-shadow: none;
 }
 .live2d-wrapper.open .side-tab { opacity: 0; pointer-events: none; }
+
+.side-tab:hover,
+.side-tab:focus-visible {
+  transform: translateY(-50%) translateX(-4px);
+  outline: none;
+}
+
+.side-tab img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  object-position: right center;
+  pointer-events: none;
+  user-select: none;
+}
 
 .side-tab.has-msg::after {
   content: '';
   position: absolute;
-  top: 4px;
-  right: 4px;
-  width: 8px;
-  height: 8px;
+  top: 18px;
+  right: 16px;
+  width: 10px;
+  height: 10px;
   background: #e74c3c;
+  border: 2px solid #fff9f0;
   border-radius: 50%;
   animation: pulse 2s infinite;
-}
-
-.tab-icon {
-  font-size: 13px;
-  font-weight: 700;
-  line-height: 1;
-}
-.tab-label {
-  writing-mode: vertical-rl;
-  font-size: 11px;
-  color: #fff;
-  letter-spacing: 2px;
 }
 
 /* 涓婚潰鏉?*/

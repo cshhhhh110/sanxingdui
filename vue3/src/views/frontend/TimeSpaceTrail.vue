@@ -2,7 +2,8 @@
   <main class="time-space-trail" :class="{ 'time-space-trail--compact': activeScene > 1, 'time-space-trail--immersive': activeScene === 3 }">
     <section class="voice-guide-panel" :class="{ 'voice-guide-panel--active': voiceGuideEnabled, 'voice-guide-panel--loading': voiceGuideLoading }" aria-label="玄喵陪游">
       <div class="voice-guide-panel__mark" aria-hidden="true">
-        <i :class="voiceGuideLoading ? 'fas fa-spinner fa-spin' : voiceGuidePlaying ? 'fas fa-volume-high' : 'fas fa-headphones'"></i>
+        <img :src="aiAvatar" alt="" />
+        <i v-if="voiceGuideLoading" class="fas fa-spinner fa-spin"></i>
       </div>
       <div class="voice-guide-panel__copy">
         <div class="voice-guide-panel__head">
@@ -75,6 +76,16 @@
         </div>
       </section>
     </Transition>
+
+    <button
+      class="trail-step-back showcase-button-hover"
+      type="button"
+      :aria-label="trailStepBackLabel"
+      @click="goBackTrailStep"
+    >
+      <i class="fas fa-arrow-left" aria-hidden="true"></i>
+      <span>{{ trailStepBackLabel }}</span>
+    </button>
 
     <section v-if="activeScene === 1" class="trail-hero">
       <div class="hero-copy showcase-enter" style="--delay: 0s">
@@ -611,7 +622,7 @@
               </div>
             </article>
 
-            <aside class="insight-panel">
+            <aside ref="insightPanelRef" class="insight-panel">
               <section class="panel-card panel-card--hero">
                 <p class="panel-label">文物档案</p>
                 <h2>{{ selectedArtifactDetail?.displayTitle || '选中文物' }}</h2>
@@ -624,12 +635,12 @@
                 </dl>
               </section>
 
-              <section class="panel-card graph-panel" :class="{ 'graph-panel--fullscreen': isGraphFullscreen }">
+              <section ref="graphPanelRef" class="panel-card graph-panel" :class="{ 'graph-panel--fullscreen': isGraphFullscreen }">
                 <div v-if="isGraphFullscreen" class="fullscreen-return-hint fullscreen-return-hint--graph" aria-live="polite">
                   <span>Esc</span>
                   返回展线
                 </div>
-                <div class="section-head">
+                <div class="section-head graph-panel__toolbar">
                   <div>
                     <p class="panel-label">关系网络</p>
                     <h3 class="section-title">图谱探索器</h3>
@@ -646,7 +657,7 @@
 
                 <p class="graph-lead">{{ activeNarrative }}</p>
 
-                <div class="type-filter-row">
+                <div class="type-filter-row" :aria-label="graphFilterHint">
                   <button
                     v-for="item in graphTypeFilters"
                     :key="item.type"
@@ -660,9 +671,13 @@
                     <strong>{{ item.count }}</strong>
                   </button>
                 </div>
+                <p class="graph-filter-hint">{{ graphFilterHint }}</p>
 
-                <div class="graph-stage">
+                <div class="graph-stage" :class="{ 'graph-stage--loading': graphLoading }">
                   <div ref="graphRef" class="graph-canvas"></div>
+                  <div v-if="graphLoading" class="graph-loading-badge" aria-live="polite">
+                    图谱正在展开关系...
+                  </div>
                   <p v-if="graphError" class="graph-error">{{ graphError }}</p>
                 </div>
 
@@ -732,7 +747,26 @@
 
           <div v-if="!guideExpanded" class="guide-preview">
             <div class="guide-preview__copy">
-              <div class="guide-avatar showcase-float" style="--delay: 0.2s">
+              <div v-if="guideArtifactVisual" class="guide-artifact-visual guide-artifact-visual--preview">
+                <img :src="guideArtifactVisual.image" :alt="guideArtifactVisual.title" />
+                <div class="guide-artifact-visual__shade"></div>
+                <div class="guide-artifact-visual__meta">
+                  <span>上一幕展品</span>
+                  <strong>{{ guideArtifactVisual.title }}</strong>
+                </div>
+                <button
+                  v-if="guideArtifactVisual.hasModel"
+                  class="guide-artifact-visual__action showcase-button-hover"
+                  type="button"
+                  @click="scrollToStage"
+                >
+                  回看 3D
+                </button>
+                <div class="guide-artifact-visual__xuanmiao" aria-hidden="true">
+                  <img :src="aiAvatar" alt="" />
+                </div>
+              </div>
+              <div v-else class="guide-avatar showcase-float" style="--delay: 0.2s">
                 <img :src="aiAvatar" alt="玄喵讲解员" />
               </div>
               <h3>{{ selectedArtifactDetail?.displayTitle || '玄喵正在等待新的文物线索' }}</h3>
@@ -758,7 +792,26 @@
 
           <div v-else class="guide-shell">
             <aside class="guide-context">
-              <div class="guide-avatar showcase-float" style="--delay: 0.2s">
+              <div v-if="guideArtifactVisual" class="guide-artifact-visual">
+                <img :src="guideArtifactVisual.image" :alt="guideArtifactVisual.title" />
+                <div class="guide-artifact-visual__shade"></div>
+                <div class="guide-artifact-visual__meta">
+                  <span>上一幕展品</span>
+                  <strong>{{ guideArtifactVisual.title }}</strong>
+                </div>
+                <button
+                  v-if="guideArtifactVisual.hasModel"
+                  class="guide-artifact-visual__action showcase-button-hover"
+                  type="button"
+                  @click="scrollToStage"
+                >
+                  回看 3D
+                </button>
+                <div class="guide-artifact-visual__xuanmiao" aria-hidden="true">
+                  <img :src="aiAvatar" alt="" />
+                </div>
+              </div>
+              <div v-else class="guide-avatar showcase-float" style="--delay: 0.2s">
                 <img :src="aiAvatar" alt="玄喵讲解员" />
               </div>
               <h3>{{ selectedArtifactDetail?.displayTitle || '玄喵正在等待新的文物线索' }}</h3>
@@ -780,17 +833,6 @@
               <button class="guide-fold showcase-button-hover" type="button" @click="toggleGuideExpanded(false)">
                 收起讲解台
               </button>
-              <div class="quick-questions">
-                <button
-                  v-for="item in quickQuestions"
-                  :key="item.text"
-                  class="question-pill showcase-button-hover"
-                  type="button"
-                  @click="sendMessage(item.text)"
-                >
-                  {{ item.text }}
-                </button>
-              </div>
             </aside>
 
             <section class="guide-chat">
@@ -817,7 +859,19 @@
                   </div>
                 </article>
 
-                <article v-if="isThinking && showThinkingBubble" class="message-row message-row--assistant">
+              <div class="quick-questions quick-questions--chat" aria-label="推荐提问">
+                <button
+                  v-for="item in quickQuestions"
+                  :key="item.text"
+                  class="question-pill showcase-button-hover"
+                  type="button"
+                  @click="sendMessage(item.text)"
+                >
+                  {{ item.text }}
+                </button>
+              </div>
+
+              <article v-if="isThinking && showThinkingBubble" class="message-row message-row--assistant">
                   <div class="message-avatar">
                     <img :src="aiAvatar" alt="玄喵" />
                   </div>
@@ -909,7 +963,7 @@ import { matchFixedAnswer } from '@/config/chatReplyConfig'
 import { buildFallbackReply, buildRagPrompt, searchKnowledge } from '@/utils/knowledgeSearch'
 import { formatYearRange } from '@/data/competitionArtifacts'
 import { pushCompetitionTrail, getRecentArtifactTrail } from '@/utils/competitionTrail'
-import aiAvatar from '@/assets/sanxingdui-ai-chat/ai-avatar.png'
+import aiAvatar from '@/assets/sanxingdui-ai-chat/xuanmiao-avatar.png'
 
 const TYPE_LABELS = {
   artifact: '相关文物',
@@ -1221,6 +1275,8 @@ const filterSectionRef = ref(null)
 const viewerRef = ref(null)
 const canvasRef = ref(null)
 const graphRef = ref(null)
+const insightPanelRef = ref(null)
+const graphPanelRef = ref(null)
 const messagesRef = ref(null)
 
 const userDisplayName = computed(() => userStore.displayName || '用户')
@@ -1282,6 +1338,8 @@ const graphError = ref('')
 const graphLoading = ref(false)
 const activeTypeFilters = ref([])
 const selectedNodeId = ref('')
+const hoverNodeId = ref('')
+const focusedPathIds = ref({ nodes: new Set(), edges: new Set() })
 const expandedNodeIds = ref(new Set())
 
 const draft = ref('')
@@ -1294,6 +1352,7 @@ const guideUserQuestionCount = ref(0)
 const showQuizPromo = ref(false)
 const trailNextCardDismissed = ref(false)
 const trailLoopHintVisible = ref(false)
+const trailViewHistory = ref([])
 const voiceGuideEnabled = ref(false)
 const voiceGuidePaused = ref(false)
 const voiceGuidePlaying = ref(false)
@@ -1317,6 +1376,7 @@ let frameId = 0
 let graphInstance = null
 let graphClickTimer = null
 let resizeObserver = null
+let graphStablePositions = new Map()
 let environmentTexture = null
 let pmremGenerator = null
 let filterTimer = null
@@ -1329,6 +1389,7 @@ let voiceGuideAudioUrl = ''
 let pendingVoiceGuideNarration = null
 let voiceGuideAbortController = null
 let voiceGuideActivePlayback = null
+let isRestoringTrailView = false
 const voiceGuideAudioCache = new Map()
 const recentNarrationKeys = new Set()
 const recentNarrationKeyQueue = []
@@ -1430,6 +1491,10 @@ const showTrailLoopNudge = computed(() => (
   guideUserQuestionCount.value >= TRAIL_LOOP_NUDGE_TRIGGER_ROUNDS
 ))
 const showTrailNextCard = computed(() => activeScene.value === 4 && guideExpanded.value && showQuizPromo.value)
+const trailStepBackLabel = computed(() => {
+  if (isViewerFullscreen.value || isGraphFullscreen.value) return '返回展线'
+  return trailViewHistory.value.length ? '返回上一步' : '回到入口'
+})
 
 const hasTrailAnchor = computed(() => Boolean(
   activePitCode.value ||
@@ -1544,6 +1609,17 @@ const compactStageLine = computed(() => {
 })
 
 const hasModel = computed(() => Boolean(selectedArtifactDetail.value?.resolvedGlbUrl))
+const guideArtifactVisual = computed(() => {
+  const artifact = selectedArtifactDetail.value || selectedArtifact.value
+  if (!artifact) return null
+  const image = artifact.cardImage || artifact.coverImage || ''
+  if (!image) return null
+  return {
+    title: artifact.displayTitle || artifact.title || '当前文物',
+    image,
+    hasModel: Boolean(artifact.resolvedGlbUrl || artifact.isModelReady)
+  }
+})
 const previousArtifact = computed(() => {
   if (!selectedArtifactDetail.value?.entityId) {
     return getRecentArtifactTrail(1)[0] || null
@@ -1588,6 +1664,7 @@ const selectedGraphNode = computed(() => {
   return graphPayload.value.nodes.find((node) => node.id === targetId) || graphPayload.value.nodes[0] || null
 })
 
+const selectedNodeTypeLabel = computed(() => TYPE_LABELS[selectedGraphNode.value?.type] || '关系线索')
 const selectedNodeTitle = computed(() => selectedGraphNode.value?.label || selectedArtifactDetail.value?.displayTitle || '等待图谱载入')
 const selectedNodeSummary = computed(() => {
   return selectedGraphNode.value?.summary || '顺着这条关系继续展开，你会看到文物如何回到古蜀文明的时空与工艺语境中。'
@@ -1672,6 +1749,15 @@ const graphTypeFilters = computed(() => {
     description: TYPE_DESCRIPTIONS[type] || '图谱节点类型',
     count: counts[type] || 0
   }))
+})
+
+const graphFilterHint = computed(() => {
+  const total = graphPayload.value.availableTypes.length
+  const active = activeTypeFilters.value.length
+  if (!total) return '图谱类型会随当前文物自动载入。'
+  if (active === total) return '当前显示全部关系类型；点击类型可临时收起，至少会保留一类避免图谱空白。'
+  const labels = activeTypeFilters.value.map((type) => TYPE_LABELS[type] || type).join('、')
+  return `当前只看：${labels || '全部关系'}。再次点击可恢复对应类型。`
 })
 
 const xuanmiaoTrailMode = computed(() => {
@@ -1865,11 +1951,15 @@ function buildArtifactReason(item) {
 async function selectArtifact(artifact, reason = '', options = {}) {
   if (!artifact?.entityId) return
 
-  const { keepScene = false } = options
+  const { keepScene = false, skipHistory = false } = options
 
   const sameArtifact =
     selectedArtifactId.value === artifact.entityId &&
     selectedArtifactDetail.value?.entityId === artifact.entityId
+
+  if (!skipHistory && !sameArtifact) {
+    pushTrailViewSnapshot('select-artifact')
+  }
 
   selectedArtifactId.value = artifact.entityId
   selectedReason.value = reason || buildArtifactReason(artifact)
@@ -1931,6 +2021,138 @@ function syncQueryState() {
       entityId: selectedArtifactId.value || undefined
     }
   })
+}
+
+function createTrailViewSnapshot(reason = '') {
+  return {
+    reason,
+    activeScene: activeScene.value,
+    activePitCode: activePitCode.value,
+    selectedArtifactId: selectedArtifactId.value,
+    selectedNodeId: selectedNodeId.value,
+    stageVisible: stageVisible.value,
+    guideExpanded: guideExpanded.value,
+    meaningFocus: meaningFocus.value,
+    activeGuideClues: { ...activeGuideClues.value },
+    isViewerFullscreen: isViewerFullscreen.value,
+    isGraphFullscreen: isGraphFullscreen.value
+  }
+}
+
+function getTrailViewSnapshotKey(snapshot) {
+  return JSON.stringify({
+    activeScene: snapshot.activeScene,
+    activePitCode: snapshot.activePitCode,
+    selectedArtifactId: snapshot.selectedArtifactId,
+    selectedNodeId: snapshot.selectedNodeId,
+    stageVisible: snapshot.stageVisible,
+    guideExpanded: snapshot.guideExpanded,
+    meaningFocus: snapshot.meaningFocus,
+    activeGuideClues: snapshot.activeGuideClues,
+    isViewerFullscreen: snapshot.isViewerFullscreen,
+    isGraphFullscreen: snapshot.isGraphFullscreen
+  })
+}
+
+function pushTrailViewSnapshot(reason = '') {
+  if (isRestoringTrailView) return
+  const snapshot = createTrailViewSnapshot(reason)
+  const latest = trailViewHistory.value[trailViewHistory.value.length - 1]
+  if (latest && getTrailViewSnapshotKey(latest) === getTrailViewSnapshotKey(snapshot)) return
+  trailViewHistory.value = [...trailViewHistory.value.slice(-7), snapshot]
+}
+
+function scrollToTrailSnapshot(snapshot) {
+  nextTick(() => {
+    if (snapshot.activeScene === 1) {
+      filterSectionRef.value?.scrollIntoView?.({ behavior: 'smooth', block: 'start' })
+      return
+    }
+    if (snapshot.activeScene === 2) {
+      artifactSectionRef.value?.scrollIntoView?.({ behavior: 'smooth', block: 'start' })
+      return
+    }
+    if (snapshot.activeScene === 3) {
+      stageSectionRef.value?.scrollIntoView?.({ behavior: 'smooth', block: 'start' })
+      restoreGraphPanelScrollPosition()
+      return
+    }
+    if (snapshot.activeScene === 4) {
+      guideSectionRef.value?.scrollIntoView?.({ behavior: 'smooth', block: 'start' })
+      scrollMessagesToBottom()
+    }
+  })
+}
+
+async function restoreTrailViewSnapshot(snapshot) {
+  isRestoringTrailView = true
+  try {
+    if (isViewerFullscreen.value) setViewerFullscreen(false)
+    if (isGraphFullscreen.value) setGraphFullscreen(false)
+
+    activeScene.value = snapshot.activeScene || 1
+    activePitCode.value = snapshot.activePitCode || ''
+    selectedArtifactId.value = snapshot.selectedArtifactId || ''
+    selectedNodeId.value = snapshot.selectedNodeId || ''
+    stageVisible.value = Boolean(snapshot.stageVisible)
+    guideExpanded.value = Boolean(snapshot.guideExpanded)
+    meaningFocus.value = snapshot.meaningFocus || ''
+    activeGuideClues.value = { ...(snapshot.activeGuideClues || {}) }
+    trailLoopHintVisible.value = false
+    trailNextCardDismissed.value = false
+    syncQueryState()
+
+    if (
+      selectedArtifactId.value &&
+      selectedArtifactDetail.value?.entityId !== selectedArtifactId.value
+    ) {
+      await loadSelectedArtifactExperience(selectedArtifactId.value)
+      stageVisible.value = Boolean(snapshot.stageVisible)
+      guideExpanded.value = Boolean(snapshot.guideExpanded)
+      selectedNodeId.value = snapshot.selectedNodeId || selectedNodeId.value
+    }
+
+    await nextTick()
+    if (activeScene.value === 3 && stageVisible.value) {
+      await ensureStageExperience(true)
+      if (selectedNodeId.value) {
+        await applyFocusState(selectedNodeId.value, false)
+      }
+    }
+    scrollToTrailSnapshot(snapshot)
+  } finally {
+    isRestoringTrailView = false
+  }
+}
+
+async function goBackTrailStep() {
+  if (isViewerFullscreen.value) {
+    setViewerFullscreen(false)
+    return
+  }
+  if (isGraphFullscreen.value) {
+    setGraphFullscreen(false)
+    return
+  }
+
+  const history = [...trailViewHistory.value]
+  const snapshot = history.pop()
+  trailViewHistory.value = history
+
+  if (snapshot) {
+    await restoreTrailViewSnapshot(snapshot)
+    return
+  }
+
+  if (activeScene.value !== 1 || stageVisible.value || guideExpanded.value) {
+    pushTrailViewSnapshot('fallback-entry')
+    activeScene.value = 1
+    stageVisible.value = false
+    guideExpanded.value = false
+    trailLoopHintVisible.value = true
+    await nextTick()
+    filterSectionRef.value?.scrollIntoView?.({ behavior: 'smooth', block: 'start' })
+  }
 }
 
 function describeFacet(option) {
@@ -2010,7 +2232,8 @@ function enterPitArtifact(artifact) {
     : `你从三星堆祭祀坑俯瞰图进入，先看 ${artifact.name}。`
 
   announcePitVoiceGuide(`${reason} 玄喵会沿着这条空间线索继续讲。`, `${pitCode || 'artifact'}-${artifact.entityId}`)
-  void selectArtifact(fallbackArtifact, reason)
+  pushTrailViewSnapshot('pit-artifact')
+  void selectArtifact(fallbackArtifact, reason, { skipHistory: true })
 }
 
 function selectGuideClue(group, clue) {
@@ -2342,6 +2565,7 @@ async function executeTrailCommand(command) {
     }
 
     if (command.action === 'goSceneOne') {
+      pushTrailViewSnapshot('command-scene-one')
       activeScene.value = 1
       stageVisible.value = false
       guideExpanded.value = false
@@ -2396,6 +2620,7 @@ async function ensureTrailArtifactDetailReady() {
 }
 
 async function executeTrailGoToArtifact(artifactCommand) {
+  pushTrailViewSnapshot('command-artifact')
   const target =
     artifacts.value.find((item) => item.entityId === artifactCommand.entityId) ||
     (selectedArtifactDetail.value?.entityId === artifactCommand.entityId ? selectedArtifactDetail.value : null) ||
@@ -2419,7 +2644,8 @@ async function executeTrailGoToArtifact(artifactCommand) {
   }
 
   const selectPromise = selectArtifact(target, `玄喵根据你的指令，带你直接来到 ${artifactCommand.title}。`, {
-    keepScene: true
+    keepScene: true,
+    skipHistory: true
   })
 
   await runTrailCommandTransitionStep(
@@ -2463,6 +2689,7 @@ async function executeTrailGoToArtifact(artifactCommand) {
 }
 
 function executeTrailSelectPit(pitCommand) {
+  pushTrailViewSnapshot('command-select-pit')
   activeScene.value = 1
   stageVisible.value = false
   guideExpanded.value = false
@@ -2512,17 +2739,37 @@ function findGraphNodeByTrailCommand(target, rawText) {
   if (!nodes.length) return null
 
   if (!target) {
-    return nodes.find((node) => node.id !== graphPayload.value.centerNodeId) || nodes[0]
+    return nodes.find((node) => node.id === graphPayload.value.centerNodeId) || nodes[0]
   }
 
   const aliases = target.aliases.map((alias) => normalizeTrailCommandText(alias))
   const typedNodes = nodes.filter((node) => node.type === target.type)
-  const exactNode = typedNodes.find((node) => {
-    const label = normalizeTrailCommandText(`${node.label || ''}${node.summary || ''}${node.routeTarget || ''}`)
-    return aliases.some((alias) => rawText.includes(alias) && label.includes(alias))
+  const scoredNodes = typedNodes
+    .map((node) => ({
+      node,
+      score: scoreGraphNodeForTrailCommand(node, rawText, aliases, target)
+    }))
+    .sort((a, b) => b.score - a.score)
+
+  const best = scoredNodes[0]
+  return best && best.score >= 5 ? best.node : null
+}
+
+function scoreGraphNodeForTrailCommand(node, rawText, aliases, target) {
+  const haystack = normalizeTrailCommandText(`${node.label || ''}${node.summary || ''}${node.routeTarget || ''}${node.entityId || ''}`)
+  let score = node.type === target.type ? 5 : 0
+
+  aliases.forEach((alias) => {
+    if (!alias) return
+    if (rawText.includes(alias)) score += 4
+    if (haystack.includes(alias)) score += 6
+    if (rawText.includes(alias) && haystack.includes(alias)) score += 10
   })
 
-  return exactNode || typedNodes[0] || null
+  if (haystack && rawText.includes(haystack)) score += 12
+  if (node.id === graphPayload.value.centerNodeId) score += 2
+  score += Math.min(Number(node.importance || 0), 100) / 100
+  return score
 }
 
 async function executeTrailFocusGraphNode(target, rawText) {
@@ -2543,7 +2790,7 @@ async function executeTrailFocusGraphNode(target, rawText) {
 
   const node = findGraphNodeByTrailCommand(target, rawText)
   if (!node) {
-    sayTrailCommand('我在当前图谱里暂时没找到这个线索。你可以换成“工艺、遗址、时代、材质、象征”这类词再试。', 'graph-missing')
+    sayTrailCommand('我在当前图谱里还不能确定你要看哪条线索。你可以直接说“看工艺关系”“看寓意关系”或“看遗址关系”。', 'graph-missing')
     return
   }
 
@@ -2553,6 +2800,9 @@ async function executeTrailFocusGraphNode(target, rawText) {
     await renderGraph()
   }
 
+  if (selectedNodeId.value !== node.id) {
+    pushTrailViewSnapshot('command-graph-node')
+  }
   selectedNodeId.value = node.id
   await nextTick()
   await applyFocusState(node.id)
@@ -2600,12 +2850,15 @@ async function ensureStageExperience(force = false) {
 }
 
 function goToScene(sceneId) {
+  if (sceneId === activeScene.value) return
   if (sceneId === 1) {
+    pushTrailViewSnapshot('nav-scene-1')
     activeScene.value = 1
     return
   }
 
   if (sceneId === 2) {
+    pushTrailViewSnapshot('nav-scene-2')
     trailLoopHintVisible.value = false
     activeScene.value = 2
     return
@@ -2613,6 +2866,7 @@ function goToScene(sceneId) {
 
   if (sceneId === 3) {
     if (!selectedArtifact.value) return
+    pushTrailViewSnapshot('nav-scene-3')
     trailLoopHintVisible.value = false
     stageVisible.value = true
     activeScene.value = 3
@@ -2621,6 +2875,7 @@ function goToScene(sceneId) {
 
   if (sceneId === 4) {
     if (!selectedArtifact.value) return
+    pushTrailViewSnapshot('nav-scene-4')
     trailLoopHintVisible.value = false
     trailNextCardDismissed.value = false
     stageVisible.value = true
@@ -2630,12 +2885,18 @@ function goToScene(sceneId) {
 }
 
 function scrollToArtifacts() {
+  if (activeScene.value !== 2) {
+    pushTrailViewSnapshot('to-artifacts')
+  }
   trailLoopHintVisible.value = false
   activeScene.value = 2
 }
 
 function scrollToStage() {
   if (!selectedArtifact.value) return
+  if (activeScene.value !== 3 || !stageVisible.value) {
+    pushTrailViewSnapshot('to-stage')
+  }
   trailLoopHintVisible.value = false
   stageVisible.value = true
   activeScene.value = 3
@@ -2643,6 +2904,9 @@ function scrollToStage() {
 
 function scrollToGuide() {
   if (!selectedArtifact.value) return
+  if (activeScene.value !== 4 || !guideExpanded.value) {
+    pushTrailViewSnapshot('to-guide')
+  }
   trailLoopHintVisible.value = false
   trailNextCardDismissed.value = false
   stageVisible.value = true
@@ -2707,14 +2971,13 @@ function scheduleVoiceGuideNarration(force = false) {
     const samePlayingContext =
       voiceGuidePlaying.value &&
       narration.scene === voiceGuideActiveContext.scene &&
-      narration.entityId === voiceGuideActiveContext.entityId
+      narration.entityId === voiceGuideActiveContext.entityId &&
+      narration.key === voiceGuideActivePlayback?.key
 
     if (!samePlayingContext || force) {
       voiceGuideLoading.value = true
       voiceGuideError.value = ''
-      if (!voiceGuidePlaying.value || force) {
-        currentNarrationText.value = narration.text
-      }
+      currentNarrationText.value = narration.text
     }
 
     if (voiceGuideTimer) window.clearTimeout(voiceGuideTimer)
@@ -2749,7 +3012,8 @@ async function playVoiceGuideNarration(narration, force = false) {
   const samePlayingContext =
     voiceGuidePlaying.value &&
     narration.scene === voiceGuideActiveContext.scene &&
-    narration.entityId === voiceGuideActiveContext.entityId
+    narration.entityId === voiceGuideActiveContext.entityId &&
+    narration.key === voiceGuideActivePlayback?.key
 
   if (samePlayingContext && !force) {
     pendingVoiceGuideNarration = narration
@@ -2769,10 +3033,11 @@ async function playVoiceGuideNarration(narration, force = false) {
   stopVoiceGuideAudio()
 
   try {
+    const preferredVoice = getVoiceGuidePreferredVoice()
     const cacheKey = getVoiceGuideCacheKey(narration)
-    const prebuiltEntry = narration.skipPreset ? null : resolvePrebuiltVoiceGuideEntry(narration)
+    const prebuiltEntry = narration.skipPreset ? null : resolvePrebuiltVoiceGuideEntry(narration, preferredVoice)
     const resolvedCacheKey = prebuiltEntry
-      ? `preset:${prebuiltEntry.key}:${prebuiltEntry.contentHash || prebuiltEntry.audioUrl}`
+      ? `preset:${preferredVoice}:${prebuiltEntry.key}:${prebuiltEntry.contentHash || prebuiltEntry.audioUrl}`
       : cacheKey
     let audioUrl = voiceGuideAudioCache.get(resolvedCacheKey)
     let usedPrebuilt = false
@@ -2784,7 +3049,7 @@ async function playVoiceGuideNarration(narration, force = false) {
           currentNarrationText.value = prebuiltEntry.text
         }
       } else {
-        audioUrl = await synthesizeVoiceGuideSpeech(narration.text)
+        audioUrl = await synthesizeVoiceGuideSpeech(narration.text, preferredVoice)
         if (!isVoiceGuideRequestCurrent(requestId, narration)) {
           revokeSpeechUrl(audioUrl)
           return
@@ -2819,7 +3084,7 @@ async function playVoiceGuideNarration(narration, force = false) {
   }
 }
 
-async function synthesizeVoiceGuideSpeech(text) {
+async function synthesizeVoiceGuideSpeech(text, voice = getVoiceGuidePreferredVoice()) {
   voiceGuideAbortController?.abort?.()
   const controller = new AbortController()
   voiceGuideAbortController = controller
@@ -2834,7 +3099,7 @@ async function synthesizeVoiceGuideSpeech(text) {
 
   try {
     return await Promise.race([
-      synthesizeSpeech(text, 'default', 1.0, { signal: controller.signal }),
+      synthesizeSpeech(text, voice, 1.0, { signal: controller.signal }),
       timeoutPromise
     ])
   } finally {
@@ -2863,41 +3128,38 @@ async function loadVoiceGuideManifest() {
       }
     })
     prebuiltVoiceGuideEntries.forEach((list) => {
-      list.sort((a, b) => (b.priority || 0) - (a.priority || 0))
+      list.sort((a, b) => {
+        if (a.legacy !== b.legacy) return a.legacy ? 1 : -1
+        const priorityDiff = (b.priority || 0) - (a.priority || 0)
+        if (priorityDiff) return priorityDiff
+        return String(a.variant || a.key || '').localeCompare(String(b.variant || b.key || ''))
+      })
     })
   } catch (error) {
     console.warn('玄喵陪游预制清单读取失败，将使用实时 TTS。', error)
   }
 }
 
-function resolvePrebuiltVoiceGuideEntry(narration) {
+function resolvePrebuiltVoiceGuideEntry(narration, preferredVoice = getVoiceGuidePreferredVoice()) {
   const keys = Array.isArray(narration.presetKeys) ? narration.presetKeys : []
   for (const key of keys) {
-    const entries = prebuiltVoiceGuideEntries.get(key) || []
-    const entry = pickPrebuiltVoiceVariant(entries, `${narration.key}-${key}`)
-    const audioUrl = getPrebuiltAudioUrl(entry)
+    const entries = (prebuiltVoiceGuideEntries.get(key) || []).filter((entry) =>
+      Boolean(getPrebuiltAudioUrl(entry, preferredVoice))
+    )
+    const entry = pickPrebuiltVoiceVariant(entries, `${narration.key}-${key}`, preferredVoice)
+    const audioUrl = getPrebuiltAudioUrl(entry, preferredVoice)
     if (audioUrl) return { ...entry, audioUrl }
   }
   return null
 }
 
-function getPrebuiltAudioUrl(entry) {
+function getPrebuiltAudioUrl(entry, preferredVoice = getVoiceGuidePreferredVoice()) {
   if (!entry) return ''
-  const preferredVoice = getVoiceGuidePreferredVoice()
   const readyVoices = Array.isArray(entry.readyVoices) ? entry.readyVoices : []
-  const voiceCandidates = [
-    preferredVoice,
-    'default',
-    'zh_female',
-    'sweet',
-    ...readyVoices
-  ].filter(Boolean)
-  for (const voice of voiceCandidates) {
-    if (readyVoices.length && !readyVoices.includes(voice)) continue
-    const source = entry.sources?.[voice]?.wav
-    if (source) return source
-  }
-  return entry?.sources?.wav || entry?.audioUrl || ''
+  if (readyVoices.length && !readyVoices.includes(preferredVoice)) return ''
+  const source = entry.sources?.[preferredVoice]?.wav
+  if (source) return source
+  return preferredVoice === 'default' ? (entry?.sources?.wav || entry?.audioUrl || '') : ''
 }
 
 function dispatchXuanmiaoSpeech(narration, audioUrl, text) {
@@ -2973,20 +3235,25 @@ function hasPrebuiltAudio(entry) {
 
 function getVoiceGuidePreferredVoice() {
   try {
-    return localStorage.getItem('xuanmiao_voice') || 'default'
+    const voice = localStorage.getItem('xuanmiao_voice') || 'default'
+    return ['default', 'zh_female', 'sweet'].includes(voice) ? voice : 'default'
   } catch (error) {
     return 'default'
   }
 }
 
-function pickPrebuiltVoiceVariant(entries, seed) {
+function pickPrebuiltVoiceVariant(entries, seed, preferredVoice = getVoiceGuidePreferredVoice()) {
   if (!entries.length) return null
+  const voiceReadyEntries = entries.filter((entry) => Boolean(getPrebuiltAudioUrl(entry, preferredVoice)))
+  const modernEntries = voiceReadyEntries.filter((entry) => !entry.legacy)
+  const candidates = modernEntries.length ? modernEntries : voiceReadyEntries
+  if (!candidates.length) return null
   let hash = 0
   const source = `${seed}-${lastNarrationIntent.value || 'start'}`
   for (let index = 0; index < source.length; index += 1) {
     hash = (hash * 33 + source.charCodeAt(index)) % 104729
   }
-  return entries[hash % entries.length]
+  return candidates[hash % candidates.length]
 }
 
 function stopVoiceGuideAudio() {
@@ -3035,7 +3302,7 @@ function isVoiceGuideRequestCurrent(requestId, narration) {
 }
 
 function getVoiceGuideCacheKey(narration) {
-  return `${narration.key}::${narration.text}`
+  return `${getVoiceGuidePreferredVoice()}::${narration.key}::${narration.text}`
 }
 
 function pruneVoiceGuideAudioCache() {
@@ -3103,7 +3370,6 @@ function buildVoiceGuideNarration() {
       entityId: selectedArtifact.value?.entityId || 'artifact-list',
       presetKeys: [
         `artifact-list.${selectedArtifact.value?.entityId || ''}`,
-        `artifact-context.${selectedArtifact.value?.entityId || ''}`,
         'artifact-list.default'
       ],
       text: pickVoiceVariant(`scene-2-${targetTitle}-${count}`, [
@@ -3122,6 +3388,7 @@ function buildVoiceGuideNarration() {
       scene: 3,
       entityId,
       presetKeys: [
+        ...getGraphNodeVoiceGuidePresetKeys(entityId, selectedGraphNode.value?.type),
         `graph-type.${selectedGraphNode.value?.type || ''}`,
         'graph-type.default'
       ],
@@ -3140,9 +3407,6 @@ function buildVoiceGuideNarration() {
       entityId,
       presetKeys: [
         `stage-viewer.${entityId}`,
-        `artifact-craft.${entityId}`,
-        `artifact-symbol.${entityId}`,
-        `artifact-context.${entityId}`,
         'stage-viewer.default'
       ],
       text: title
@@ -3218,7 +3482,6 @@ function buildVoiceGuideNarrationV2() {
       entityId: selectedArtifact.value?.entityId || 'artifact-list',
       presetKeys: [
         `artifact-list.${selectedArtifact.value?.entityId || ''}`,
-        `artifact-context.${selectedArtifact.value?.entityId || ''}`,
         'artifact-list.default'
       ],
       text: pickVoiceVariant(`scene-2-v2-${targetTitle}-${count}`, [
@@ -3240,6 +3503,7 @@ function buildVoiceGuideNarrationV2() {
       scene: 3,
       entityId,
       presetKeys: [
+        ...getGraphNodeVoiceGuidePresetKeys(entityId, selectedGraphNode.value?.type),
         `graph-type.${selectedGraphNode.value?.type || ''}`,
         'graph-type.default'
       ],
@@ -3258,9 +3522,6 @@ function buildVoiceGuideNarrationV2() {
       entityId,
       presetKeys: [
         `stage-viewer.${entityId}`,
-        `artifact-craft.${entityId}`,
-        `artifact-symbol.${entityId}`,
-        `artifact-context.${entityId}`,
         'stage-viewer.default'
       ],
       text: title
@@ -3278,12 +3539,9 @@ function buildVoiceGuideNarrationV2() {
       intent: 'guide-chat',
       scene: 4,
       entityId,
-      presetKeys: [
-        `guide-chat.${entityId}`,
-        `artifact-next.${entityId}`,
-        `artifact-symbol.${entityId}`,
-        'guide-chat.default'
-      ],
+      presetKeys: guideExpanded.value
+        ? [`guide-chat.${entityId}`, `artifact-symbol.${entityId}`, 'guide-chat.default']
+        : [`artifact-next.${entityId}`, `guide-chat.${entityId}`, 'guide-chat.default'],
       text: title
         ? pickVoiceVariant(`scene-4-guide-v2-${entityId}`, [
             `这里可以继续问玄喵。围绕 ${title}，你可以问它为什么重要、用了什么工艺，或和哪件文物有关。`,
@@ -3322,7 +3580,20 @@ function pickVoiceVariant(key, variants) {
   return variants[hash % variants.length]
 }
 
+function getGraphNodeVoiceGuidePresetKeys(entityId, nodeType) {
+  if (!entityId || entityId === 'none') return []
+  const artifactKey = String(entityId)
+  const type = String(nodeType || '')
+  if (type === 'craft') return [`artifact-craft.${artifactKey}`]
+  if (['meaning', 'motif', 'ritual'].includes(type)) return [`artifact-symbol.${artifactKey}`]
+  if (['site', 'era'].includes(type)) return [`artifact-context.${artifactKey}`]
+  return []
+}
+
 function toggleGuideExpanded(expanded) {
+  if (guideExpanded.value !== expanded) {
+    pushTrailViewSnapshot(expanded ? 'expand-guide' : 'collapse-guide')
+  }
   guideExpanded.value = expanded
   if (expanded) {
     trailNextCardDismissed.value = false
@@ -3335,6 +3606,7 @@ function askXuanmiaoFromCompanion() {
     scrollToArtifacts()
     return
   }
+  pushTrailViewSnapshot('companion-guide')
   trailLoopHintVisible.value = false
   trailNextCardDismissed.value = false
   stageVisible.value = true
@@ -3344,6 +3616,7 @@ function askXuanmiaoFromCompanion() {
 }
 
 function openGuideAndAsk(question) {
+  pushTrailViewSnapshot('quick-guide-question')
   trailLoopHintVisible.value = false
   trailNextCardDismissed.value = false
   stageVisible.value = true
@@ -3514,8 +3787,9 @@ async function loadGraph() {
     activeTypeFilters.value = getDefaultTypeFilters(graphPayload.value.availableTypes)
     selectedNodeId.value = graphPayload.value.centerNodeId
     expandedNodeIds.value = new Set()
+    graphStablePositions = new Map()
     await nextTick()
-    await renderGraph()
+    await renderGraph({ fit: true })
   } catch (error) {
     console.error('图谱加载失败:', error)
     graphError.value = '关系网络暂时没有完整展开，但当前文物档案和讲解仍可继续浏览。'
@@ -3602,6 +3876,9 @@ function preserveTypeFilters() {
     return
   }
   activeTypeFilters.value = graphPayload.value.availableTypes.filter((type) => activeTypeFilters.value.includes(type))
+  if (!activeTypeFilters.value.length) {
+    activeTypeFilters.value = getDefaultTypeFilters(graphPayload.value.availableTypes)
+  }
 }
 
 function getDefaultTypeFilters(availableTypes) {
@@ -3620,16 +3897,25 @@ function getVisibleGraphPayload() {
 
 function buildG6Data() {
   const { nodes, edges } = getVisibleGraphPayload()
-  const positions = computeRadialLayout(nodes, graphPayload.value.centerNodeId)
+  const positions = computeRadialLayout(nodes, graphPayload.value.centerNodeId, edges)
+  const visibleIds = new Set(nodes.map((node) => node.id))
+  graphStablePositions.forEach((_, id) => {
+    if (!visibleIds.has(id)) graphStablePositions.delete(id)
+  })
+
   return {
-    nodes: nodes.map((node) => ({
-      id: node.id,
-      data: node,
-      style: {
-        ...buildNodeStyle(node),
-        ...(positions.get(node.id) || { x: 0, y: 0 })
+    nodes: nodes.map((node) => {
+      const nextPosition = graphStablePositions.get(node.id) || positions.get(node.id) || { x: 0, y: 0 }
+      graphStablePositions.set(node.id, nextPosition)
+      return {
+        id: node.id,
+        data: node,
+        style: {
+          ...buildNodeStyle(node),
+          ...nextPosition
+        }
       }
-    })),
+    }),
     edges: edges.map((edge) => ({
       id: edge.id,
       source: edge.source,
@@ -3640,33 +3926,61 @@ function buildG6Data() {
   }
 }
 
-function computeRadialLayout(nodes, centerNodeId) {
+function computeRadialLayout(nodes, centerNodeId, edges = []) {
   const positions = new Map()
   const centerId = centerNodeId || nodes.find((node) => node.type === 'artifact')?.id
   if (!centerId) return positions
 
   positions.set(centerId, { x: 0, y: 0 })
+  const rankedNodes = rankGraphNodes(nodes, edges, centerId)
   const ringBuckets = {
-    ring1: nodes.filter((node) => node.id !== centerId && (node.type === 'site' || node.type === 'era' || node.type === 'material')),
-    ring2: nodes.filter((node) => node.id !== centerId && (node.type === 'craft' || node.type === 'meaning' || node.type === 'motif')),
-    ring3: nodes.filter((node) => node.id !== centerId && (node.type === 'ritual' || node.type === 'artifact'))
+    ring1: rankedNodes.filter((node) => node.id !== centerId && (node.type === 'site' || node.type === 'era' || node.type === 'material')),
+    ring2: rankedNodes.filter((node) => node.id !== centerId && (node.type === 'craft' || node.type === 'meaning' || node.type === 'motif')),
+    ring3: rankedNodes.filter((node) => node.id !== centerId && (node.type === 'ritual' || node.type === 'artifact'))
   }
 
-  layoutRing(ringBuckets.ring1, 170, positions, -Math.PI / 2)
-  layoutRing(ringBuckets.ring2, 290, positions, -Math.PI / 3)
-  layoutRing(ringBuckets.ring3, 410, positions, 0)
+  layoutRing(ringBuckets.ring1, 165, positions, -Math.PI / 2)
+  layoutRing(ringBuckets.ring2, 285, positions, -Math.PI / 3)
+  layoutRing(ringBuckets.ring3, 400, positions, 0)
   return positions
+}
+
+function rankGraphNodes(nodes, edges, centerId) {
+  const relationScores = edges.reduce((scores, edge) => {
+    const weight = Number(edge.weight || 1)
+    scores[edge.source] = (scores[edge.source] || 0) + weight
+    scores[edge.target] = (scores[edge.target] || 0) + weight
+    return scores
+  }, {})
+
+  return [...nodes].sort((a, b) => {
+    if (a.id === centerId) return -1
+    if (b.id === centerId) return 1
+    const scoreA = Number(a.importance || 0) + (relationScores[a.id] || 0) * 8 + (a.expandable ? 5 : 0)
+    const scoreB = Number(b.importance || 0) + (relationScores[b.id] || 0) * 8 + (b.expandable ? 5 : 0)
+    if (scoreA !== scoreB) return scoreB - scoreA
+    return String(a.label || a.id).localeCompare(String(b.label || b.id), 'zh-Hans-CN')
+  })
 }
 
 function layoutRing(nodes, radius, positions, startAngle) {
   if (!nodes.length) return
+  const spread = nodes.length <= 4 ? Math.PI * 1.36 : Math.PI * 2
+  const offset = nodes.length <= 4 ? spread / 2 : 0
   nodes.forEach((node, index) => {
-    const angle = startAngle + (Math.PI * 2 * index) / nodes.length
+    const angle = startAngle - offset + (spread * index) / Math.max(nodes.length, 1)
+    const importance = Math.min(Number(node.importance || 0), 100)
+    const radiusShift = importance >= 85 ? -18 : node.expandable ? -8 : 0
     positions.set(node.id, {
-      x: Math.cos(angle) * radius,
-      y: Math.sin(angle) * radius
+      x: Math.cos(angle) * (radius + radiusShift),
+      y: Math.sin(angle) * (radius + radiusShift)
     })
   })
+}
+
+function clipGraphLabel(label, maxLength = 9) {
+  const text = String(label || '')
+  return text.length > maxLength ? `${text.slice(0, maxLength)}…` : text
 }
 
 function buildNodeStyle(node) {
@@ -3687,13 +4001,17 @@ function buildNodeStyle(node) {
     haloStroke: palette.stroke,
     haloStrokeOpacity: isCenter ? 0.3 : 0.18,
     label: true,
-    labelText: node.label,
+    labelText: isCenter ? node.label : clipGraphLabel(node.label),
     labelFill: isCenter ? '#f8f0db' : palette.label,
     labelFontFamily: '"Noto Serif SC", "STZhongsong", serif',
     labelFontWeight: isCenter ? 700 : 600,
     labelFontSize: isCenter ? 18 : 13,
     labelPlacement: isCenter ? 'center' : 'bottom',
-    labelOffsetY: isCenter ? 0 : 14
+    labelOffsetY: isCenter ? 0 : 14,
+    labelBackground: !isCenter,
+    labelBackgroundFill: 'rgba(8, 17, 13, 0.72)',
+    labelBackgroundRadius: 6,
+    labelPadding: [3, 6]
   }
 }
 
@@ -3719,8 +4037,9 @@ function buildEdgeStyle(edge) {
   }
 }
 
-async function renderGraph() {
+async function renderGraph(options = {}) {
   if (!graphRef.value) return
+  const { fit = false, focus = false } = options
 
   const data = buildG6Data()
   if (!data.nodes.length) {
@@ -3730,6 +4049,7 @@ async function renderGraph() {
 
   const width = Math.max(graphRef.value.clientWidth || 0, 320)
   const height = Math.max(graphRef.value.clientHeight || 0, 420)
+  const isNewGraph = !graphInstance
 
   if (!graphInstance) {
     graphInstance = new G6Graph({
@@ -3737,21 +4057,40 @@ async function renderGraph() {
       width,
       height,
       data,
-      autoFit: 'view',
       padding: 36,
       animation: false,
       node: {
         type: 'circle',
         state: {
-          active: { lineWidth: 4, haloLineWidth: 22, haloStrokeOpacity: 0.45 },
-          neighbor: { lineWidth: 3, haloLineWidth: 16, haloStrokeOpacity: 0.28 },
-          dim: { opacity: 0.16 }
+          active: {
+            lineWidth: 5,
+            haloLineWidth: 26,
+            haloStrokeOpacity: 0.55,
+            labelFontWeight: 800,
+            labelFontSize: 15,
+            labelBackgroundFill: 'rgba(216, 184, 109, 0.22)'
+          },
+          hover: {
+            lineWidth: 4,
+            haloLineWidth: 22,
+            haloStrokeOpacity: 0.38,
+            labelFontWeight: 800,
+            labelBackgroundFill: 'rgba(121, 196, 167, 0.18)'
+          },
+          neighbor: {
+            lineWidth: 3,
+            haloLineWidth: 16,
+            haloStrokeOpacity: 0.28,
+            labelOpacity: 0.95
+          },
+          dim: { opacity: 0.18, labelOpacity: 0.3, haloStrokeOpacity: 0.04 }
         }
       },
       edge: {
         type: 'line',
         state: {
-          active: { lineWidth: 2.8, opacity: 1 },
+          active: { lineWidth: 3.4, opacity: 1 },
+          preview: { lineWidth: 2.4, opacity: 0.9 },
           dim: { opacity: 0.08 }
         }
       },
@@ -3765,7 +4104,10 @@ async function renderGraph() {
 
   await graphInstance.render()
   normalizeSelectedNode()
-  await applyFocusState(selectedNodeId.value || graphPayload.value.centerNodeId)
+  if (fit || isNewGraph) {
+    await graphInstance.fitView()
+  }
+  await applyFocusState(selectedNodeId.value || graphPayload.value.centerNodeId, focus)
 }
 
 function bindGraphEvents() {
@@ -3776,12 +4118,16 @@ function bindGraphEvents() {
     if (!nodeId) return
     if (graphClickTimer) window.clearTimeout(graphClickTimer)
     graphClickTimer = window.setTimeout(async () => {
+      if (selectedNodeId.value !== nodeId) {
+        pushTrailViewSnapshot('graph-node')
+      }
       selectedNodeId.value = nodeId
-      await applyFocusState(nodeId)
+      hoverNodeId.value = ''
+      await applyFocusState(nodeId, false)
       const node = graphPayload.value.nodes.find((item) => item.id === nodeId)
       if (node?.expandable && !expandedNodeIds.value.has(node.id)) {
         await expandNode(node)
-        await applyFocusState(nodeId)
+        await applyFocusState(nodeId, false)
       }
     }, 180)
   })
@@ -3800,32 +4146,36 @@ function bindGraphEvents() {
   graphInstance.on('node:mouseenter', async (event) => {
     const nodeId = event?.target?.id
     if (!nodeId || nodeId === selectedNodeId.value) return
-    await applyFocusState(nodeId, false)
+    hoverNodeId.value = nodeId
+    await applyFocusState(nodeId, false, true)
   })
 
   graphInstance.on('node:mouseleave', async () => {
+    hoverNodeId.value = ''
     await applyFocusState(selectedNodeId.value || graphPayload.value.centerNodeId, false)
   })
 }
 
-async function applyFocusState(nodeId, animate = true) {
+async function applyFocusState(nodeId, animate = true, preview = false) {
   if (!graphInstance || !nodeId) return
   const { nodes, edges } = getVisibleGraphPayload()
   const neighborIds = new Set([nodeId])
+  const relatedEdgeIds = new Set()
   const states = {}
 
   edges.forEach((edge) => {
     const isRelated = edge.source === nodeId || edge.target === nodeId
-    states[edge.id] = isRelated ? ['active'] : ['dim']
+    states[edge.id] = isRelated ? [preview ? 'preview' : 'active'] : ['dim']
     if (isRelated) {
       neighborIds.add(edge.source)
       neighborIds.add(edge.target)
+      relatedEdgeIds.add(edge.id)
     }
   })
 
   nodes.forEach((node) => {
     if (node.id === nodeId) {
-      states[node.id] = ['active']
+      states[node.id] = [preview ? 'hover' : 'active']
     } else if (neighborIds.has(node.id)) {
       states[node.id] = ['neighbor']
     } else {
@@ -3833,8 +4183,13 @@ async function applyFocusState(nodeId, animate = true) {
     }
   })
 
+  if (preview && selectedNodeId.value && selectedNodeId.value !== nodeId) {
+    states[selectedNodeId.value] = ['active']
+  }
+
+  focusedPathIds.value = { nodes: neighborIds, edges: relatedEdgeIds }
   await graphInstance.setElementState(states, false)
-  if (animate) {
+  if (animate && !preview) {
     await graphInstance.focusElement(nodeId, { duration: 400, easing: 'ease-in-out' })
   }
 }
@@ -3843,6 +4198,9 @@ function normalizeSelectedNode() {
   const visibleIds = new Set(getVisibleGraphPayload().nodes.map((node) => node.id))
   if (!visibleIds.has(selectedNodeId.value)) {
     selectedNodeId.value = graphPayload.value.centerNodeId
+  }
+  if (!visibleIds.has(hoverNodeId.value)) {
+    hoverNodeId.value = ''
   }
 }
 
@@ -3855,12 +4213,14 @@ function toggleTypeFilter(type) {
 }
 
 async function focusCenterNode() {
+  hoverNodeId.value = ''
   selectedNodeId.value = graphPayload.value.centerNodeId
   await applyFocusState(selectedNodeId.value)
 }
 
 async function resetGraphViewport() {
   if (!graphInstance) return
+  hoverNodeId.value = ''
   await graphInstance.fitView()
   await applyFocusState(selectedNodeId.value || graphPayload.value.centerNodeId, false)
 }
@@ -3876,6 +4236,7 @@ async function resizeGraphStage(fit = false) {
 
 function jumpByNode(node) {
   if (!node) return
+  pushTrailViewSnapshot('graph-jump')
 
   if (node.type === 'artifact') {
     if (node.entityId === selectedArtifactDetail.value?.entityId) {
@@ -3933,6 +4294,7 @@ function jumpByNode(node) {
 function destroyGraph() {
   graphInstance?.destroy()
   graphInstance = null
+  graphStablePositions = new Map()
 }
 
 function mountResizeObserver() {
@@ -3979,13 +4341,37 @@ function syncViewerLayoutAfterFullscreen(recheck = false) {
 
 function syncGraphLayoutAfterFullscreen(recheck = false) {
   afterFullscreenLayout(() => {
-    void resizeGraphStage(true)
+    void renderGraph()
+      .then(() => resizeGraphStage(true))
+      .then(() => {
+        if (recheck) restoreGraphPanelScrollPosition()
+      })
     if (recheck) {
       window.setTimeout(() => {
-        void resizeGraphStage(true)
+        restoreGraphPanelScrollPosition()
+        void renderGraph().then(() => resizeGraphStage(true))
       }, 140)
+      window.setTimeout(() => {
+        restoreGraphPanelScrollPosition()
+        void resizeGraphStage(true)
+      }, 360)
     }
   })
+}
+
+function restoreGraphPanelScrollPosition() {
+  const scroller = insightPanelRef.value
+  const panel = graphPanelRef.value
+  if (!scroller || !panel) return
+
+  const style = window.getComputedStyle(scroller)
+  const canScroll = style.overflowY === 'auto' || style.overflowY === 'scroll'
+  if (!canScroll) return
+
+  const scrollerRect = scroller.getBoundingClientRect()
+  const panelRect = panel.getBoundingClientRect()
+  const targetTop = Math.max(scroller.scrollTop + panelRect.top - scrollerRect.top - 12, 0)
+  scroller.scrollTo({ top: targetTop, behavior: 'auto' })
 }
 
 function toggleViewerFullscreen() {
@@ -4057,6 +4443,7 @@ function restoreGraphPageState() {
   document.body.style.overflow = previousBodyOverflow
   previousBodyOverflow = ''
   isGraphFullscreen.value = false
+  syncGraphLayoutAfterFullscreen(true)
 }
 
 async function initializeGuide() {
@@ -4472,6 +4859,7 @@ function dismissQuizPromo() {
 }
 
 function returnToTrailStart() {
+  pushTrailViewSnapshot('trail-loop-start')
   activeScene.value = 1
   guideExpanded.value = false
   trailLoopHintVisible.value = true
@@ -4552,6 +4940,53 @@ function goQuizChallenge() {
 
 .voice-guide-panel--active {
   border-color: rgba(66, 102, 79, 0.26);
+}
+
+.trail-step-back {
+  position: fixed;
+  top: calc(var(--voice-guide-top) + 86px);
+  left: 24px;
+  z-index: 775;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 40px;
+  padding: 0 14px;
+  border: 1px solid rgba(66, 102, 79, 0.16);
+  border-radius: 999px;
+  color: var(--green-deep);
+  background: rgba(255, 252, 243, 0.94);
+  box-shadow: 0 14px 28px rgba(37, 56, 45, 0.12);
+  cursor: pointer;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 800;
+  letter-spacing: 0;
+  backdrop-filter: blur(14px);
+  transition:
+    transform 0.2s ease,
+    border-color 0.2s ease,
+    background 0.2s ease,
+    box-shadow 0.2s ease;
+}
+
+.trail-step-back:hover {
+  transform: translateY(-1px);
+  border-color: rgba(184, 146, 67, 0.34);
+  background: rgba(255, 248, 230, 0.96);
+  box-shadow: 0 18px 34px rgba(37, 56, 45, 0.16);
+}
+
+.trail-step-back i {
+  font-size: 12px;
+}
+
+.time-space-trail--immersive .trail-step-back {
+  color: #f7f2e4;
+  border-color: rgba(121, 196, 167, 0.18);
+  background: rgba(12, 28, 21, 0.86);
+  box-shadow: 0 16px 34px rgba(0, 0, 0, 0.22);
 }
 
 .trail-command-overlay {
@@ -4687,7 +5122,7 @@ function goQuizChallenge() {
 }
 
 .voice-guide-panel--loading .voice-guide-panel__mark {
-  background: linear-gradient(135deg, #b89243, var(--green));
+  border-color: rgba(184, 146, 67, 0.46);
 }
 
 .time-space-trail--immersive .voice-guide-panel {
@@ -4701,12 +5136,37 @@ function goQuizChallenge() {
 .voice-guide-panel__mark {
   display: grid;
   place-items: center;
-  width: 42px;
-  height: 42px;
-  border-radius: 16px;
-  color: #f8f2df;
-  background: linear-gradient(135deg, var(--green), var(--green-deep));
+  position: relative;
+  width: 46px;
+  height: 46px;
+  overflow: hidden;
+  border: 2px solid rgba(184, 146, 67, 0.28);
+  border-radius: 50%;
+  color: var(--green-deep);
+  background: #f7efe3;
   box-shadow: 0 12px 24px rgba(41, 72, 58, 0.2);
+}
+
+.voice-guide-panel__mark img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.voice-guide-panel__mark i {
+  position: absolute;
+  right: -1px;
+  bottom: -1px;
+  display: grid;
+  place-items: center;
+  width: 18px;
+  height: 18px;
+  border: 2px solid #f7efe3;
+  border-radius: 50%;
+  color: #fff8e8;
+  background: var(--gold);
+  font-size: 9px;
 }
 
 .voice-guide-panel__copy {
@@ -6536,11 +6996,28 @@ function goQuizChallenge() {
     0 0 0 9999px rgba(2, 8, 6, 0.72);
 }
 
+.graph-panel--fullscreen .graph-panel__toolbar {
+  position: absolute;
+  top: 18px;
+  left: 22px;
+  right: 22px;
+  z-index: 8;
+  min-height: 42px;
+  padding: 0;
+  gap: 16px;
+}
+
 .graph-panel--fullscreen .section-head {
   align-items: center;
 }
 
+.graph-panel--fullscreen .section-actions {
+  flex-wrap: nowrap;
+  justify-content: flex-end;
+}
+
 .graph-panel--fullscreen .graph-stage {
+  position: relative;
   min-height: 0;
   height: 100%;
 }
@@ -6916,7 +7393,15 @@ function goQuizChallenge() {
   font-size: 12px;
 }
 
+.graph-filter-hint {
+  margin: -4px 0 10px;
+  color: rgba(244, 237, 220, 0.62);
+  font-size: 12px;
+  line-height: 1.5;
+}
+
 .graph-stage {
+  position: relative;
   min-height: 340px;
   border-radius: 22px;
   background:
@@ -6925,6 +7410,30 @@ function goQuizChallenge() {
     linear-gradient(180deg, #0b1411 0%, #0f1915 100%);
   background-size: 40px 40px, 40px 40px, auto;
   overflow: hidden;
+}
+
+.graph-stage--loading::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: radial-gradient(circle at 50% 45%, rgba(121, 196, 167, 0.08), transparent 42%);
+}
+
+.graph-loading-badge {
+  position: absolute;
+  top: 14px;
+  left: 14px;
+  z-index: 4;
+  padding: 8px 12px;
+  border: 1px solid rgba(216, 184, 109, 0.24);
+  border-radius: 999px;
+  background: rgba(10, 20, 15, 0.78);
+  color: #f2ead4;
+  font-size: 12px;
+  font-weight: 700;
+  box-shadow: 0 12px 24px rgba(0, 0, 0, 0.22);
+  backdrop-filter: blur(10px);
 }
 
 .graph-canvas {
@@ -7066,7 +7575,7 @@ function goQuizChallenge() {
 .guide-preview__copy,
 .guide-context,
 .guide-chat {
-  padding: 22px;
+  padding: 20px;
   border-radius: 24px;
   background: rgba(255, 255, 255, 0.76);
 }
@@ -7087,7 +7596,8 @@ function goQuizChallenge() {
 
 .guide-shell {
   display: grid;
-  grid-template-columns: minmax(280px, 0.78fr) minmax(0, 1.22fr);
+  grid-template-columns: minmax(300px, 0.82fr) minmax(0, 1.18fr);
+  align-items: stretch;
   gap: 18px;
 }
 
@@ -7103,39 +7613,138 @@ function goQuizChallenge() {
   object-fit: cover;
 }
 
+.guide-artifact-visual {
+  position: relative;
+  width: min(100%, 310px);
+  aspect-ratio: 16 / 10;
+  min-height: 0;
+  margin-bottom: 14px;
+  overflow: hidden;
+  border: 1px solid rgba(66, 102, 79, 0.12);
+  border-radius: 18px;
+  background: rgba(241, 237, 225, 0.72);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.34);
+}
+
+.guide-artifact-visual--preview {
+  width: min(100%, 340px);
+  aspect-ratio: 16 / 10;
+}
+
+.guide-artifact-visual > img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.guide-artifact-visual__shade {
+  position: absolute;
+  inset: auto 0 0;
+  height: 58%;
+  background: linear-gradient(180deg, rgba(20, 38, 31, 0), rgba(20, 38, 31, 0.74));
+  pointer-events: none;
+}
+
+.guide-artifact-visual__meta {
+  position: absolute;
+  left: 14px;
+  right: 58px;
+  bottom: 12px;
+  display: grid;
+  gap: 2px;
+  color: #fff8e8;
+  text-shadow: 0 2px 12px rgba(0, 0, 0, 0.22);
+}
+
+.guide-artifact-visual__meta span {
+  font-size: 11px;
+  font-weight: 800;
+  opacity: 0.78;
+}
+
+.guide-artifact-visual__meta strong {
+  font-size: 15px;
+  line-height: 1.25;
+}
+
+.guide-artifact-visual__action {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  min-height: 30px;
+  padding: 0 10px;
+  border: 1px solid rgba(255, 248, 232, 0.42);
+  border-radius: 999px;
+  color: #fff8e8;
+  background: rgba(36, 61, 49, 0.72);
+  font: inherit;
+  font-size: 11px;
+  font-weight: 800;
+  cursor: pointer;
+  backdrop-filter: blur(10px);
+}
+
+.guide-artifact-visual__xuanmiao {
+  position: absolute;
+  right: 12px;
+  bottom: 12px;
+  width: 38px;
+  height: 38px;
+  overflow: hidden;
+  border: 2px solid rgba(255, 248, 232, 0.78);
+  border-radius: 50%;
+  background: #f7efe3;
+  box-shadow: 0 10px 22px rgba(10, 24, 18, 0.28);
+}
+
+.guide-artifact-visual__xuanmiao img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
 .guide-facts {
   display: grid;
-  gap: 12px;
-  margin: 20px 0;
+  gap: 10px;
+  margin: 14px 0;
 }
 
 .guide-facts div {
-  padding: 14px 16px;
-  border-radius: 18px;
+  padding: 11px 14px;
+  border-radius: 14px;
   background: rgba(66, 102, 79, 0.06);
 }
 
 .guide-facts dt {
-  margin-bottom: 6px;
+  margin-bottom: 4px;
   color: var(--ink-soft);
-  font-size: 13px;
+  font-size: 12px;
 }
 
 .guide-facts dd {
   margin: 0;
   color: var(--ink);
+  font-size: 13px;
   font-weight: 700;
 }
 
 .quick-questions {
   display: flex;
   flex-wrap: wrap;
-  gap: 10px;
+  gap: 8px;
+}
+
+.quick-questions--chat {
+  width: min(620px, 100%);
+  margin: 4px 0 0 56px;
+  padding: 10px 0 0;
+  border-top: 1px solid rgba(66, 102, 79, 0.08);
 }
 
 .question-pill {
-  padding: 12px 14px;
-  font-size: 13px;
+  padding: 9px 12px;
+  font-size: 12px;
   font-weight: 700;
 }
 
@@ -7614,7 +8223,8 @@ function goQuizChallenge() {
   }
 
   .voice-guide-panel__mark {
-    display: none;
+    width: 42px;
+    height: 42px;
   }
 
   .voice-guide-panel__actions {
@@ -7643,6 +8253,14 @@ function goQuizChallenge() {
 
   .trail-command-overlay__steps {
     grid-template-columns: 1fr;
+  }
+
+  .trail-step-back {
+    top: calc(var(--voice-guide-top) + 164px);
+    left: 14px;
+    min-height: 36px;
+    padding: 0 12px;
+    font-size: 12px;
   }
 
   .trail-hero {
@@ -7750,6 +8368,25 @@ function goQuizChallenge() {
     border-radius: 22px;
   }
 
+  .guide-artifact-visual,
+  .guide-artifact-visual--preview {
+    width: min(100%, 290px);
+    aspect-ratio: 16 / 10;
+  }
+
+  .guide-artifact-visual__meta {
+    right: 64px;
+  }
+
+  .guide-artifact-visual__meta strong {
+    font-size: 16px;
+  }
+
+  .quick-questions--chat {
+    width: 100%;
+    margin-left: 0;
+  }
+
   .hero-copy h1 {
     font-size: 42px;
   }
@@ -7813,6 +8450,16 @@ function goQuizChallenge() {
     inset: 10px;
     border-radius: 22px;
     padding: 64px 16px 16px;
+  }
+
+  .graph-panel--fullscreen .graph-panel__toolbar {
+    top: 14px;
+    left: 16px;
+    right: 16px;
+  }
+
+  .graph-panel--fullscreen .section-actions {
+    flex-wrap: wrap;
   }
 
   .insight-panel {

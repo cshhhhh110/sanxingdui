@@ -192,7 +192,7 @@ import { createBrowserSpeechRecognition, getBrowserSpeechRecognitionCtor } from 
 import { formatYearRange } from '@/data/competitionArtifacts'
 import { competitionActionLabels } from '@/data/competitionUi'
 import { getSpacetimeArtifactDetail } from '@/api/SpacetimeApi'
-import aiAvatar from '@/assets/sanxingdui-ai-chat/ai-avatar.png'
+import aiAvatar from '@/assets/sanxingdui-ai-chat/xuanmiao-avatar.png'
 import { getRecentArtifactTrail, pushCompetitionTrail } from '@/utils/competitionTrail'
 
 const route = useRoute()
