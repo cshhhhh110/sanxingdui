@@ -77,20 +77,31 @@ export function buildFallbackReply(question, docs = [], context = {}) {
   const questionText = String(question || '').trim()
   const title = context.title || context.contextTitle || context.name || ''
   const prefix = title ? `围绕“${title}”` : '这个问题'
-  const questionPrefix = questionText ? `你刚才问的是“${questionText}”。` : ''
+  const questionPrefix = buildQuestionIntro(questionText)
 
   if (docs.length) {
     const lead = extractLead(docs[0].content)
     const guidance = title
       ? '可以继续问它的工艺、年代或象征意义。'
-      : '可以继续问青铜神树、纵目面具、青铜大立人、金杖、黄金面具或青铜工艺。'
+      : '你也可以继续问青铜神树、青铜纵目面具、青铜大立人像、金杖、黄金面具或青铜工艺。'
 
-    return `${questionPrefix}${prefix}先给你一个简短判断：${lead}。${guidance}`
+    return `${questionPrefix}${prefix}可以先这样理解：${lead}。${guidance}`
   }
 
   return title
-    ? `${questionPrefix}${prefix}暂时没有足够本地资料，我不编造。你可以换个角度继续问。`
-    : `${questionPrefix}这个问题暂时没有匹配到足够明确的本地资料，我不编造。你可以换个角度继续问。`
+    ? `${questionPrefix}${prefix}暂时没有检索到足够明确的本地资料，我不会编造。你可以换个角度继续问。`
+    : `${questionPrefix}这个问题暂时没有匹配到足够明确的本地资料，我不会编造。你可以换个角度继续问。`
+}
+
+function buildQuestionIntro(questionText) {
+  const normalizedQuestion = String(questionText || '').trim()
+  if (!normalizedQuestion) return ''
+
+  const cleanQuestion = normalizedQuestion.replace(/[。；;，,、\s]+$/g, '')
+  if (!cleanQuestion) return ''
+
+  const hasEndPunctuation = /[！？!?]$/.test(cleanQuestion)
+  return `你问到：${cleanQuestion}${hasEndPunctuation ? '' : '。'}`
 }
 
 async function loadAllDocs() {

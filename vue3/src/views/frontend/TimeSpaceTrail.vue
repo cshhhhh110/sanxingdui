@@ -1,6 +1,25 @@
 <template>
   <main class="time-space-trail" :class="{ 'time-space-trail--compact': activeScene > 1, 'time-space-trail--immersive': activeScene === 3 }">
-    <section class="voice-guide-panel" :class="{ 'voice-guide-panel--active': voiceGuideEnabled, 'voice-guide-panel--loading': voiceGuideLoading }" aria-label="玄喵陪游">
+    <div
+      v-if="voiceGuideAutoCollapsed"
+      class="voice-guide-hover-zone"
+      aria-hidden="true"
+      @mouseenter="revealVoiceGuidePanel"
+    >
+      <span>玄喵陪游</span>
+    </div>
+    <section
+      class="voice-guide-panel"
+      :class="{
+        'voice-guide-panel--active': voiceGuideEnabled,
+        'voice-guide-panel--loading': voiceGuideLoading,
+        'voice-guide-panel--collapsed': voiceGuideAutoCollapsed,
+        'voice-guide-panel--revealed': voiceGuidePeekVisible
+      }"
+      aria-label="玄喵陪游"
+      @mouseenter="revealVoiceGuidePanel"
+      @mouseleave="hideVoiceGuidePanelIfNeeded"
+    >
       <div class="voice-guide-panel__mark" aria-hidden="true">
         <img :src="aiAvatar" alt="" />
         <i v-if="voiceGuideLoading" class="fas fa-spinner fa-spin"></i>
@@ -1304,6 +1323,8 @@ const currentNarrationText = ref('')
 const lastNarrationKey = ref('')
 const lastNarrationIntent = ref('')
 const voiceGuideError = ref('')
+const voiceGuideScrolledAway = ref(false)
+const voiceGuidePeekVisible = ref(false)
 
 const QUIZ_PROMO_SESSION_KEY = 'sanxingdui.trail.quizPromo.seen'
 const QUIZ_PROMO_TRIGGER_ROUNDS = 2
@@ -1720,12 +1741,34 @@ const xuanmiaoCompanionLine = computed(() => {
   return '开启后，玄喵会边走边讲；想细问时，可以直接进入第四幕追问。'
 })
 
+const voiceGuideAutoCollapsed = computed(() => voiceGuideScrolledAway.value && !voiceGuidePeekVisible.value)
+
+function syncVoiceGuideCollapseState() {
+  const scrolledAway = window.scrollY > 72
+  voiceGuideScrolledAway.value = scrolledAway
+  if (!scrolledAway) {
+    voiceGuidePeekVisible.value = false
+  }
+}
+
+function revealVoiceGuidePanel() {
+  if (!voiceGuideScrolledAway.value) return
+  voiceGuidePeekVisible.value = true
+}
+
+function hideVoiceGuidePanelIfNeeded() {
+  if (!voiceGuideScrolledAway.value) return
+  voiceGuidePeekVisible.value = false
+}
+
 onMounted(async () => {
   window.addEventListener('keydown', handleViewerKeydown)
+  window.addEventListener('scroll', syncVoiceGuideCollapseState, { passive: true })
   window.addEventListener('xuanmiao:speech-ended', handleXuanmiaoSpeechEnded)
   window.addEventListener('xuanmiao:speech-error', handleXuanmiaoSpeechError)
   window.addEventListener('xuanmiao:speech-stopped', handleXuanmiaoSpeechStopped)
   window.addEventListener('xuanmiao:trail-command', handleTrailCommandEvent)
+  syncVoiceGuideCollapseState()
   hydrateQuizPromoState()
   void loadVoiceGuideManifest()
   await loadArtifacts()
@@ -1737,6 +1780,7 @@ onBeforeUnmount(() => {
   if (graphClickTimer) window.clearTimeout(graphClickTimer)
   clearTrailCommandTransitionTimer()
   window.removeEventListener('keydown', handleViewerKeydown)
+  window.removeEventListener('scroll', syncVoiceGuideCollapseState)
   window.removeEventListener('xuanmiao:speech-ended', handleXuanmiaoSpeechEnded)
   window.removeEventListener('xuanmiao:speech-error', handleXuanmiaoSpeechError)
   window.removeEventListener('xuanmiao:speech-stopped', handleXuanmiaoSpeechStopped)
@@ -4884,6 +4928,51 @@ function goQuizChallenge() {
     var(--paper-soft);
   box-shadow: 0 16px 34px rgba(78, 62, 31, 0.08);
   backdrop-filter: blur(14px);
+  transition:
+    transform 0.28s ease,
+    opacity 0.24s ease,
+    border-color 0.24s ease,
+    box-shadow 0.24s ease;
+  will-change: transform, opacity;
+}
+
+.voice-guide-hover-zone {
+  position: fixed;
+  top: 54px;
+  left: max(28px, calc((100vw - 1120px) / 2));
+  right: max(28px, calc((100vw - 1120px) / 2));
+  z-index: 781;
+  height: 34px;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  pointer-events: auto;
+}
+
+.voice-guide-hover-zone span {
+  margin-top: 6px;
+  padding: 5px 14px;
+  border: 1px solid rgba(184, 146, 67, 0.22);
+  border-radius: 999px;
+  color: rgba(41, 72, 58, 0.78);
+  background: rgba(255, 252, 243, 0.88);
+  box-shadow: 0 10px 24px rgba(37, 56, 45, 0.12);
+  font-size: 12px;
+  font-weight: 800;
+  opacity: 0.72;
+  backdrop-filter: blur(12px);
+}
+
+.voice-guide-panel--collapsed {
+  opacity: 0;
+  pointer-events: none;
+  transform: translateY(calc(-1 * (var(--voice-guide-top) + 100% + 10px)));
+}
+
+.voice-guide-panel--revealed {
+  opacity: 1;
+  pointer-events: auto;
+  transform: translateY(0);
 }
 
 .voice-guide-panel--active {
@@ -6958,8 +7047,8 @@ function goQuizChallenge() {
 }
 
 .insight-panel {
-  display: grid;
-  grid-template-rows: auto minmax(0, 1fr) auto;
+  display: flex;
+  flex-direction: column;
   gap: 18px;
   min-height: 0;
   height: 100%;
@@ -6990,9 +7079,27 @@ function goQuizChallenge() {
 
 .graph-panel {
   position: relative;
-  min-height: 0;
+  flex: 0 0 auto;
+  min-height: auto;
   display: flex;
   flex-direction: column;
+}
+
+.graph-panel__toolbar {
+  align-items: flex-start;
+  flex-wrap: wrap;
+  gap: 12px 16px;
+}
+
+.graph-panel__toolbar > div:first-child {
+  flex: 1 1 170px;
+  min-width: 0;
+}
+
+.graph-panel__toolbar .section-actions {
+  flex: 1 1 260px;
+  justify-content: flex-end;
+  align-self: flex-start;
 }
 
 .graph-panel--fullscreen {
@@ -7354,7 +7461,7 @@ function goQuizChallenge() {
 }
 
 .graph-lead {
-  margin: 12px 0;
+  margin: 10px 0 12px;
   color: var(--ink-soft);
   line-height: 1.6;
 }
@@ -7423,8 +7530,9 @@ function goQuizChallenge() {
 
 .graph-stage {
   position: relative;
-  flex: 1 1 340px;
-  min-height: 300px;
+  flex: none;
+  height: clamp(260px, 31vh, 360px);
+  min-height: 260px;
   border-radius: 22px;
   background:
     linear-gradient(rgba(255, 255, 255, 0.03) 1px, transparent 1px),
@@ -7461,7 +7569,7 @@ function goQuizChallenge() {
 .graph-canvas {
   width: 100%;
   height: 100%;
-  min-height: 300px;
+  min-height: 260px;
 }
 
 .graph-error {
@@ -8270,6 +8378,12 @@ function goQuizChallenge() {
     gap: 10px;
     padding: 14px;
     transform: none;
+  }
+
+  .voice-guide-hover-zone {
+    top: 48px;
+    left: 12px;
+    right: 12px;
   }
 
   .voice-guide-panel__mark {
