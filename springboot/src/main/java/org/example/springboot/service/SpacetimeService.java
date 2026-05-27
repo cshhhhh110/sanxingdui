@@ -210,14 +210,28 @@ public class SpacetimeService {
         if (neo4jGraphService == null) {
             return null;
         }
-        return neo4jGraphService.buildArtifactGraph(entityId);
+        try {
+            return java.util.concurrent.CompletableFuture
+                .supplyAsync(() -> neo4jGraphService.buildArtifactGraph(entityId))
+                .get(3, java.util.concurrent.TimeUnit.SECONDS);
+        } catch (Exception e) {
+            log.warn("Neo4j 图谱查询超时或不可用，降级为 MySQL 查询: {}", e.getMessage());
+            return null;
+        }
     }
 
     private ArtifactGraphResponseDTO tryBuildNeo4jNodeNeighbors(String entityId, String nodeId, Integer depth) {
         if (neo4jGraphService == null) {
             return null;
         }
-        return neo4jGraphService.buildNodeNeighbors(entityId, nodeId, depth);
+        try {
+            return java.util.concurrent.CompletableFuture
+                .supplyAsync(() -> neo4jGraphService.buildNodeNeighbors(entityId, nodeId, depth))
+                .get(3, java.util.concurrent.TimeUnit.SECONDS);
+        } catch (Exception e) {
+            log.warn("Neo4j 邻居查询超时或不可用，降级为 MySQL 查询: {}", e.getMessage());
+            return null;
+        }
     }
 
     private ArtifactGraphResponseDTO createEmptyGraph() {

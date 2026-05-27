@@ -310,9 +310,14 @@ watch(() => route.path, (newPath) => {
 }
 
 .logo-text {
-  font-size: 20px;
-  font-weight: 600;
-  color: #42664f;
+  font-size: 22px;
+  font-weight: 700;
+  font-family: 'STZhongsong', 'Noto Serif SC', '华文中宋', serif;
+  letter-spacing: 0.06em;
+  background: linear-gradient(135deg, #3a5c40, #6b8f71);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
 }
 
 .navbar-menu {

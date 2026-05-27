@@ -120,9 +120,10 @@ export default {
     return {
       xuanmiaoPeekImage,
       // 渚ц竟鏍?
-      isPanelOpen: true,   // 棣栨鍔犺浇灞曠ず鐜勫柕
+      isPanelOpen: false,
       hasPendingMsg: false,
       autoHideTimer: null,
+      hasPlayedWelcome: false,
 
       currentAnswer: '',
       isAnswering: false,
@@ -149,6 +150,8 @@ export default {
       hideTimeout: null,
       audioEl: null,
       audioCtx: null,
+      audioSource: null,
+      audioUnlocked: false,
       currentAudioUrl: null,
       externalSpeechContext: null,
       ttsAbortController: null,
@@ -207,10 +210,10 @@ export default {
       const avatarCenterX = position.x + avatarWidth / 2;
       const nearLeft = position.x < bubbleWidth * 0.55;
 
-      const anchorOverlap = Math.min(58, avatarWidth * 0.32);
+      const bubbleGap = 26;
       const x = nearLeft
-        ? avatarRight - anchorOverlap
-        : position.x - bubbleWidth + anchorOverlap;
+        ? avatarRight + bubbleGap
+        : position.x - bubbleWidth - bubbleGap;
       const topNearAvatar = position.y + Math.min(30, avatarHeight * 0.1);
       const xSafe = Math.max(margin, Math.min(window.innerWidth - bubbleWidth - margin, x));
       const y = Math.max(74, Math.min(window.innerHeight - bubbleHeight - margin, topNearAvatar));
@@ -220,7 +223,7 @@ export default {
         right: 'auto',
         bottom: 'auto',
         width: `${bubbleWidth}px`,
-        '--bubble-tail-left': `${Math.max(34, Math.min(bubbleWidth - 34, avatarCenterX - xSafe))}px`
+        '--bubble-tail-left': `${Math.max(42, Math.min(bubbleWidth - 42, avatarCenterX - xSafe))}px`
       };
     },
     voiceInputButtonTitle() {
@@ -237,11 +240,15 @@ export default {
     this.loadVoices();
     this.loadL2DScript();
     this.observeLive2DCreation();
-    this._onDocClick = () => this.resetAutoHide();
+    this._onDocClick = () => {
+      this.resetAutoHide();
+      this.primeAudioContext();
+    };
     document.addEventListener('click', this._onDocClick);
     window.addEventListener('xuanmiao:say', this.handleExternalSpeech);
     window.addEventListener('xuanmiao:stop', this.handleExternalStop);
     window.addEventListener('resize', this.applyAvatarPosition);
+    window.addEventListener('scroll', this.repositionInputDialog, true);
     window.visualViewport?.addEventListener('resize', this.applyAvatarPosition);
     window.visualViewport?.addEventListener('scroll', this.applyAvatarPosition);
     this.initMcpClient();
@@ -688,6 +695,11 @@ export default {
       const text = String(detail.text || '').trim();
       if (!text || this.isDestroyed) return;
       if (this.isSpeaking && detail.interrupt === false) return;
+      if (!this.isPanelOpen) {
+        this.isPanelOpen = true;
+        this.hasPendingMsg = false;
+        this.syncWidgetVisibility();
+      }
 
       await this.startTypewriterAndSpeech(text, {
         audioUrl: detail.audioUrl || '',
@@ -824,6 +836,7 @@ export default {
         this.hasPendingMsg = false;
         this.userInteracted = true;
         this.startAutoHide();
+        this.playWelcomeOnce();
       } else {
         this.cancelAutoHide();
       }
@@ -862,6 +875,16 @@ export default {
       };
     },
 
+    getViewportBox() {
+      const viewport = window.visualViewport;
+      return {
+        left: Math.floor(viewport?.offsetLeft || 0),
+        top: Math.floor(viewport?.offsetTop || 0),
+        width: Math.max(320, Math.floor(viewport?.width || window.innerWidth || document.documentElement.clientWidth || 320)),
+        height: Math.max(360, Math.floor(viewport?.height || window.innerHeight || document.documentElement.clientHeight || 360))
+      };
+    },
+
     getAvatarSize() {
       const rect = this.live2dCanvas?.getBoundingClientRect?.();
       return {
@@ -881,6 +904,61 @@ export default {
         x: Math.max(minX, Math.min(maxX, Number(position?.x) || maxX)),
         y: Math.max(minY, Math.min(maxY, Number(position?.y) || maxY))
       };
+    },
+
+    clampDialogPosition(position, dialogWidth = 340, dialogHeight = 320) {
+      const viewport = this.getViewportBox();
+      const margin = 14;
+      const minTop = viewport.top + 76;
+      const minX = viewport.left + margin;
+      const minY = Math.max(viewport.top + margin, minTop);
+      const maxX = Math.max(minX, viewport.left + viewport.width - dialogWidth - margin);
+      const maxY = Math.max(minY, viewport.top + viewport.height - dialogHeight - margin);
+      return {
+        x: Math.max(minX, Math.min(maxX, Number(position?.x) || minX)),
+        y: Math.max(minY, Math.min(maxY, Number(position?.y) || minY))
+      };
+    },
+
+    getDialogElementSize() {
+      const dialog = this.$el?.querySelector?.('.input-dialog');
+      const viewport = this.getViewportBox();
+      const availableWidth = Math.max(260, viewport.width - 28);
+      const width = Math.min(dialog?.offsetWidth || 340, 340, availableWidth);
+      const height = Math.min(Math.max(260, viewport.height - 90), Math.max(300, dialog?.offsetHeight || 320));
+      return { width, height };
+    },
+
+    getDialogPositionNearAvatar(dialogWidth = 340, dialogHeight = 320) {
+      const viewport = this.getViewportBox();
+      const avatar = this.getSafeAvatarPosition();
+      const avatarSize = this.getAvatarSize();
+      const gap = 18;
+      const candidates = [
+        { x: avatar.x - dialogWidth - gap, y: avatar.y - 4 },
+        { x: avatar.x - dialogWidth - gap, y: avatar.y + avatarSize.height * 0.18 },
+        { x: avatar.x + avatarSize.width + gap, y: avatar.y - 4 },
+        { x: avatar.x + avatarSize.width + gap, y: avatar.y + avatarSize.height * 0.18 },
+        { x: avatar.x + avatarSize.width / 2 - dialogWidth / 2, y: avatar.y - dialogHeight - gap },
+        { x: avatar.x + avatarSize.width / 2 - dialogWidth / 2, y: avatar.y + avatarSize.height + gap }
+      ];
+      const margin = 14;
+      const minTop = viewport.top + 76;
+      const fits = (point) =>
+        point.x >= viewport.left + margin &&
+        point.x + dialogWidth <= viewport.left + viewport.width - margin &&
+        point.y >= Math.max(viewport.top + margin, minTop) &&
+        point.y + dialogHeight <= viewport.top + viewport.height - margin;
+
+      return this.clampDialogPosition(candidates.find(fits) || candidates[0], dialogWidth, dialogHeight);
+    },
+
+    repositionInputDialog() {
+      if (!this.showInputDialog || this.isDragging) return;
+      this.$nextTick(() => {
+        const { width, height } = this.getDialogElementSize();
+        this.dialogPosition = this.getDialogPositionNearAvatar(width, height);
+      });
     },
 
     syncAvatarPosition() {
@@ -903,8 +981,10 @@ export default {
         left: `${this.avatarPosition.x}px`,
         top: `${this.avatarPosition.y}px`,
         right: 'auto',
-        bottom: 'auto'
+        bottom: 'auto',
+        zIndex: '100010'
       });
+      this.repositionInputDialog();
     },
 
     handleAvatarClick(e) {
@@ -1049,10 +1129,7 @@ export default {
         }
       });
 
-      setTimeout(() => {
-        if (this.isDestroyed) return;
-        this.startTypewriterAndSpeech('喵，如果你想了解三星堆的青铜神树、纵目面具、金杖或古蜀工艺，可以直接问我，我会结合资料认真讲给你听。');
-      }, 800);
+      this.syncWidgetVisibility();
     },
 
     // ========== 鐩戝惉 Live2D 鐢诲竷 ==========
@@ -1073,7 +1150,7 @@ export default {
 
           this.live2dCanvas.style.pointerEvents = 'auto';
           this.live2dCanvas.style.cursor = 'grab';
-          this.live2dCanvas.style.zIndex = '99999';
+          this.live2dCanvas.style.zIndex = '100010';
           this.live2dCanvas.style.touchAction = 'none';
           this.syncAvatarPosition();
 
@@ -1100,6 +1177,7 @@ export default {
 
     // ========== 鐐瑰嚮浜や簰 ==========
     handleClick(e) {
+      this.primeAudioContext();
       this.clearAllTimers();
       this.stopAudio();
 
@@ -1108,6 +1186,13 @@ export default {
         this.isPanelOpen = true;
         this.hasPendingMsg = false;
         this.startAutoHide();
+        this.playWelcomeOnce();
+        this.syncWidgetVisibility();
+        return;
+      }
+
+      if (!this.hasPlayedWelcome) {
+        this.playWelcomeOnce();
         return;
       }
 
@@ -1121,19 +1206,26 @@ export default {
       this.inputQuestion = '';
       this.showInputDialog = true;
 
-      const dialogWidth = 340;
-      const dialogHeight = 280;
-      const margin = 20;
-      const avatar = this.getSafeAvatarPosition();
-
-      this.dialogPosition.x = Math.max(margin, Math.min(window.innerWidth - dialogWidth - margin, avatar.x - dialogWidth - 18));
-      this.dialogPosition.y = Math.max(76, Math.min(window.innerHeight - dialogHeight - margin, avatar.y + 34));
-
       this.$nextTick(() => {
+        this.repositionInputDialog();
         if (this.$refs.dialogInput) {
           this.$refs.dialogInput.focus();
         }
       });
+    },
+
+    playWelcomeOnce() {
+      if (this.hasPlayedWelcome || this.isDestroyed) return;
+      this.hasPlayedWelcome = true;
+      const welcomeReply = matchFixedAnswer('欢迎');
+      this.startTypewriterAndSpeech(
+          welcomeReply?.reply || '欢迎来到青铜数元，我是 AI 虚拟向导玄喵。你可以直接问我三星堆文物、知识图谱、三维展馆和项目功能。',
+          {
+            audioUrl: welcomeReply?.audioUrl,
+            fallbackToTtsOnAudioError: true,
+            playDelayMs: 120
+          }
+      );
     },
 
     closeInputDialog() {
@@ -1158,8 +1250,11 @@ export default {
 
     onDrag(e) {
       if (!this.isDragging) return;
-      this.dialogPosition.x = e.clientX - this.dragOffset.x;
-      this.dialogPosition.y = e.clientY - this.dragOffset.y;
+      const { width, height } = this.getDialogElementSize();
+      this.dialogPosition = this.clampDialogPosition({
+        x: e.clientX - this.dragOffset.x,
+        y: e.clientY - this.dragOffset.y
+      }, width, height);
     },
 
     stopDrag() {
@@ -1193,7 +1288,11 @@ export default {
 
       const fixedReply = matchFixedAnswer(question);
       if (fixedReply) {
-        this.startTypewriterAndSpeech(fixedReply);
+        this.startTypewriterAndSpeech(fixedReply.reply, {
+          audioUrl: fixedReply.audioUrl,
+          fallbackToTtsOnAudioError: true,
+          playDelayMs: 120
+        });
         return;
       }
 
@@ -1650,6 +1749,19 @@ export default {
           this.speechPlaybackToken === playbackToken
         );
 
+        const fallbackToCloudTts = () => {
+          if (!options.fallbackToTtsOnAudioError || !isCurrentSpeech() || this.audioEl !== audioEl) {
+            return false;
+          }
+          this.startTypewriterAndSpeech(finalText, {
+            ...options,
+            audioUrl: '',
+            fallbackToTtsOnAudioError: false,
+            playDelayMs: Math.max(120, Math.min(playDelayMs, 500))
+          });
+          return true;
+        };
+
         if (!isCurrentSpeech()) {
           revokeSpeechUrl(audioUrl);
           return;
@@ -1658,6 +1770,20 @@ export default {
         this.currentAudioUrl = audioUrl;
         const audioEl = new Audio(audioUrl);
         this.audioEl = audioEl;
+
+        const finishSpeech = () => {
+          if (!isCurrentSpeech() || this.audioEl !== audioEl) return;
+          this.stopThinkingStatus();
+          clearInterval(this.typewriterInterval);
+          this.typewriterInterval = null;
+          this.displayedText = finalText;
+          this.isSpeaking = false;
+          bubbleEl.classList.remove('speaking');
+          this.checkScrollBar();
+          this.scheduleHide();
+          this.startAutoHide();
+          this.notifyExternalSpeech('ended');
+        };
 
         let ttsReadyFired = false;
         const startPlaybackAndTyping = () => {
@@ -1692,11 +1818,15 @@ export default {
           clearTimeout(this.playDelayTimer);
           this.playDelayTimer = setTimeout(() => {
             if (!isCurrentSpeech() || this.audioEl !== audioEl) return;
-            audioEl.play().catch(() => {
+            audioEl.play().catch(async () => {
               if (!isCurrentSpeech() || this.audioEl !== audioEl) return;
-              this.notifyExternalSpeech('error');
-              this.continueTypingWithoutSpeech();
-              this.startAutoHide();
+              const played = await this.playWithAudioContext(audioUrl, isCurrentSpeech, audioEl, finishSpeech);
+              if (!played) {
+                if (fallbackToCloudTts()) return;
+                this.notifyExternalSpeech('error');
+                this.continueTypingWithoutSpeech();
+                this.startAutoHide();
+              }
             });
           }, playDelayMs);
         };
@@ -1710,20 +1840,11 @@ export default {
         }, 500);
 
         audioEl.onended = () => {
-          if (!isCurrentSpeech() || this.audioEl !== audioEl) return;
-          this.stopThinkingStatus();
-          clearInterval(this.typewriterInterval);
-          this.typewriterInterval = null;
-          this.displayedText = finalText;
-          this.isSpeaking = false;
-          bubbleEl.classList.remove('speaking');
-          this.checkScrollBar();
-          this.scheduleHide();
-          this.startAutoHide();
-          this.notifyExternalSpeech('ended');
+          finishSpeech();
         };
         audioEl.onerror = () => {
           if (!isCurrentSpeech() || this.audioEl !== audioEl) return;
+          if (fallbackToCloudTts()) return;
           this.stopThinkingStatus();
           this.notifyExternalSpeech('error');
           this.continueTypingWithoutSpeech();
@@ -1766,16 +1887,77 @@ export default {
       }, 50);
     },
 
+    async primeAudioContext() {
+      try {
+        const AudioContextCtor = window.AudioContext || window.webkitAudioContext;
+        if (!AudioContextCtor) return null;
+        if (!this.audioCtx || this.audioCtx.state === 'closed') {
+          this.audioCtx = new AudioContextCtor();
+        }
+        if (this.audioCtx.state === 'suspended') {
+          await this.audioCtx.resume();
+        }
+        this.audioUnlocked = this.audioCtx.state === 'running';
+        return this.audioCtx;
+      } catch (error) {
+        this.audioUnlocked = false;
+        return null;
+      }
+    },
+
+    async playWithAudioContext(audioUrl, isCurrentSpeech, audioEl, onEnded) {
+      try {
+        const ctx = await this.primeAudioContext();
+        if (!ctx || ctx.state !== 'running' || !isCurrentSpeech() || this.audioEl !== audioEl) {
+          return false;
+        }
+        const response = await fetch(audioUrl);
+        const arrayBuffer = await response.arrayBuffer();
+        const audioBuffer = await ctx.decodeAudioData(arrayBuffer.slice(0));
+        if (!isCurrentSpeech() || this.audioEl !== audioEl) {
+          return false;
+        }
+        if (this.audioSource) {
+          try {
+            this.audioSource.stop();
+          } catch (error) {
+            // Ignore already-stopped sources.
+          }
+          this.audioSource.disconnect();
+        }
+        const source = ctx.createBufferSource();
+        source.buffer = audioBuffer;
+        source.connect(ctx.destination);
+        this.audioSource = source;
+        source.onended = () => {
+          if (this.audioSource === source) {
+            this.audioSource = null;
+          }
+          onEnded();
+        };
+        source.start(0);
+        return true;
+      } catch (error) {
+        console.warn('AudioContext playback failed:', error);
+        return false;
+      }
+    },
+
     stopAudio() {
       this.speechPlaybackToken += 1;
       if (this.ttsAbortController) {
         this.ttsAbortController.abort();
         this.ttsAbortController = null;
       }
-      if (this.audioCtx && this.audioCtx.state !== 'closed') {
-        this.audioCtx.close();
+      if (this.audioSource) {
+        try {
+          this.audioSource.stop();
+        } catch (error) {
+          // Ignore already-stopped sources.
+        }
+        this.audioSource.disconnect();
+        this.audioSource = null;
       }
-      this.audioCtx = null;
       if (this.audioEl) {
         this.audioEl.pause();
         this.audioEl.currentTime = 0;
@@ -1827,7 +2009,8 @@ export default {
       });
     },
 
-    scheduleHide() {
+    scheduleHide(delay = 3000) {
+      clearTimeout(this.hideTimeout);
       this.hideTimeout = setTimeout(() => {
         this.isHiding = true;
         setTimeout(() => {
@@ -1835,11 +2018,12 @@ export default {
           if (bubbleEl) {
             bubbleEl.style.display = 'none';
           }
+          this.hideTimeout = null;
           this.isHiding = false;
           this.isStopped = false;
           this.isScrollable = false;
         }, 500);
-      }, 30000);
+      }, delay);
     }
   },
   beforeUnmount() {
@@ -1849,6 +2033,10 @@ export default {
     this.clearDemoCommandTimers();
     this.clearAllTimers();
     this.stopAudio();
+    if (this.audioCtx && this.audioCtx.state !== 'closed') {
+      this.audioCtx.close();
+    }
+    this.audioCtx = null;
     if (window.L2Dwidget) {
       window.L2Dwidget.destroy?.();
     }
@@ -1872,6 +2060,7 @@ export default {
     window.removeEventListener('xuanmiao:say', this.handleExternalSpeech);
     window.removeEventListener('xuanmiao:stop', this.handleExternalStop);
     window.removeEventListener('resize', this.applyAvatarPosition);
+    window.removeEventListener('scroll', this.repositionInputDialog, true);
     window.visualViewport?.removeEventListener('resize', this.applyAvatarPosition);
     window.visualViewport?.removeEventListener('scroll', this.applyAvatarPosition);
     this.cleanupMcpListeners();
@@ -1886,7 +2075,7 @@ export default {
   position: fixed;
   right: 0;
   bottom: 0;
-  z-index: 1100;
+  z-index: 100000;
 }
 
 /* 渚ц竟鍞ゅ嚭鏍囩 */
@@ -1904,7 +2093,7 @@ export default {
   border-radius: 0;
   cursor: pointer;
   display: block;
-  z-index: 1110;
+  z-index: 100020;
   transition: opacity 0.3s ease, transform 0.24s ease;
   box-shadow: none;
 }
@@ -2205,7 +2394,7 @@ export default {
 #live2d-widget {
   bottom: 0px !important;
   right: 20px !important;
-  z-index: 1100 !important;
+  z-index: 100010 !important;
 }
 
 #live2d-widget canvas {
@@ -2216,11 +2405,12 @@ export default {
 .input-dialog {
   position: fixed;
   width: 340px;
+  max-width: calc(100vw - 28px);
   background: linear-gradient(135deg, #fff9f0 0%, #fff5e6 100%);
   border: 2px solid #d4a574;
   border-radius: 16px;
   box-shadow: 0 12px 40px rgba(139, 69, 19, 0.2);
-  z-index: 1300;
+  z-index: 100030;
   opacity: 0;
   transform: translateY(10px) scale(0.95);
   pointer-events: none;
@@ -2439,8 +2629,7 @@ export default {
 
 @media (max-width: 768px) {
   .input-dialog {
-    right: 20px;
-    width: calc(100vw - 40px);
+    width: calc(100vw - 28px);
     max-width: 340px;
   }
 }

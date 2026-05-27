@@ -505,6 +505,33 @@ function updateAssistantMessageById(messageId, content, fallbackTime = '') {
   scrollToBottom()
 }
 
+function wait(ms) {
+  return new Promise((resolve) => window.setTimeout(resolve, ms))
+}
+
+async function typeAssistantMessageById(messageId, text, options = {}) {
+  const finalText = String(text || '').trim()
+  if (!finalText) return
+
+  const thinkingMs = options.thinkingMs ?? 650
+  const charDelay = options.charDelay ?? 24
+  isThinking.value = true
+  showThinkingBubble.value = true
+  scrollToBottom()
+  await wait(thinkingMs)
+
+  isThinking.value = false
+  showThinkingBubble.value = false
+  updateAssistantMessageById(messageId, '')
+
+  let displayed = ''
+  for (const char of finalText) {
+    displayed += char
+    updateAssistantMessageById(messageId, displayed)
+    await wait(charDelay)
+  }
+}
+
 function appendAssistantPlaceholder(content = '...') {
   const id = Date.now() + Math.random()
   messages.value.push({
@@ -825,7 +852,7 @@ async function sendMessage(presetQuestion = '') {
   const assistantPlaceholderId = appendAssistantPlaceholder()
 
   if (fixedAnswer) {
-    updateAssistantMessageById(assistantPlaceholderId, fixedAnswer)
+    await typeAssistantMessageById(assistantPlaceholderId, fixedAnswer.reply)
     return
   }
 

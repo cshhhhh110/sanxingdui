@@ -9,7 +9,9 @@ import org.springframework.stereotype.Service;
 import java.net.HttpURLConnection;
 import java.net.URI;
 import java.nio.charset.StandardCharsets;
-import java.util.*;
+import java.util.Base64;
+import java.util.List;
+import java.util.Map;
 
 @Slf4j
 @Service
@@ -17,7 +19,6 @@ public class TtsService {
 
     private final ObjectMapper objectMapper = new ObjectMapper();
 
-    // ==================== SiliconFlow (CosyVoice2) ====================
     @Value("${spring.ai.openai.api-key}")
     private String sfApiKey;
 
@@ -26,74 +27,70 @@ public class TtsService {
 
     private static final String SF_MODEL = "FunAudioLLM/CosyVoice2-0.5B";
     private static final Map<String, String> SF_VOICE_MAP = Map.of(
-            "default",      "FunAudioLLM/CosyVoice2-0.5B:alex",
-            "zh_female",    "FunAudioLLM/CosyVoice2-0.5B:bella",
-            "sweet",        "FunAudioLLM/CosyVoice2-0.5B:anna"
+            "default", "FunAudioLLM/CosyVoice2-0.5B:alex",
+            "zh_female", "FunAudioLLM/CosyVoice2-0.5B:bella",
+            "sweet", "FunAudioLLM/CosyVoice2-0.5B:anna"
     );
 
-    private static final List<Map<String,String>> SF_VOICE_LIST = List.of(
-            Map.of("key","default","label","默认男声","desc","中性沉稳 alex"),
-            Map.of("key","zh_female","label","标准女声","desc","清晰自然 bella"),
-            Map.of("key","sweet","label","甜美女声","desc","甜美活泼 anna")
+    private static final List<Map<String, String>> SF_VOICE_LIST = List.of(
+            Map.of("key", "default", "label", "\u9ed8\u8ba4\u7537\u58f0", "desc", "alex"),
+            Map.of("key", "zh_female", "label", "\u6e05\u4eae\u5973\u58f0", "desc", "bella"),
+            Map.of("key", "sweet", "label", "\u751c\u7f8e\u5973\u58f0", "desc", "anna")
     );
 
-    // ==================== MiMo ====================
     @Value("${mimo.api-key:}")
     private String mimoApiKey;
 
-    @Value("${mimo.base-url:https://api.xiaomimimo.com/v1}")
+    @Value("${mimo.base-url:https://token-plan-cn.xiaomimimo.com/v1}")
     private String mimoBaseUrl;
 
     @Value("${mimo.tts.model:mimo-v2.5-tts}")
     private String mimoTtsModel;
 
-    // MiMo TTS 音色：苏打(男)、冰糖(女)、茉莉(女甜)
     private static final Map<String, String> MIMO_VOICE_MAP = Map.of(
-            "default",      "苏打",
-            "zh_female",    "冰糖",
-            "sweet",        "茉莉"
+            "default", "\u82cf\u6253",
+            "zh_female", "\u51b0\u7cd6",
+            "sweet", "\u8309\u8389",
+            "suda", "\u82cf\u6253",
+            "bingtang", "\u51b0\u7cd6",
+            "moli", "\u8309\u8389"
     );
 
-    private static final List<Map<String,String>> MIMO_VOICE_LIST = List.of(
-            Map.of("key","default","label","默认男声","desc","沉稳 苏打"),
-            Map.of("key","zh_female","label","标准女声","desc","清晰 冰糖"),
-            Map.of("key","sweet","label","甜美女声","desc","甜美 茉莉")
+    private static final List<Map<String, String>> MIMO_VOICE_LIST = List.of(
+            Map.of("key", "default", "label", "\u9ed8\u8ba4\u7537\u58f0", "desc", "\u82cf\u6253"),
+            Map.of("key", "zh_female", "label", "\u6e05\u4eae\u5973\u58f0", "desc", "\u51b0\u7cd6"),
+            Map.of("key", "sweet", "label", "\u751c\u7f8e\u5973\u58f0", "desc", "\u8309\u8389")
     );
 
-    // ==================== Provider 选择 ====================
     @Value("${tts.provider:siliconflow}")
     private String provider;
 
-    // ==================== 本地兜底 ====================
     @Value("${tts.moss-nano.url:http://localhost:18083}")
     private String localTtsUrl;
 
-    // ==================== 对外接口 ====================
-
-    public java.util.List<java.util.Map<String,String>> getVoiceList() {
+    public List<Map<String, String>> getVoiceList() {
         return "mimo".equalsIgnoreCase(provider) ? MIMO_VOICE_LIST : SF_VOICE_LIST;
     }
 
     public byte[] synthesize(String text, String voice, float speed) {
-        String safeText = text.length() > 500 ? text.substring(0, 500) : text;
-
-        try {
-            byte[] audio;
-            if ("mimo".equalsIgnoreCase(provider)) {
-                audio = synthesizeMiMo(safeText, voice);
-            } else {
-                audio = synthesizeSiFlow(safeText, voice);
-            }
-            log.info("TTS成功 provider:{} text:{} audio:{}bytes", provider, safeText.length(), audio.length);
-            return audio;
-        } catch (Exception e) {
-            log.warn("云端TTS失败(provider={})，切回本地: {}", provider, e.getMessage());
+        String safeText = text == null ? "" : text.trim();
+        safeText = safeText.length() > 500 ? safeText.substring(0, 500) : safeText;
+        if (safeText.isBlank()) {
+            throw new IllegalArgumentException("TTS text is empty");
         }
 
-        return synthesizeLocal(safeText, voice);
-    }
+        try {
+            byte[] audio = "mimo".equalsIgnoreCase(provider)
+                    ? synthesizeMiMo(safeText, voice)
+                    : synthesizeSiFlow(safeText, voice);
+            log.info("TTS success provider:{} text:{} audio:{}bytes", provider, safeText.length(), audio.length);
+            return audio;
+        } catch (Exception e) {
+            log.warn("Cloud TTS failed(provider={}), falling back to local TTS: {}", provider, e.getMessage());
+        }
 
-    // ==================== SiliconFlow CosyVoice2 ====================
+        return synthesizeLocal(safeText);
+    }
 
     private byte[] synthesizeSiFlow(String text, String voice) throws Exception {
         String voiceId = SF_VOICE_MAP.getOrDefault(voice != null ? voice : "default",
@@ -109,19 +106,16 @@ public class TtsService {
         return doHttpPost(sfBaseUrl + "/v1/audio/speech", body, sfApiKey);
     }
 
-    // ==================== MiMo TTS（Chat 通道 + api-key 头） ====================
-
     private byte[] synthesizeMiMo(String text, String voice) throws Exception {
-        if (mimoApiKey == null || mimoApiKey.isBlank() || "YOUR_MIMO_API_KEY_HERE".equals(mimoApiKey)) {
-            throw new RuntimeException("MiMo API key 未配置，请在 application.yml 中填写 mimo.api-key");
+        if (mimoApiKey == null || mimoApiKey.isBlank() || mimoApiKey.startsWith("YOUR_")) {
+            throw new IllegalStateException("MiMo API key is not configured");
         }
 
-        String voiceId = MIMO_VOICE_MAP.getOrDefault(voice != null ? voice : "default", "苏打");
-
-        var body = Map.of(
+        String voiceId = MIMO_VOICE_MAP.getOrDefault(voice != null ? voice : "default", "\u82cf\u6253");
+        String json = objectMapper.writeValueAsString(Map.of(
                 "model", mimoTtsModel,
-                "messages", java.util.List.of(
-                        Map.of("role", "user", "content", "用自然流畅的语速朗读以下内容"),
+                "messages", List.of(
+                        Map.of("role", "user", "content", "Read the following Chinese text naturally and clearly."),
                         Map.of("role", "assistant", "content", text)
                 ),
                 "audio", Map.of(
@@ -129,9 +123,7 @@ public class TtsService {
                         "voice", voiceId
                 ),
                 "stream", false
-        );
-
-        String json = objectMapper.writeValueAsString(body);
+        ));
 
         HttpURLConnection conn = (HttpURLConnection) URI.create(mimoBaseUrl + "/chat/completions").toURL().openConnection();
         conn.setRequestMethod("POST");
@@ -148,6 +140,7 @@ public class TtsService {
             String err = conn.getErrorStream() != null
                     ? new String(conn.getErrorStream().readAllBytes(), StandardCharsets.UTF_8)
                     : "unknown";
+            conn.disconnect();
             throw new RuntimeException("MiMo TTS " + conn.getResponseCode() + ": " + err);
         }
 
@@ -156,13 +149,11 @@ public class TtsService {
 
         JsonNode root = objectMapper.readTree(resp);
         String b64 = root.at("/choices/0/message/audio/data").asText();
-        if (b64 == null || b64.isEmpty()) {
-            throw new RuntimeException("MiMo TTS 返回无音频数据: " + resp.substring(0, Math.min(200, resp.length())));
+        if (b64 == null || b64.isBlank()) {
+            throw new RuntimeException("MiMo TTS returned no audio data");
         }
         return Base64.getDecoder().decode(b64);
     }
-
-    // ==================== 通用 HTTP 请求 ====================
 
     private byte[] doHttpPost(String url, String body, String apiKey) throws Exception {
         HttpURLConnection conn = (HttpURLConnection) URI.create(url).toURL().openConnection();
@@ -177,7 +168,10 @@ public class TtsService {
         conn.getOutputStream().close();
 
         if (conn.getResponseCode() != 200) {
-            String err = new String(conn.getErrorStream().readAllBytes(), StandardCharsets.UTF_8);
+            String err = conn.getErrorStream() != null
+                    ? new String(conn.getErrorStream().readAllBytes(), StandardCharsets.UTF_8)
+                    : "unknown";
+            conn.disconnect();
             throw new RuntimeException("TTS HTTP " + conn.getResponseCode() + ": " + err);
         }
         byte[] audio = conn.getInputStream().readAllBytes();
@@ -185,12 +179,9 @@ public class TtsService {
         return audio;
     }
 
-    // ==================== 本地 TTS 兜底 ====================
-
-    private byte[] synthesizeLocal(String text, String voice) {
-        String demoId = "demo-1";
+    private byte[] synthesizeLocal(String text) {
         String formBody = "text=" + java.net.URLEncoder.encode(text, StandardCharsets.UTF_8)
-                + "&demo_id=" + demoId;
+                + "&demo_id=demo-1";
 
         try {
             HttpURLConnection conn = (HttpURLConnection) URI.create(localTtsUrl + "/api/generate").toURL().openConnection();
@@ -204,19 +195,18 @@ public class TtsService {
             conn.getOutputStream().close();
 
             if (conn.getResponseCode() != 200) {
-                throw new RuntimeException("本地TTS返回 " + conn.getResponseCode());
+                throw new RuntimeException("Local TTS returned " + conn.getResponseCode());
             }
             String resp = new String(conn.getInputStream().readAllBytes(), StandardCharsets.UTF_8);
             conn.disconnect();
 
             JsonNode json = objectMapper.readTree(resp);
             byte[] audio = Base64.getDecoder().decode(json.get("audio_base64").asText());
-            log.info("本地GPU TTS成功 text:{} audio:{}bytes", text.length(), audio.length);
+            log.info("Local TTS success text:{} audio:{}bytes", text.length(), audio.length);
             return audio;
-
         } catch (Exception e) {
-            log.error("本地TTS也失败: {}", e.getMessage());
-            throw new RuntimeException("语音合成失败（云端+本地均不可用）", e);
+            log.error("Local TTS failed: {}", e.getMessage());
+            throw new RuntimeException("TTS synthesis failed: cloud and local providers are unavailable", e);
         }
     }
 }

@@ -1,0 +1,265 @@
+{
+  "version": 1,
+  "generatedAt": "2026-05-27T11:06:53.225Z",
+  "endpoint": "http://localhost:8889/api/tts/speech",
+  "voice": "default",
+  "total": 32,
+  "items": [
+    {
+      "id": "welcome",
+      "voice": "default",
+      "text": "欢迎来到青铜数元，我是 AI 虚拟向导玄喵。你可以直接问我三星堆文物、知识图谱、三维展馆和项目功能。",
+      "textHash": "afbf179bbb45651e",
+      "file": "/audio/xuanmiao-preset/preset.welcome.default.wav",
+      "bytes": 453164
+    },
+    {
+      "id": "hello",
+      "voice": "default",
+      "text": "你好呀，我是玄喵。想了解青铜神树、纵目面具、金杖、金面具，或者想让我带你逛展馆，都可以直接问我。",
+      "textHash": "326147559b9d9571",
+      "file": "/audio/xuanmiao-preset/preset.hello.default.wav",
+      "bytes": 430124
+    },
+    {
+      "id": "identity",
+      "voice": "default",
+      "text": "我是玄喵，青铜数元里的 AI 虚拟向导。我会结合本地知识库和项目功能，帮你理解三星堆文物背后的文明线索。",
+      "textHash": "fab02d0eddd953c4",
+      "file": "/audio/xuanmiao-preset/preset.identity.default.wav",
+      "bytes": 483884
+    },
+    {
+      "id": "capability",
+      "voice": "default",
+      "text": "我可以回答三星堆文化问题，带你查看文物线索，讲解知识图谱、三维展馆、时空探索、文创商城和答题学习功能。",
+      "textHash": "2cfa594043055263",
+      "file": "/audio/xuanmiao-preset/preset.capability.default.wav",
+      "bytes": 468524
+    },
+    {
+      "id": "how-to-ask",
+      "voice": "default",
+      "text": "你可以像聊天一样直接提问，例如青铜神树象征什么，纵目面具为什么特别，或者带我去看文创商城。",
+      "textHash": "d0bdef5c5c5c651a",
+      "file": "/audio/xuanmiao-preset/preset.how-to-ask.default.wav",
+      "bytes": 483884
+    },
+    {
+      "id": "enter-museum",
+      "voice": "default",
+      "text": "你可以从首页进入三维数字展馆，也可以直接告诉我想看的文物，我会尽量帮你跳转到对应展线。",
+      "textHash": "554c9e8379afa6c9",
+      "file": "/audio/xuanmiao-preset/preset.enter-museum.default.wav",
+      "bytes": 384044
+    },
+    {
+      "id": "voice-question",
+      "voice": "default",
+      "text": "点击玄喵提问框里的语音提问按钮，就可以用语音输入问题。识别完成后，我会根据问题进行讲解。",
+      "textHash": "5abe452c23df63ad",
+      "file": "/audio/xuanmiao-preset/preset.voice-question.default.wav",
+      "bytes": 384044
+    },
+    {
+      "id": "sanxingdui",
+      "voice": "default",
+      "text": "三星堆是古蜀文明的重要遗址，出土了青铜神树、纵目面具、金杖等代表性文物，展现出独特的祭祀体系、工艺水平和审美想象。",
+      "textHash": "a0f20ce6938f1f1e",
+      "file": "/audio/xuanmiao-preset/preset.sanxingdui.default.wav",
+      "bytes": 568364
+    },
+    {
+      "id": "ancient-shu",
+      "voice": "default",
+      "text": "古蜀文明是长江上游重要的区域文明。三星堆文物让我们看到古蜀人在祭祀、权力象征、青铜工艺和宇宙观上的独特表达。",
+      "textHash": "2dbfdefaeec66138",
+      "file": "/audio/xuanmiao-preset/preset.ancient-shu.default.wav",
+      "bytes": 553004
+    },
+    {
+      "id": "sacred-tree",
+      "voice": "default",
+      "text": "青铜神树通常被理解为连接天地、人神沟通的象征。它复杂的枝干、神鸟和树形结构，体现了古蜀人对宇宙秩序和祭祀空间的想象。",
+      "textHash": "f6547fd0eb50d88c",
+      "file": "/audio/xuanmiao-preset/preset.sacred-tree.default.wav",
+      "bytes": 576044
+    },
+    {
+      "id": "eye-mask",
+      "voice": "default",
+      "text": "青铜纵目面具最突出的特征是夸张的眼部造型。它可能与神性观看、祖先崇拜和祭祀权威有关，是三星堆视觉形象中极具辨识度的符号。",
+      "textHash": "7244e512e8cb0d0f",
+      "file": "/audio/xuanmiao-preset/preset.eye-mask.default.wav",
+      "bytes": 599084
+    },
+    {
+      "id": "standing-figure",
+      "voice": "default",
+      "text": "青铜大立人像体量巨大，姿态庄重，双手似乎曾持有器物。它常被视为祭祀主持者、权力人物或神职形象的重要表达。",
+      "textHash": "557b779a8e2d5533",
+      "file": "/audio/xuanmiao-preset/preset.standing-figure.default.wav",
+      "bytes": 483884
+    },
+    {
+      "id": "gold-scepter",
+      "voice": "default",
+      "text": "金杖是三星堆权力与礼制的重要象征。其纹样和材质共同强化了身份、祭祀和统治权威的视觉表达。",
+      "textHash": "0b48ed250fa2dadc",
+      "file": "/audio/xuanmiao-preset/preset.gold-scepter.default.wav",
+      "bytes": 437804
+    },
+    {
+      "id": "gold-mask",
+      "voice": "default",
+      "text": "金面具以黄金材质和面部造型强化神圣感，体现了三星堆对身份、祭祀与审美表达的高度重视。",
+      "textHash": "135f98d80846e149",
+      "file": "/audio/xuanmiao-preset/preset.gold-mask.default.wav",
+      "bytes": 414764
+    },
+    {
+      "id": "sacrificial-pits",
+      "voice": "default",
+      "text": "三星堆祭祀坑集中出土了大量青铜器、金器、玉石器和象牙等遗存，为理解古蜀礼仪活动和文明结构提供了关键线索。",
+      "textHash": "44e0077dfcc127d6",
+      "file": "/audio/xuanmiao-preset/preset.sacrificial-pits.default.wav",
+      "bytes": 506924
+    },
+    {
+      "id": "knowledge-graph",
+      "voice": "default",
+      "text": "知识图谱会把文物、遗址、时代、工艺和象征意义连接起来，让观众看到的不只是一件展品，而是一张古蜀文明关系网络。",
+      "textHash": "6353f330c877526f",
+      "file": "/audio/xuanmiao-preset/preset.knowledge-graph.default.wav",
+      "bytes": 537644
+    },
+    {
+      "id": "rag",
+      "voice": "default",
+      "text": "RAG 检索增强生成会先从本地知识库查找相关资料，再生成回答，这样可以降低幻觉风险，让讲解更可靠。",
+      "textHash": "568545b64a1fbe0a",
+      "file": "/audio/xuanmiao-preset/preset.rag.default.wav",
+      "bytes": 514604
+    },
+    {
+      "id": "three-d-museum",
+      "voice": "default",
+      "text": "三维数字展馆支持文物旋转、缩放和细节观察，让观众从器型结构、纹饰特征到视觉风格获得更直观的沉浸体验。",
+      "textHash": "a870a0fb561dfc20",
+      "file": "/audio/xuanmiao-preset/preset.three-d-museum.default.wav",
+      "bytes": 522284
+    },
+    {
+      "id": "spacetime",
+      "voice": "default",
+      "text": "时空探索模块可以按照历史时代、遗址空间和制作工艺筛选文物，帮助观众从多维视角进入三星堆文化。",
+      "textHash": "ed663ea14f9486bc",
+      "file": "/audio/xuanmiao-preset/preset.spacetime.default.wav",
+      "bytes": 468524
+    },
+    {
+      "id": "shop",
+      "voice": "default",
+      "text": "文创商城把三星堆文化符号转化为可传播、可购买的产品，让文化展示进一步连接消费和传播场景。",
+      "textHash": "94b304d09d7dec40",
+      "file": "/audio/xuanmiao-preset/preset.shop.default.wav",
+      "bytes": 437804
+    },
+    {
+      "id": "study",
+      "voice": "default",
+      "text": "研学课程模块承载三星堆历史、青铜工艺和文化知识内容，让文化理解从参观延伸到系统学习。",
+      "textHash": "77ddd777e7fd731d",
+      "file": "/audio/xuanmiao-preset/preset.study.default.wav",
+      "bytes": 422444
+    },
+    {
+      "id": "quiz",
+      "voice": "default",
+      "text": "答题系统通过刷题、挑战和成绩记录，把参观后的知识转化为互动学习体验，也适合研学和课堂场景。",
+      "textHash": "ffc1c3ba3f47d7bb",
+      "file": "/audio/xuanmiao-preset/preset.quiz.default.wav",
+      "bytes": 445484
+    },
+    {
+      "id": "ai-image",
+      "voice": "default",
+      "text": "AI 生图模块可以结合三星堆纹样和古蜀意象，辅助生成文化创意视觉内容，为文创设计提供灵感。",
+      "textHash": "a0c29050223379fc",
+      "file": "/audio/xuanmiao-preset/preset.ai-image.default.wav",
+      "bytes": 414764
+    },
+    {
+      "id": "tech-stack",
+      "voice": "default",
+      "text": "项目融合 Vue three、Spring Boot、My S Q L、Three dot J S、知识图谱和大模型问答技术，实现展示、交互和智能导览的结合。",
+      "textHash": "26405644f8704250",
+      "file": "/audio/xuanmiao-preset/preset.tech-stack.default.wav",
+      "bytes": 522284
+    },
+    {
+      "id": "project-highlight",
+      "voice": "default",
+      "text": "青铜数元的亮点在于用知识图谱组织文化关系，用 RAG 提升讲解可靠性，再结合三维展馆和玄喵向导形成可交互的寻踪体验。",
+      "textHash": "d6bd86725b23c532",
+      "file": "/audio/xuanmiao-preset/preset.project-highlight.default.wav",
+      "bytes": 583724
+    },
+    {
+      "id": "culture-value",
+      "voice": "default",
+      "text": "这个系统让三星堆文化以更智能、更年轻、更可交互的方式被看见、被理解、被传承，也能服务博物馆研学和线上展览。",
+      "textHash": "b16717c7f7d47731",
+      "file": "/audio/xuanmiao-preset/preset.culture-value.default.wav",
+      "bytes": 499244
+    },
+    {
+      "id": "future-plan",
+      "voice": "default",
+      "text": "未来可以继续扩展文物数据和三维模型资源，接入更多博物馆研学、线上展览和文化教育场景。",
+      "textHash": "d4c63567b13fbb04",
+      "file": "/audio/xuanmiao-preset/preset.future-plan.default.wav",
+      "bytes": 407084
+    },
+    {
+      "id": "searching",
+      "voice": "default",
+      "text": "好的，我正在整理相关线索。你也可以补充文物名称、遗址空间或工艺关键词，我会讲得更准确。",
+      "textHash": "d2cadab88a87fbe4",
+      "file": "/audio/xuanmiao-preset/preset.searching.default.wav",
+      "bytes": 384044
+    },
+    {
+      "id": "not-understood",
+      "voice": "default",
+      "text": "没关系，你可以换一种说法，或者直接说文物名称，比如青铜神树、纵目面具、金杖和金面具。",
+      "textHash": "cae9bd4f8083fdbd",
+      "file": "/audio/xuanmiao-preset/preset.not-understood.default.wav",
+      "bytes": 414764
+    },
+    {
+      "id": "network-error",
+      "voice": "default",
+      "text": "如果暂时没有声音，可能是浏览器拦截了音频或网络请求较慢。你可以先点击页面任意位置，再重新向我提问。",
+      "textHash": "139fe98cc53d0a16",
+      "file": "/audio/xuanmiao-preset/preset.network-error.default.wav",
+      "bytes": 407084
+    },
+    {
+      "id": "login-required",
+      "voice": "default",
+      "text": "浏览文物和提问通常不需要登录。涉及订单、个人中心或学习记录时，系统会提示你先登录。",
+      "textHash": "204c7b0cd73d5724",
+      "file": "/audio/xuanmiao-preset/preset.login-required.default.wav",
+      "bytes": 376364
+    },
+    {
+      "id": "navigate-done",
+      "voice": "default",
+      "text": "已经完成啦。你可以继续告诉我想看哪件文物，或者问我这页内容背后的文化线索。",
+      "textHash": "34f1e7309e324630",
+      "file": "/audio/xuanmiao-preset/preset.navigate-done.default.wav",
+      "bytes": 322604
+    }
+  ]
+}

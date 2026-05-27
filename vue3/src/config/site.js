@@ -5,24 +5,24 @@
 
 export const siteConfig = {
   // 站点基本信息
-  name: '非遗传承',
-  shortName: '非遗',
-  description: '传承千年文化，守护匠心技艺',
-  slogan: '让非遗之美代代相传',
+  name: '青铜数元',
+  shortName: '青铜数元',
+  description: 'AI赋能三星堆文化传播与沉浸式认知',
+  slogan: '玄喵引路，让三星堆文物开口说话',
   
   // Logo配置
   logo: {
     icon: '/src/assets/logo.png', // Logo图片路径
-    text: '古蜀数维'
+    text: '青铜数元'
   },
   
   // 后台管理系统配置
   admin: {
-    name: '非遗传承管理系统',
+    name: '青铜数元管理端',
     shortName: '管理后台',
     logo: {
       icon: '/src/assets/logo.png', // Logo图片路径
-      text: '古蜀数维管理端'
+      text: '青铜数元管理端'
     }
   },
   

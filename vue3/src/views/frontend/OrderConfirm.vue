@@ -25,7 +25,7 @@
                 <span>Delivery</span>
                 <h2>收货地址</h2>
               </div>
-              <button class="text-action" type="button" @click="showAddressModal = true">
+              <button class="text-action" type="button" @click="openAddressModal()">
                 <i class="fas fa-plus"></i>
                 新增地址
               </button>
@@ -34,7 +34,7 @@
             <div v-if="addressList.length === 0" class="empty-state">
               <i class="fas fa-map-marker-alt"></i>
               <p>暂无收货地址，请先添加地址</p>
-              <a-button type="primary" @click="showAddressModal = true">
+              <a-button type="primary" @click="openAddressModal()">
                 添加收货地址
               </a-button>
             </div>
@@ -55,10 +55,36 @@
                       <a-tag v-if="addr.isDefault" color="green">默认地址</a-tag>
                     </div>
                     <div class="address-detail">
-                      {{ addr.province }} {{ addr.city }} {{ addr.district }} {{ addr.detail }}
+                      {{ formatAddress(addr) }}
                     </div>
                   </div>
                 </a-radio>
+                <div class="address-actions" @click.stop>
+                  <button class="address-action-btn" type="button" @click="openAddressModal(addr)">
+                    <i class="fas fa-pen"></i>
+                    编辑
+                  </button>
+                  <button
+                      v-if="!addr.isDefault"
+                      class="address-action-btn"
+                      type="button"
+                      @click="handleSetDefaultAddress(addr.id)"
+                  >
+                    <i class="fas fa-star"></i>
+                    设为默认
+                  </button>
+                  <a-popconfirm
+                      title="确定删除这个收货地址吗？"
+                      ok-text="删除"
+                      cancel-text="取消"
+                      @confirm="handleDeleteAddress(addr.id)"
+                  >
+                    <button class="address-action-btn danger" type="button">
+                      <i class="fas fa-trash-alt"></i>
+                      删除
+                    </button>
+                  </a-popconfirm>
+                </div>
               </div>
             </a-radio-group>
           </section>
@@ -145,9 +171,12 @@
 
       <a-modal
           v-model:open="showAddressModal"
-          title="新增收货地址"
+          :title="isAddressEditing ? '编辑收货地址' : '新增收货地址'"
           :width="600"
-          @ok="handleAddAddress"
+          :confirm-loading="savingAddress"
+          ok-text="保存地址"
+          cancel-text="取消"
+          @ok="handleSaveAddress"
           @cancel="resetAddressForm"
       >
         <a-form
@@ -191,7 +220,13 @@ import { ref, computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { message } from 'ant-design-vue'
 import { getProductById } from '@/api/ShopProductApi'
-import { getUserAddressList, createAddress } from '@/api/AddressApi'
+import {
+  getUserAddressList,
+  createAddress,
+  updateAddress,
+  deleteAddress,
+  setDefaultAddress
+} from '@/api/AddressApi'
 import { createOrder } from '@/api/OrderApi'
 
 // ========== 路由 ==========
@@ -207,6 +242,9 @@ const addressList = ref([])
 const selectedAddressId = ref(null)
 const orderRemark = ref('')
 const showAddressModal = ref(false)
+const isAddressEditing = ref(false)
+const editingAddressId = ref(null)
+const savingAddress = ref(false)
 
 // 新增地址表单
 const addressForm = ref({
@@ -262,16 +300,23 @@ const fetchProductDetail = (productId) => {
   })
 }
 
-const fetchAddressList = () => {
+const fetchAddressList = (preferredAddressId = selectedAddressId.value) => {
   getUserAddressList({
     onSuccess: (res) => {
       addressList.value = res || []
+      if (addressList.value.some(addr => addr.id === preferredAddressId)) {
+        selectedAddressId.value = preferredAddressId
+        return
+      }
+
       // 自动选择默认地址
       const defaultAddr = addressList.value.find(addr => addr.isDefault)
       if (defaultAddr) {
         selectedAddressId.value = defaultAddr.id
       } else if (addressList.value.length > 0) {
         selectedAddressId.value = addressList.value[0].id
+      } else {
+        selectedAddressId.value = null
       }
     },
     onError: (error) => {
@@ -280,24 +325,111 @@ const fetchAddressList = () => {
   })
 }
 
-const handleAddAddress = () => {
+const openAddressModal = (address = null) => {
+  if (address) {
+    isAddressEditing.value = true
+    editingAddressId.value = address.id
+    addressForm.value = {
+      receiver: address.receiver || '',
+      phone: address.phone || '',
+      province: address.province || '',
+      city: address.city || '',
+      district: address.district || '',
+      detail: address.detail || '',
+      isDefault: !!address.isDefault
+    }
+  } else {
+    isAddressEditing.value = false
+    editingAddressId.value = null
+    resetAddressForm()
+  }
+  showAddressModal.value = true
+}
+
+const formatAddress = (address) => {
+  return address.fullAddress || [address.province, address.city, address.district, address.detail]
+      .filter(Boolean)
+      .join(' ')
+}
+
+const validateAddressForm = () => {
   // 验证表单
   if (!addressForm.value.receiver || !addressForm.value.phone ||
       !addressForm.value.province || !addressForm.value.city ||
       !addressForm.value.district || !addressForm.value.detail) {
     message.warning('请填写完整的地址信息')
-    return
+    return false
   }
 
-  createAddress(addressForm.value, {
-    successMsg: '地址添加成功',
-    onSuccess: (res) => {
-      showAddressModal.value = false
-      resetAddressForm()
+  if (!/^1[3-9]\d{9}$/.test(addressForm.value.phone)) {
+    message.warning('请输入正确的手机号')
+    return false
+  }
+
+  return true
+}
+
+const handleSaveAddress = () => {
+  if (!validateAddressForm()) return
+
+  savingAddress.value = true
+  const payload = { ...addressForm.value }
+  const currentEditingId = editingAddressId.value
+  const request = isAddressEditing.value
+      ? updateAddress(currentEditingId, payload, {
+        successMsg: '地址已更新',
+        onSuccess: (res) => {
+          savingAddress.value = false
+          showAddressModal.value = false
+          resetAddressForm()
+          fetchAddressList(res?.id || currentEditingId)
+        },
+        onError: (error) => {
+          savingAddress.value = false
+          message.error('更新地址失败：' + error.message)
+        }
+      })
+      : createAddress(payload, {
+        successMsg: '地址添加成功',
+        onSuccess: (res) => {
+          savingAddress.value = false
+          showAddressModal.value = false
+          resetAddressForm()
+          fetchAddressList(res?.id)
+        },
+        onError: (error) => {
+          savingAddress.value = false
+          message.error('添加地址失败：' + error.message)
+        }
+      })
+
+  return request
+}
+
+const handleDeleteAddress = (addressId) => {
+  deleteAddress(addressId, {
+    successMsg: '地址已删除',
+    onSuccess: () => {
+      if (selectedAddressId.value === addressId) {
+        selectedAddressId.value = null
+      }
       fetchAddressList()
     },
     onError: (error) => {
-      message.error('添加地址失败：' + error.message)
+      message.error('删除地址失败：' + error.message)
+    }
+  })
+}
+
+const handleSetDefaultAddress = (addressId) => {
+  setDefaultAddress(addressId, {
+    successMsg: '已设为默认地址',
+    onSuccess: () => {
+      selectedAddressId.value = addressId
+      fetchAddressList(addressId)
+    },
+    onError: (error) => {
+      message.error('设置默认地址失败：' + error.message)
     }
   })
 }
@@ -312,6 +444,9 @@ const resetAddressForm = () => {
     detail: '',
     isDefault: false
   }
+  isAddressEditing.value = false
+  editingAddressId.value = null
+  savingAddress.value = false
 }
 
 const handleSubmitOrder = () => {
@@ -546,6 +681,10 @@ const handleSubmitOrder = () => {
 }
 
 .address-item {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 14px;
+  align-items: flex-start;
   padding: 17px;
   cursor: pointer;
   border: 1px solid var(--shop-line);
@@ -565,11 +704,59 @@ const handleSubmitOrder = () => {
 
   :deep(.ant-radio-wrapper) {
     width: 100%;
+    align-items: flex-start;
+    margin-inline-end: 0;
+  }
+
+  :deep(.ant-radio + span) {
+    min-width: 0;
+    flex: 1;
   }
 
   :deep(.ant-radio-checked .ant-radio-inner) {
     border-color: var(--shop-primary);
     background-color: var(--shop-primary);
+  }
+}
+
+.address-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 8px;
+  max-width: 240px;
+}
+
+.address-action-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 30px;
+  padding: 0 10px;
+  color: var(--shop-primary);
+  font-size: 12px;
+  font-weight: 800;
+  cursor: pointer;
+  border: 1px solid rgba(66, 102, 79, 0.18);
+  background: #f8fbf9;
+  transition: color 0.22s ease, border-color 0.22s ease, background 0.22s ease;
+
+  &:hover {
+    color: #ffffff;
+    border-color: var(--shop-primary);
+    background: var(--shop-primary);
+  }
+
+  &.danger {
+    color: #b84a3a;
+    border-color: rgba(184, 74, 58, 0.2);
+    background: #fff8f6;
+
+    &:hover {
+      color: #ffffff;
+      border-color: #b84a3a;
+      background: #b84a3a;
+    }
   }
 }
 
@@ -812,6 +999,16 @@ const handleSubmitOrder = () => {
 
   .section-heading {
     display: grid;
+  }
+
+  .address-item {
+    grid-template-columns: 1fr;
+  }
+
+  .address-actions {
+    justify-content: flex-start;
+    max-width: none;
+    padding-left: 26px;
   }
 }
 </style>

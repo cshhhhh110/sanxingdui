@@ -1,5 +1,5 @@
 {
-  "name": "vue3",
+  "name": "bronze-digital-sanxingdui",
   "version": "0.1.0",
   "private": true,
   "scripts": {
@@ -8,7 +8,8 @@
     "build:staging": "vite build --mode staging",
     "preview": "vite preview",
     "lint": "eslint . --ext .vue,.js,.jsx,.cjs,.mjs --fix --ignore-path .gitignore",
-    "voice-guide:generate": "node scripts/generate-trail-voice-guide.mjs"
+    "voice-guide:generate": "node scripts/generate-trail-voice-guide.mjs",
+    "xuanmiao-preset:generate": "node scripts/generate-xuanmiao-preset-voice.mjs"
   },
   "dependencies": {
     "@ant-design/icons-vue": "^7.0.1",

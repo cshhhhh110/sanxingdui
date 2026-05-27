@@ -184,6 +184,10 @@
               </div>
               <span class="pit-map-card__badge">{{ activePitCode || '俯瞰图' }}</span>
             </div>
+            <div class="pit-map-hint" aria-label="地图交互提示">
+              <span><strong>K1-K8 坑位</strong>点击选择空间线索</span>
+              <span><strong>文物标注</strong>点击直接进入对应文物</span>
+            </div>
             <div class="pit-map-scroll" aria-label="三星堆遗址重点文物模型位置示意图">
               <div class="pit-map-stage">
                 <img class="pit-map-image" src="/images/trail/pit-map.png" alt="三星堆遗址重点文物模型位置示意图" />
@@ -202,6 +206,7 @@
                   :style="getPitHotspotStyle(spot)"
                   type="button"
                   :aria-label="spot.label"
+                  :title="spot.kind === 'pit' ? `${spot.label}：点击选择坑位` : `${spot.label}：点击直接进入文物`"
                   @click="selectPitHotspot(spot)"
                 >
                   <span>{{ spot.shortLabel }}</span>
@@ -675,14 +680,24 @@
                     <p class="narrative-label">下一步去哪里</p>
                     <strong>{{ selectedNodeActionTitle }}</strong>
                     <p>{{ selectedNodeActionHint }}</p>
-                    <button
-                      class="narrative-button"
-                      type="button"
-                      :disabled="!selectedGraphNode"
-                      @click="jumpByNode(selectedGraphNode)"
-                    >
-                      {{ selectedNodeActionButton }}
-                    </button>
+                    <div class="narrative-actions">
+                      <button
+                        class="narrative-button narrative-button--secondary"
+                        type="button"
+                        :disabled="!selectedGraphNode"
+                        @click="continueXuanmiaoNarrationFromNode"
+                      >
+                        继续听玄喵讲
+                      </button>
+                      <button
+                        class="narrative-button"
+                        type="button"
+                        :disabled="!selectedGraphNode"
+                        @click="jumpByNode(selectedGraphNode)"
+                      >
+                        {{ selectedNodeActionButton }}
+                      </button>
+                    </div>
                   </article>
                 </div>
               </section>
@@ -953,6 +968,9 @@ const VOICE_GUIDE_CACHE_LIMIT = 8
 const VOICE_GUIDE_RECENT_LIMIT = 10
 const VOICE_GUIDE_TTS_TIMEOUT = 7000
 const VOICE_GUIDE_LOADING_TEXT = '玄喵正在组织讲解…'
+const VOICE_GUIDE_START_KEY = 'trail-guide-start'
+const VOICE_GUIDE_START_TEXT = '玄喵陪游已开启。接下来我会跟着你的探索路线，结合当前文物、遗址和图谱线索，边走边讲。'
+const VOICE_GUIDE_START_AUDIO_URL = '/audio/xuanmiao-preset/preset.trail-guide-start.default.wav'
 const VOICE_GUIDE_TEXT_FALLBACK = '语音稍慢，已先显示文字提示'
 const VOICE_GUIDE_MANIFEST_URL = '/data/trail-voice-guide.manifest.json'
 
@@ -1112,6 +1130,41 @@ const PIT_MAP_HOTSPOTS = [
   { key: 'artifact-mask-eye', kind: 'artifact', pitCode: 'K2', entityId: 'HI-2025-003', shortLabel: '纵目', label: '青铜纵目面具，进入二号祭祀坑展线', x: 69.5, y: 66, w: 12.5, h: 11.6 },
   { key: 'artifact-gold-mask', kind: 'artifact', pitCode: 'K5', entityId: 'HI-2025-002', shortLabel: '金面具', label: '金面具，进入五号祭祀坑展线', x: 46.5, y: 73, w: 12, h: 10.5 }
 ]
+
+const PIT_VOICE_GUIDE_PRESETS = {
+  K1: {
+    text: '你点到了一号祭祀坑。这里以金杖为代表，适合从王权象征、身份标识和祭祀权威进入三星堆展线。',
+    audioUrl: '/audio/trail-guide/pit-anchor.K1.default.wav'
+  },
+  K2: {
+    text: '你点到了二号祭祀坑。这里关联青铜神树、青铜大立人像和青铜纵目面具，是理解三星堆青铜文明最丰富的入口。',
+    audioUrl: '/audio/trail-guide/pit-anchor.K2.default.wav'
+  },
+  K3: {
+    text: '你点到了三号祭祀坑。这里可以从金面罩、青铜尊和青铜罍等线索，观察金器与大型礼器如何组成祭祀陈设。',
+    audioUrl: '/audio/trail-guide/pit-anchor.K3.default.wav'
+  },
+  K4: {
+    text: '你点到了四号祭祀坑。这里关联铜扭头跪坐人像等人物形象，适合追问谁在祭祀，以及以什么姿态祭祀。',
+    audioUrl: '/audio/trail-guide/pit-anchor.K4.default.wav'
+  },
+  K5: {
+    text: '你点到了五号祭祀坑。这里以金面具为代表，突出黄金崇拜、高等级身份和小型坑位的出土特征。',
+    audioUrl: '/audio/trail-guide/pit-anchor.K5.default.wav'
+  },
+  K6: {
+    text: '你点到了六号祭祀坑。这里关联木箱、玉刀、朱砂和丝织品残痕，提醒我们关注那些不易保存的材料线索。',
+    audioUrl: '/audio/trail-guide/pit-anchor.K6.default.wav'
+  },
+  K7: {
+    text: '你点到了七号祭祀坑。这里以龟背形网格状铜器和玉石器组合为线索，适合观察特殊器形、结构和材料并置。',
+    audioUrl: '/audio/trail-guide/pit-anchor.K7.default.wav'
+  },
+  K8: {
+    text: '你点到了八号祭祀坑。这里集中呈现顶尊蛇身人像、铜神坛和铜神兽等神话性铜器组合，是理解三星堆想象力的重要入口。',
+    audioUrl: '/audio/trail-guide/pit-anchor.K8.default.wav'
+  }
+}
 
 const TRAIL_COMMAND_NAV_WORDS = [
   '带我',
@@ -1353,6 +1406,7 @@ let pendingVoiceGuideNarration = null
 let voiceGuideAbortController = null
 let voiceGuideActivePlayback = null
 let isRestoringTrailView = false
+let suppressNextVoiceGuideSchedule = false
 const voiceGuideAudioCache = new Map()
 const recentNarrationKeys = new Set()
 const recentNarrationKeyQueue = []
@@ -1837,6 +1891,10 @@ watch(
     () => visibleArtifacts.value.length
   ],
   () => {
+    if (suppressNextVoiceGuideSchedule) {
+      suppressNextVoiceGuideSchedule = false
+      return
+    }
     scheduleVoiceGuideNarration()
   },
   { flush: 'post' }
@@ -2170,9 +2228,19 @@ function triggerPitHotspotFeedback(key) {
   }, 420)
 }
 
+function suppressAutomaticVoiceGuideOnce() {
+  suppressNextVoiceGuideSchedule = true
+  cancelVoiceGuideRequest()
+}
+
 function selectPitHotspot(spot) {
   if (!spot?.pitCode) return
   triggerPitHotspotFeedback(spot.key)
+  const willChangePit = activePitCode.value !== spot.pitCode
+  const willEnterArtifact = spot.kind === 'artifact' && spot.entityId
+  if (willChangePit || willEnterArtifact) {
+    suppressAutomaticVoiceGuideOnce()
+  }
   activePitCode.value = spot.pitCode
   activeGuideClues.value = { ...activeGuideClues.value, pit: spot.pitCode }
   syncQueryState()
@@ -2200,6 +2268,7 @@ function enterPitArtifact(artifact) {
 
   const pitCode = artifact.pitCode || activePitCode.value
   if (pitCode) {
+    suppressAutomaticVoiceGuideOnce()
     activePitCode.value = pitCode
     activeGuideClues.value = { ...activeGuideClues.value, pit: pitCode }
   }
@@ -2228,6 +2297,7 @@ function selectGuideClue(group, clue) {
   if (group.key === 'pit') {
     const isSamePit = activePitCode.value === clue.value
     const nextPitCode = isSamePit ? '' : clue.value
+    suppressAutomaticVoiceGuideOnce()
     activePitCode.value = nextPitCode
     activeGuideClues.value = { ...activeGuideClues.value, pit: nextPitCode }
     syncQueryState()
@@ -2241,6 +2311,7 @@ function selectGuideClue(group, clue) {
   }
 
   if (group.key === 'meaning' && clue.mode === 'filterable') {
+    suppressAutomaticVoiceGuideOnce()
     meaningFocus.value = meaningFocus.value === clue.value ? '' : clue.value
     activeGuideClues.value = { ...activeGuideClues.value, [group.key]: meaningFocus.value }
     syncQueryState()
@@ -2272,29 +2343,26 @@ function isGuideClueActive(group, clue) {
 
 function buildPitVoiceGuideText(pitInfo) {
   if (!pitInfo) return '这个坑位资料先作为空间线索记录，后续可继续补齐文物展线。'
-  if (pitInfo.pitCode === 'K2') {
-    return '你点到了二号祭祀坑，这里关联青铜神树、青铜大立人像和青铜纵目面具。'
-  }
-  if (pitInfo.artifacts?.some((item) => item.entityId)) {
-    return `你点到了${pitInfo.title}，可以从这里进入${pitInfo.artifacts[0].name}的展线。`
-  }
-  return '这个坑位资料先作为空间线索记录，后续可继续补齐文物展线。'
+  return PIT_VOICE_GUIDE_PRESETS[pitInfo.pitCode]?.text || '这个坑位资料先作为空间线索记录，后续可继续补齐文物展线。'
 }
 
 function announcePitVoiceGuide(text, key) {
   if (!text) return
+  const preset = PIT_VOICE_GUIDE_PRESETS[key] || null
+  cancelVoiceGuideRequest()
   currentNarrationText.value = text
   if (!voiceGuideEnabled.value || voiceGuidePaused.value) return
   void playVoiceGuideNarration(
     {
       key: `pit-map-${key}`,
       intent: 'pit-map',
-      text,
+      text: preset?.text || text,
       scene: activeScene.value,
       entityId: selectedArtifactId.value || '',
+      audioUrl: preset?.audioUrl || '',
       skipPreset: true
     },
-    true
+    false
   )
 }
 
@@ -2905,9 +2973,9 @@ function enableVoiceGuide() {
   voiceGuideEnabled.value = true
   voiceGuidePaused.value = false
   voiceGuideError.value = ''
-  voiceGuideLoading.value = true
-  currentNarrationText.value = VOICE_GUIDE_LOADING_TEXT
-  scheduleVoiceGuideNarration(true)
+  voiceGuideLoading.value = false
+  currentNarrationText.value = VOICE_GUIDE_START_TEXT
+  playVoiceGuideStartBridge()
 }
 
 function toggleVoiceGuidePause() {
@@ -2934,6 +3002,31 @@ function closeVoiceGuide() {
   lastNarrationIntent.value = ''
   cancelVoiceGuideRequest()
   stopVoiceGuideAudio()
+}
+
+function playVoiceGuideStartBridge() {
+  const narration = {
+    key: VOICE_GUIDE_START_KEY,
+    intent: 'guide-start',
+    scene: activeScene.value,
+    entityId: selectedArtifactId.value || '',
+    text: VOICE_GUIDE_START_TEXT
+  }
+
+  cancelVoiceGuideRequest()
+  stopVoiceGuideAudio()
+  lastNarrationKey.value = narration.key
+  lastNarrationIntent.value = narration.intent
+  voiceGuideActiveContext.scene = narration.scene
+  voiceGuideActiveContext.entityId = narration.entityId
+  voiceGuideActivePlayback = {
+    key: narration.key,
+    narration,
+    usedPrebuilt: false,
+    resolvedCacheKey: 'preset:trail-guide-start'
+  }
+  voiceGuidePlaying.value = true
+  dispatchXuanmiaoSpeech(narration, VOICE_GUIDE_START_AUDIO_URL, VOICE_GUIDE_START_TEXT)
 }
 
 function scheduleVoiceGuideNarration(force = false) {
@@ -3024,11 +3117,16 @@ async function playVoiceGuideNarration(narration, force = false) {
     const prebuiltEntry = narration.skipPreset ? null : resolvePrebuiltVoiceGuideEntry(narration, preferredVoice)
     const resolvedCacheKey = prebuiltEntry
       ? `preset:${preferredVoice}:${prebuiltEntry.key}:${prebuiltEntry.contentHash || prebuiltEntry.audioUrl}`
-      : cacheKey
+      : narration.audioUrl
+        ? `direct:${narration.audioUrl}`
+        : cacheKey
     let audioUrl = voiceGuideAudioCache.get(resolvedCacheKey)
     let usedPrebuilt = false
     if (!audioUrl) {
-      if (prebuiltEntry?.audioUrl) {
+      if (narration.audioUrl) {
+        audioUrl = narration.audioUrl
+        usedPrebuilt = true
+      } else if (prebuiltEntry?.audioUrl) {
         audioUrl = prebuiltEntry.audioUrl
         usedPrebuilt = true
         if (prebuiltEntry.text) {
@@ -3174,9 +3272,16 @@ function handleXuanmiaoSpeechEnded(event) {
   if (detail.source !== 'trail-guide') return
   if (voiceGuideActivePlayback?.key && detail.key !== voiceGuideActivePlayback.key) return
 
+  const endedPlayback = voiceGuideActivePlayback
   voiceGuidePlaying.value = false
   voiceGuideAudioUrl = ''
   voiceGuideActivePlayback = null
+  if (endedPlayback?.narration?.intent === 'guide-start') {
+    if (voiceGuideEnabled.value && !voiceGuidePaused.value && !isThinking.value) {
+      scheduleVoiceGuideNarration(true)
+    }
+    return
+  }
   const pending = pendingVoiceGuideNarration
   pendingVoiceGuideNarration = null
   if (pending && voiceGuideEnabled.value && !voiceGuidePaused.value && !isThinking.value) {
@@ -3337,7 +3442,8 @@ function buildVoiceGuideNarration() {
       intent: 'scene-anchor',
       scene: 1,
       entityId: 'filters',
-      presetKeys: ['scene-anchor.default'],
+      skipPreset: true,
+      presetKeys: [],
       text: pickVoiceVariant(`scene-1-${filterKey}`, [
         `这里先定古蜀坐标。${filterText}下方会把命中文物收束成一条展线。`,
         `${filterText}你每换一次条件，展线都会重新整理，适合先找一条最想看的线索。`
@@ -3435,6 +3541,7 @@ function buildVoiceGuideNarrationV2() {
 
   if (activeScene.value === 1) {
     const pitInfo = getPitInfo(activePitCode.value)
+    const pitPreset = pitInfo ? PIT_VOICE_GUIDE_PRESETS[pitInfo.pitCode] : null
     const filterKey = `${activeEra.value || 'all'}-${activeSite.value || 'all'}-${activeCraft.value || 'all'}-${activePitCode.value || 'map'}-${meaningFocus.value || 'all'}`
     const filterText = activeFilterChips.value.length
       ? `当前线索是 ${activeFilterChips.value.map((item) => item.value).join('、')}。`
@@ -3448,8 +3555,10 @@ function buildVoiceGuideNarrationV2() {
       intent: 'scene-anchor',
       scene: 1,
       entityId: 'filters',
-      presetKeys: ['scene-anchor.default'],
-      text: pickVoiceVariant(`scene-1-v2-${filterKey}`, [
+      skipPreset: true,
+      presetKeys: [],
+      audioUrl: pitPreset?.audioUrl || '',
+      text: pitPreset?.text || pickVoiceVariant(`scene-1-v2-${filterKey}`, [
         sceneText,
         `${filterText} 真实筛选会改变结果，导览线索只帮助你决定观察角度。`
       ])
@@ -3599,6 +3708,24 @@ function askXuanmiaoFromCompanion() {
   guideExpanded.value = true
   activeScene.value = 4
   scrollMessagesToBottom()
+}
+
+async function continueXuanmiaoNarrationFromNode() {
+  if (!selectedGraphNode.value && !selectedArtifactDetail.value) return
+
+  voiceGuideEnabled.value = true
+  voiceGuidePaused.value = false
+  voiceGuideError.value = ''
+
+  if (isThinking.value) {
+    currentNarrationText.value = '玄喵正在整理当前线索，稍等一下。'
+    voiceGuideLoading.value = false
+    return
+  }
+
+  voiceGuideLoading.value = true
+  currentNarrationText.value = '玄喵正在接着当前线索讲解...'
+  await playCurrentVoiceGuideNarration(true)
 }
 
 function openGuideAndAsk(question) {
@@ -4517,6 +4644,33 @@ function updateAssistantMessageById(messageId, content) {
   scrollMessagesToBottom()
 }
 
+function wait(ms) {
+  return new Promise((resolve) => window.setTimeout(resolve, ms))
+}
+
+async function typeAssistantMessageById(messageId, text, options = {}) {
+  const finalText = String(text || '').trim()
+  if (!finalText) return
+
+  const thinkingMs = options.thinkingMs ?? 650
+  const charDelay = options.charDelay ?? 24
+  isThinking.value = true
+  showThinkingBubble.value = true
+  scrollMessagesToBottom()
+  await wait(thinkingMs)
+
+  isThinking.value = false
+  showThinkingBubble.value = false
+  updateAssistantMessageById(messageId, '')
+
+  let displayed = ''
+  for (const char of finalText) {
+    displayed += char
+    updateAssistantMessageById(messageId, displayed)
+    await wait(charDelay)
+  }
+}
+
 function appendAssistantPlaceholder(content = '...') {
   const id = Date.now() + Math.random()
   messages.value.push({
@@ -4694,7 +4848,7 @@ async function sendMessage(presetQuestion = '') {
   const assistantPlaceholderId = appendAssistantPlaceholder()
 
   if (fixedAnswer) {
-    updateAssistantMessageById(assistantPlaceholderId, fixedAnswer)
+    await typeAssistantMessageById(assistantPlaceholderId, fixedAnswer.reply)
     maybeRevealQuizPromo(quizPromoRound)
     return
   }
@@ -5862,11 +6016,13 @@ function goQuizChallenge() {
 }
 
 .pit-map-layout {
+  --pit-map-panel-height: clamp(560px, calc(100vh - 260px), 720px);
   display: grid;
   grid-template-columns: minmax(0, 1.65fr) minmax(280px, 0.75fr);
   gap: 18px;
   margin-top: 24px;
   align-items: stretch;
+  grid-auto-rows: minmax(0, auto);
 }
 
 .pit-map-card,
@@ -5878,6 +6034,9 @@ function goQuizChallenge() {
 }
 
 .pit-map-card {
+  display: flex;
+  flex-direction: column;
+  height: var(--pit-map-panel-height);
   overflow: hidden;
   border-radius: 22px;
 }
@@ -5914,7 +6073,35 @@ function goQuizChallenge() {
   font-weight: 800;
 }
 
+.pit-map-hint {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 0 18px 12px;
+}
+
+.pit-map-hint span {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  min-height: 30px;
+  padding: 5px 10px;
+  border: 1px solid rgba(66, 102, 79, 0.12);
+  border-radius: 999px;
+  background: rgba(250, 247, 239, 0.82);
+  color: var(--ink-soft);
+  font-size: 12px;
+  line-height: 1.35;
+}
+
+.pit-map-hint strong {
+  color: var(--green);
+  font-weight: 900;
+  white-space: nowrap;
+}
+
 .pit-map-scroll {
+  flex: 1 1 auto;
   overflow: auto hidden;
   padding: 0 16px 16px;
   scrollbar-width: thin;
@@ -6121,13 +6308,35 @@ function goQuizChallenge() {
 .pit-map-inspector {
   display: flex;
   flex-direction: column;
-  min-height: 100%;
-  padding: 20px;
+  align-self: stretch;
+  min-height: 0;
+  height: var(--pit-map-panel-height);
+  max-height: var(--pit-map-panel-height);
+  padding: 20px 16px 20px 20px;
   border-radius: 22px;
   position: relative;
-  overflow: hidden;
+  overflow-x: hidden;
+  overflow-y: scroll;
+  scrollbar-gutter: stable;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(49, 88, 69, 0.54) rgba(49, 88, 69, 0.08);
   transition: border-color 0.24s ease, box-shadow 0.24s ease, transform 0.24s ease;
   animation: pitInspectorIn 0.24s ease both;
+}
+
+.pit-map-inspector::-webkit-scrollbar {
+  width: 8px;
+}
+
+.pit-map-inspector::-webkit-scrollbar-track {
+  border-radius: 999px;
+  background: rgba(49, 88, 69, 0.08);
+}
+
+.pit-map-inspector::-webkit-scrollbar-thumb {
+  border: 2px solid rgba(255, 255, 255, 0.76);
+  border-radius: 999px;
+  background: rgba(49, 88, 69, 0.54);
 }
 
 .pit-map-inspector::before {
@@ -7079,27 +7288,37 @@ function goQuizChallenge() {
 
 .graph-panel {
   position: relative;
-  flex: 0 0 auto;
-  min-height: auto;
-  display: flex;
-  flex-direction: column;
+  min-height: 0;
+  display: grid;
+  grid-template-rows: auto auto auto auto minmax(340px, 340px) auto;
+  gap: 12px;
+  overflow: hidden;
 }
 
-.graph-panel__toolbar {
-  align-items: flex-start;
-  flex-wrap: wrap;
-  gap: 12px 16px;
+.graph-panel:not(.graph-panel--fullscreen) {
+  min-height: 680px;
 }
 
-.graph-panel__toolbar > div:first-child {
-  flex: 1 1 170px;
+.graph-panel:not(.graph-panel--fullscreen) .graph-panel__toolbar {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  align-items: start;
+  gap: 10px;
+}
+
+.graph-panel:not(.graph-panel--fullscreen) .section-actions {
+  justify-content: flex-start;
   min-width: 0;
 }
 
-.graph-panel__toolbar .section-actions {
-  flex: 1 1 260px;
-  justify-content: flex-end;
-  align-self: flex-start;
+.graph-panel:not(.graph-panel--fullscreen) .section-tag,
+.graph-panel:not(.graph-panel--fullscreen) .mini-action {
+  flex: 0 0 auto;
+}
+
+.graph-panel > * {
+  position: relative;
+  z-index: 1;
 }
 
 .graph-panel--fullscreen {
@@ -7461,9 +7680,28 @@ function goQuizChallenge() {
 }
 
 .graph-lead {
-  margin: 10px 0 12px;
+  display: -webkit-box;
+  margin: 0;
+  padding: 10px 12px;
+  border: 1px solid rgba(121, 196, 167, 0.1);
+  border-radius: 14px;
+  background: rgba(5, 13, 10, 0.72);
   color: var(--ink-soft);
   line-height: 1.6;
+  overflow: hidden;
+  overflow-wrap: anywhere;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 4;
+}
+
+.graph-panel--fullscreen .graph-lead {
+  display: block;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  overflow: visible;
+  -webkit-line-clamp: unset;
 }
 
 .type-filter-row {
@@ -7472,7 +7710,7 @@ function goQuizChallenge() {
   align-items: center;
   align-content: flex-start;
   gap: 8px;
-  margin-bottom: 12px;
+  margin-bottom: 0;
 }
 
 .type-filter {
@@ -7522,17 +7760,28 @@ function goQuizChallenge() {
 }
 
 .graph-filter-hint {
-  margin: -4px 0 10px;
+  display: -webkit-box;
+  margin: -2px 0 0;
   color: rgba(244, 237, 220, 0.62);
   font-size: 12px;
   line-height: 1.5;
+  overflow: hidden;
+  overflow-wrap: anywhere;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+
+.graph-panel--fullscreen .graph-filter-hint {
+  display: block;
+  overflow: visible;
+  -webkit-line-clamp: unset;
 }
 
 .graph-stage {
   position: relative;
-  flex: none;
-  height: clamp(260px, 31vh, 360px);
-  min-height: 260px;
+  flex: 0 0 340px;
+  min-height: 340px;
+  height: 340px;
   border-radius: 22px;
   background:
     linear-gradient(rgba(255, 255, 255, 0.03) 1px, transparent 1px),
@@ -7540,6 +7789,7 @@ function goQuizChallenge() {
     linear-gradient(180deg, #0b1411 0%, #0f1915 100%);
   background-size: 40px 40px, 40px 40px, auto;
   overflow: hidden;
+  z-index: 2;
 }
 
 .graph-stage--loading::after {
@@ -7568,8 +7818,19 @@ function goQuizChallenge() {
 
 .graph-canvas {
   width: 100%;
+  height: 340px;
+  min-height: 340px;
+}
+
+.graph-panel--fullscreen .graph-stage {
+  flex: 1 1 auto;
+  min-height: 0;
   height: 100%;
-  min-height: 260px;
+}
+
+.graph-panel--fullscreen .graph-canvas {
+  min-height: 0;
+  height: 100%;
 }
 
 .graph-error {
@@ -7665,11 +7926,18 @@ function goQuizChallenge() {
   margin-bottom: 0;
 }
 
+.narrative-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 12px;
+}
+
 .narrative-button {
   display: inline-flex;
   align-items: center;
   min-height: 42px;
-  margin-top: 12px;
+  margin-top: 0;
   padding: 0 18px;
   border: none;
   border-radius: 999px;
@@ -7687,6 +7955,17 @@ function goQuizChallenge() {
 
 .narrative-button:hover:not(:disabled) {
   box-shadow: 0 8px 20px rgba(66, 102, 79, 0.22);
+}
+
+.narrative-button--secondary {
+  background: rgba(66, 102, 79, 0.1);
+  color: var(--green-deep);
+  box-shadow: none;
+}
+
+.narrative-button--secondary:hover:not(:disabled) {
+  background: rgba(66, 102, 79, 0.16);
+  box-shadow: 0 8px 18px rgba(41, 72, 58, 0.12);
 }
 
 .guide-preview,
@@ -8492,7 +8771,20 @@ function goQuizChallenge() {
   }
 
   .pit-map-layout {
+    --pit-map-panel-height: auto;
     grid-template-columns: 1fr;
+  }
+
+  .pit-map-card,
+  .pit-map-inspector {
+    height: auto;
+    max-height: none;
+  }
+
+  .pit-map-inspector {
+    overflow: visible;
+    padding-right: 20px;
+    scrollbar-gutter: auto;
   }
 
   .pit-map-card__head,
