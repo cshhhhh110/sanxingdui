@@ -195,7 +195,7 @@ onMounted(() => {
   padding: 76px 24px 34px;
   background:
     linear-gradient(135deg, rgba(66, 102, 79, 0.13), rgba(255, 255, 255, 0.86) 52%),
-    url('@/assets/sanxingdui_02_zhanting_quanjing.png') center / cover;
+    url('@/assets/sanxingdui_04_zongmu_mianju.png') center 58% / cover;
 
   &::before {
     position: absolute;

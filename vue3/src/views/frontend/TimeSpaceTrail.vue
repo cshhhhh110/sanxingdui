@@ -89,15 +89,15 @@
 
     <section v-if="activeScene === 1" class="trail-hero">
       <div class="hero-copy showcase-enter" style="--delay: 0s">
-        <p class="hero-kicker">玄喵引路</p>
-        <h1>沿古蜀线索，向下走</h1>
+        <p class="hero-kicker">玄喵导览</p>
+        <h1>循着古蜀线索，走进三星堆</h1>
         <p class="hero-subtitle">{{ heroNarrative }}</p>
         <div class="hero-actions">
           <button class="hero-button hero-button--primary showcase-button-hover" type="button" @click="scrollToArtifacts">
-            看命中文物
+            查看推荐文物
           </button>
           <button class="hero-button showcase-button-hover" type="button" :disabled="!selectedArtifact" @click="scrollToGuide">
-            听玄喵开讲
+            听玄喵讲解
           </button>
         </div>
       </div>
@@ -118,73 +118,35 @@
       </aside>
     </section>
 
-    <nav class="trail-nav showcase-enter" style="--delay: 0.1s" aria-label="展线切换">
-      <button
-        v-for="scene in sceneSteps"
-        :key="scene.id"
-        class="scene-tab showcase-button-hover"
-        :class="{
-          'scene-tab--active': activeScene === scene.id,
-          'scene-tab--unlocked': activeScene >= scene.id || scene.id === 1
-        }"
-        type="button"
-        @click="goToScene(scene.id)"
-      >
-        <span class="scene-index">0{{ scene.id }}</span>
-        <span class="scene-copy">
-          <strong>{{ scene.title }}</strong>
-          <small>{{ scene.subtitle }}</small>
-        </span>
-      </button>
-    </nav>
-
-    <section class="trail-progress-card showcase-enter" style="--delay: 0.12s" aria-label="展线进度">
-      <div class="trail-progress-card__head">
-        <span>展线进度</span>
-        <strong>{{ activeScene }}/{{ sceneSteps.length }}</strong>
-      </div>
-      <div class="trail-progress-card__bar" aria-hidden="true">
-        <i :style="{ width: `${trailSceneProgressPercent}%` }"></i>
-      </div>
-      <div class="trail-progress-card__steps">
-        <span
-          v-for="item in trailProgressItems"
-          :key="item.id"
-          :class="{
-            'is-done': item.id < activeScene,
-            'is-active': item.id === activeScene
-          }"
-        >
-          <em>{{ item.index }}</em>
-          <small>{{ item.label }}</small>
-        </span>
-      </div>
-      <p>{{ trailProgressHint }}</p>
-    </section>
-
-    <section v-if="activeScene > 1" class="trail-stagebar showcase-enter" style="--delay: 0.06s">
-      <div class="trail-stagebar__copy">
-        <p class="trail-stagebar__kicker">{{ activeSceneMeta?.title || '展线继续' }}</p>
-        <h1>{{ compactStageTitle }}</h1>
-        <p class="trail-stagebar__line">{{ compactStageLine }}</p>
-      </div>
-      <div class="trail-stagebar__stats">
-        <span class="trail-stagebar__stat">
-          <em>当前命中</em>
-          <strong>{{ displayVisibleCount }}</strong>
-        </span>
-        <span class="trail-stagebar__stat">
-          <em>可看 3D</em>
-          <strong>{{ displayReadyCount }}</strong>
-        </span>
-        <span v-if="selectedArtifact" class="trail-stagebar__stat">
-          <em>当前焦点</em>
-          <strong>1</strong>
-        </span>
-      </div>
-    </section>
-
     <section class="trail-shell" :class="{ 'trail-shell--immersive': activeScene === 3, 'trail-shell--guide': activeScene === 4 }">
+      <section class="trail-progress-card showcase-enter" style="--delay: 0.12s" aria-label="展线进度">
+        <div class="trail-progress-card__head">
+          <span>展线进度</span>
+          <strong>{{ activeScene }}/{{ sceneSteps.length }}</strong>
+        </div>
+        <div class="trail-progress-card__bar" aria-hidden="true">
+          <i :style="{ width: `${trailSceneProgressPercent}%` }"></i>
+        </div>
+        <div class="trail-progress-card__steps">
+          <button
+            v-for="item in trailProgressItems"
+            :key="item.id"
+            class="trail-progress-step showcase-button-hover"
+            :class="{
+              'is-done': item.id < activeScene,
+              'is-active': item.id === activeScene
+            }"
+            type="button"
+            :disabled="item.disabled"
+            @click="goToScene(item.id)"
+          >
+            <em>{{ item.index }}</em>
+            <small>{{ item.label }}</small>
+          </button>
+        </div>
+        <p>{{ trailProgressHint }}</p>
+      </section>
+
       <section v-show="activeScene === 1" ref="filterSectionRef" class="filter-panel showcase-enter" style="--delay: 0.12s">
         <div class="panel-head">
           <div>
@@ -421,7 +383,6 @@
           <div class="section-head">
             <div>
               <p class="section-kicker">第二幕 · 文物驻足</p>
-              <h2>先停在一件文物前，再决定继续走向哪里</h2>
             </div>
             <span class="section-badge">{{ visibleArtifacts.length }} 件</span>
           </div>
@@ -509,30 +470,11 @@
         </section>
 
         <section v-show="activeScene === 3" ref="stageSectionRef" class="immersive-section showcase-enter" style="--delay: 0.24s">
-          <div class="section-head">
-            <div>
-              <p class="section-kicker">第三幕 · 展品现场</p>
-              <h2>走近这一件，再顺着它的关系继续往下</h2>
-            </div>
-            <span class="section-badge">{{ selectedArtifact ? selectedArtifact.displayTitle : '等待选中文物' }}</span>
-          </div>
-
-          <div v-if="activeFilterChips.length" class="scene-context-row scene-context-row--immersive">
-            <span class="scene-context-row__label">你是沿着这组坐标走到这里的</span>
-            <span v-for="chip in activeFilterChips" :key="chip.key" class="scene-context-chip scene-context-chip--dark">
-              {{ chip.label }}：{{ chip.value }}
-            </span>
-          </div>
-
-          <div v-if="stageVisible && selectedArtifactDetail" class="stage-overview">
+          <div v-if="stageVisible && selectedArtifactDetail" class="stage-overview stage-overview--single">
             <article class="stage-overview__card">
               <span>当前文物</span>
               <strong>{{ selectedArtifactDetail.displayTitle }}</strong>
               <p>{{ selectedArtifactDetail.summary }}</p>
-            </article>
-            <article class="stage-overview__card">
-              <span>为何先看它</span>
-              <p>{{ selectedReason }}</p>
             </article>
           </div>
 
@@ -1446,7 +1388,7 @@ const displayReadyCount = computed(() => {
 })
 
 const heroNarrative = computed(() => {
-  return searchNarrative.value.entryLine || '先定下一处时空落点，再让一件文物把你带进更深处。'
+  return searchNarrative.value.entryLine || '先选择时代、遗址与工艺线索，系统会为你筛出相关文物；再进入 3D 展品与玄喵讲解，沿着关系图谱继续探索。'
 })
 
 const activeFilterChips = computed(() => {
@@ -1510,10 +1452,10 @@ const hasTrailStage = computed(() => Boolean(stageVisible.value && selectedArtif
 const hasTrailGuide = computed(() => Boolean(selectedArtifactDetail.value && (guideExpanded.value || activeScene.value === 4 || messages.value.some((item) => item.role === 'user'))))
 
 const trailProgressItems = computed(() => [
-  { id: 1, index: '01', label: '定点', done: hasTrailAnchor.value },
-  { id: 2, index: '02', label: '驻足', done: hasTrailArtifact.value },
-  { id: 3, index: '03', label: '现场', done: hasTrailStage.value },
-  { id: 4, index: '04', label: '讲解', done: hasTrailGuide.value }
+  { id: 1, index: '01', label: '时空定点', done: hasTrailAnchor.value, disabled: false },
+  { id: 2, index: '02', label: '文物驻足', done: hasTrailArtifact.value, disabled: false },
+  { id: 3, index: '03', label: '展品现场', done: hasTrailStage.value, disabled: !selectedArtifact.value },
+  { id: 4, index: '04', label: '玄喵讲解', done: hasTrailGuide.value, disabled: !selectedArtifact.value }
 ])
 
 const trailSceneProgressPercent = computed(() => Math.round((activeScene.value / sceneSteps.length) * 100))
@@ -3661,7 +3603,7 @@ function initThreeStage() {
 
   const { clientWidth, clientHeight } = viewerRef.value
   camera = new THREE.PerspectiveCamera(38, clientWidth / clientHeight, 0.1, 120)
-  camera.position.set(0, 1.5, 5.6)
+  camera.position.set(0, 0.72, 5.4)
 
   renderer = new THREE.WebGLRenderer({ canvas: canvasRef.value, antialias: true, alpha: true })
   renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2))
@@ -3703,7 +3645,7 @@ function initThreeStage() {
   controls.minDistance = 2.6
   controls.maxDistance = 9.8
   controls.maxPolarAngle = Math.PI * 0.68
-  controls.target.set(0, 0, 0)
+  controls.target.set(0, 0.05, 0)
 
   const loader = new GLTFLoader()
   loader.load(
@@ -3717,9 +3659,15 @@ function initThreeStage() {
       const scale = 2.35 / maxDimension
       glbModel.scale.setScalar(scale)
       glbModel.position.sub(center.multiplyScalar(scale))
-      glbModel.position.y -= 0.9
       const fittedBox = new THREE.Box3().setFromObject(glbModel)
       const fittedSize = fittedBox.getSize(new THREE.Vector3())
+      const fittedCenter = fittedBox.getCenter(new THREE.Vector3())
+      const fittedSphere = fittedBox.getBoundingSphere(new THREE.Sphere())
+      const fitDistance = Math.max(3.4, fittedSphere.radius / Math.sin(THREE.MathUtils.degToRad(camera.fov * 0.5)) * 1.08)
+      camera.position.set(fittedCenter.x, fittedCenter.y + fittedSphere.radius * 0.12, fittedCenter.z + fitDistance)
+      camera.near = Math.max(0.05, fitDistance / 80)
+      camera.far = fitDistance * 80
+      camera.updateProjectionMatrix()
       floor.position.y = fittedBox.min.y - Math.max(0.12, fittedSize.y * 0.06)
 
       glbModel.traverse((child) => {
@@ -3732,7 +3680,7 @@ function initThreeStage() {
       })
 
       scene.add(glbModel)
-      controls.target.set(0, 0, 0)
+      controls.target.copy(fittedCenter)
       controls.update()
       isModelLoading.value = false
       modelProgress.value = 100
@@ -5278,7 +5226,7 @@ function goQuizChallenge() {
 }
 
 .time-space-trail--immersive {
-  padding: var(--voice-guide-space) 0 0;
+  padding: var(--voice-guide-space) 28px 56px;
   background:
     radial-gradient(circle at 20% 0%, rgba(52, 97, 81, 0.16), transparent 42%),
     radial-gradient(circle at 100% 0%, rgba(182, 140, 52, 0.08), transparent 28%),
@@ -5314,8 +5262,8 @@ function goQuizChallenge() {
 }
 
 .time-space-trail--immersive .trail-progress-card__head strong,
-.time-space-trail--immersive .trail-progress-card__steps span.is-done small,
-.time-space-trail--immersive .trail-progress-card__steps span.is-active small {
+.time-space-trail--immersive .trail-progress-card__steps button.is-done small,
+.time-space-trail--immersive .trail-progress-card__steps button.is-active small {
   color: #f4eddc;
 }
 
@@ -5351,30 +5299,42 @@ function goQuizChallenge() {
 .trail-hero {
   position: relative;
   display: grid;
-  grid-template-columns: minmax(560px, 1fr) minmax(280px, 320px);
-  gap: 24px;
+  grid-template-columns: minmax(0, 1fr) minmax(260px, 340px);
+  gap: 34px;
   align-items: stretch;
   margin-bottom: 20px;
-  padding: 22px 24px;
+  padding: 34px 40px;
   min-height: 0;
   scroll-snap-align: start;
   overflow: hidden;
-  border: 1px solid rgba(184, 146, 67, 0.16);
-  border-radius: 30px;
+  border: 1px solid rgba(184, 146, 67, 0.2);
+  border-radius: 26px;
   background:
-    radial-gradient(circle at 44% 40%, rgba(66, 102, 79, 0.08), transparent 22%),
-    radial-gradient(circle at 100% 0%, rgba(184, 146, 67, 0.12), transparent 26%),
+    linear-gradient(120deg, rgba(255, 255, 255, 0.86), rgba(255, 250, 238, 0.72) 50%, rgba(232, 224, 204, 0.38)),
+    linear-gradient(90deg, rgba(66, 102, 79, 0.08), transparent 38%),
     var(--paper-soft);
-  box-shadow: 0 20px 42px rgba(78, 62, 31, 0.08);
+  box-shadow: 0 22px 48px rgba(78, 62, 31, 0.1);
 }
 
 .trail-hero::before {
   content: '';
   position: absolute;
-  inset: 18px 340px 18px 48%;
+  inset: 16px;
   pointer-events: none;
-  border-radius: 999px;
-  background: linear-gradient(90deg, rgba(66, 102, 79, 0.08), transparent);
+  border-radius: 22px;
+  border: 1px solid rgba(255, 255, 255, 0.68);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.82);
+}
+
+.trail-hero::after {
+  content: '';
+  position: absolute;
+  top: 18px;
+  bottom: 18px;
+  left: 56%;
+  width: 1px;
+  pointer-events: none;
+  background: linear-gradient(180deg, transparent, rgba(184, 146, 67, 0.2), transparent);
 }
 
 .hero-copy,
@@ -5393,7 +5353,7 @@ function goQuizChallenge() {
   z-index: 1;
   width: 100%;
   min-width: 0;
-  padding: 28px 32px;
+  padding: 26px 12px 26px 8px;
   border: 0;
   background: transparent;
   box-shadow: none;
@@ -5456,12 +5416,27 @@ function goQuizChallenge() {
   margin-top: 12px;
 }
 
-.trail-progress-card__steps span {
+.trail-progress-card__steps button {
   display: inline-flex;
   align-items: center;
   gap: 8px;
   min-width: 0;
+  padding: 0;
   color: var(--ink-soft);
+  text-align: left;
+  background: transparent;
+  border: 0;
+  cursor: pointer;
+}
+
+.trail-progress-card__steps button:disabled {
+  cursor: not-allowed;
+  opacity: 0.48;
+}
+
+.trail-progress-card__steps button:not(:disabled):hover em {
+  transform: translateY(-2px);
+  box-shadow: 0 0 0 4px rgba(184, 146, 67, 0.13);
 }
 
 .trail-progress-card__steps em {
@@ -5477,6 +5452,7 @@ function goQuizChallenge() {
   font-size: 11px;
   font-style: normal;
   font-weight: 900;
+  transition: transform 0.22s ease, box-shadow 0.22s ease, background 0.22s ease;
 }
 
 .trail-progress-card__steps small {
@@ -5487,17 +5463,17 @@ function goQuizChallenge() {
   font-weight: 800;
 }
 
-.trail-progress-card__steps span.is-done em {
+.trail-progress-card__steps button.is-done em {
   background: #315845;
   color: #f7f2e4;
 }
 
-.trail-progress-card__steps span.is-active em {
+.trail-progress-card__steps button.is-active em {
   box-shadow: 0 0 0 4px rgba(184, 146, 67, 0.16);
 }
 
-.trail-progress-card__steps span.is-done small,
-.trail-progress-card__steps span.is-active small {
+.trail-progress-card__steps button.is-done small,
+.trail-progress-card__steps button.is-active small {
   color: var(--green);
 }
 
@@ -5516,7 +5492,7 @@ function goQuizChallenge() {
   color: var(--gold);
   font-size: 12px;
   font-weight: 700;
-  letter-spacing: 0.16em;
+  letter-spacing: 0;
 }
 
 .hero-copy h1,
@@ -5533,7 +5509,10 @@ function goQuizChallenge() {
 
 .hero-copy h1 {
   max-width: 860px;
-  font-size: clamp(38px, 3.4vw, 62px);
+  color: var(--ink);
+  font-size: clamp(36px, 3.6vw, 62px);
+  letter-spacing: 0;
+  text-shadow: 0 10px 24px rgba(46, 64, 50, 0.08);
 }
 
 .hero-subtitle,
@@ -5550,10 +5529,11 @@ function goQuizChallenge() {
 }
 
 .hero-subtitle {
-  max-width: 860px;
-  margin: 18px 0 0;
+  max-width: 920px;
+  margin: 20px 0 0;
   color: var(--ink-soft);
-  font-size: 16px;
+  font-size: 17px;
+  font-weight: 700;
 }
 
 .hero-actions,
@@ -5567,7 +5547,7 @@ function goQuizChallenge() {
 }
 
 .hero-actions {
-  margin-top: 24px;
+  margin-top: 30px;
 }
 
 .hero-button,
@@ -5584,7 +5564,7 @@ function goQuizChallenge() {
 .hero-button,
 .card-action {
   border-radius: 999px;
-  padding: 14px 22px;
+  padding: 14px 26px;
   font-size: 15px;
   font-weight: 700;
 }
@@ -5616,30 +5596,46 @@ function goQuizChallenge() {
   z-index: 1;
   width: 100%;
   min-width: 0;
-  padding: 0;
+  padding: 12px;
   display: grid;
-  gap: 12px;
+  gap: 10px;
   align-content: center;
-  border: 0;
-  background: transparent;
-  box-shadow: none;
+  border: 1px solid rgba(184, 146, 67, 0.12);
+  border-radius: 24px;
+  background: rgba(255, 255, 255, 0.42);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.76);
 }
 
 .board-card {
-  border-radius: 20px;
-  padding: 16px 18px;
-  background: rgba(255, 255, 255, 0.78);
+  position: relative;
+  overflow: hidden;
+  border: 1px solid rgba(66, 102, 79, 0.08);
+  border-radius: 18px;
+  padding: 18px 20px;
+  background: rgba(255, 255, 255, 0.82);
+  box-shadow: 0 12px 24px rgba(78, 62, 31, 0.07);
+}
+
+.board-card::before {
+  content: '';
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 4px;
+  background: linear-gradient(180deg, var(--gold), var(--green));
+  opacity: 0.72;
 }
 
 .board-card span {
   display: block;
-  margin-bottom: 10px;
+  margin-bottom: 12px;
   color: var(--ink-soft);
   font-size: 14px;
+  font-weight: 800;
 }
 
 .board-card strong {
-  font-size: 40px;
+  color: var(--ink);
+  font-size: 42px;
   line-height: 1;
   font-family: 'STZhongsong', 'Noto Serif SC', serif;
 }
@@ -5648,11 +5644,6 @@ function goQuizChallenge() {
   display: grid;
   grid-template-columns: 1fr;
   gap: 0;
-}
-
-.trail-shell--immersive {
-  width: 100%;
-  max-width: none;
 }
 
 .trail-stagebar {
@@ -6711,22 +6702,29 @@ function goQuizChallenge() {
 
 .stage-overview {
   display: grid;
-  grid-template-columns: minmax(0, 1.1fr) minmax(280px, 0.9fr);
+  grid-template-columns: minmax(0, 1fr);
   gap: 14px;
+}
+
+.stage-overview--single {
+  width: 100%;
+  max-width: none;
+  margin: 0;
 }
 
 .stage-overview__card {
   position: relative;
   overflow: hidden;
-  padding: 18px 20px;
-  border-radius: 22px;
+  min-height: 170px;
+  padding: 28px 36px;
+  border-radius: 24px;
   background:
-    linear-gradient(135deg, rgba(29, 48, 38, 0.96), rgba(10, 20, 15, 0.94)),
-    radial-gradient(circle at 100% 0%, rgba(211, 171, 88, 0.16), transparent 34%);
-  border: 1px solid rgba(206, 176, 102, 0.22);
+    linear-gradient(135deg, rgba(37, 61, 48, 0.96), rgba(12, 23, 17, 0.96)),
+    radial-gradient(circle at 88% 16%, rgba(211, 171, 88, 0.2), transparent 34%);
+  border: 1px solid rgba(206, 176, 102, 0.28);
   color: #f8f1dc;
   box-shadow:
-    0 18px 38px rgba(0, 0, 0, 0.24),
+    0 22px 46px rgba(0, 0, 0, 0.26),
     inset 0 1px 0 rgba(255, 255, 255, 0.05);
 }
 
@@ -6736,26 +6734,37 @@ function goQuizChallenge() {
   inset: 0;
   pointer-events: none;
   background:
-    linear-gradient(90deg, rgba(211, 171, 88, 0.14), transparent 34%),
-    radial-gradient(circle at 8% 12%, rgba(121, 196, 167, 0.12), transparent 28%);
+    linear-gradient(90deg, rgba(211, 171, 88, 0.16), transparent 42%),
+    radial-gradient(circle at 8% 12%, rgba(121, 196, 167, 0.14), transparent 28%);
+}
+
+.stage-overview__card::after {
+  content: '';
+  position: absolute;
+  top: 24px;
+  bottom: 24px;
+  left: 0;
+  width: 5px;
+  border-radius: 0 999px 999px 0;
+  background: linear-gradient(180deg, #f2d68c, rgba(84, 132, 101, 0.86));
 }
 
 .stage-overview__card span {
   position: relative;
   display: block;
-  margin-bottom: 10px;
+  margin-bottom: 12px;
   color: #f2d68c;
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 700;
-  letter-spacing: 0.12em;
+  letter-spacing: 0;
 }
 
 .stage-overview__card strong {
   position: relative;
   display: block;
-  margin-bottom: 8px;
+  margin-bottom: 14px;
   font-family: 'STZhongsong', 'Noto Serif SC', serif;
-  font-size: 28px;
+  font-size: clamp(30px, 3vw, 46px);
   line-height: 1.16;
   color: #fff7df;
   text-shadow: 0 2px 12px rgba(0, 0, 0, 0.28);
@@ -6763,10 +6772,11 @@ function goQuizChallenge() {
 
 .stage-overview__card p {
   position: relative;
+  max-width: 980px;
   margin: 0;
   color: rgba(244, 237, 220, 0.9);
-  font-size: 15px;
-  line-height: 1.75;
+  font-size: 16px;
+  line-height: 1.8;
 }
 
 .scene-context-row__label {
@@ -6932,20 +6942,28 @@ function goQuizChallenge() {
   display: grid;
   grid-template-columns: minmax(0, 1.15fr) minmax(360px, 0.85fr);
   gap: 18px;
-  align-items: start;
+  align-items: stretch;
+  height: clamp(540px, calc(100vh - 330px), 660px);
+  min-height: 0;
 }
 
 .viewer-card {
   display: grid;
   grid-template-rows: auto minmax(0, 1fr);
+  height: 100%;
+  min-height: 0;
   padding: 20px;
   border-radius: 28px;
+  overflow: hidden;
 }
 
 .insight-panel {
   display: grid;
+  grid-template-rows: auto minmax(0, 1fr) auto;
   gap: 18px;
-  max-height: calc(100vh - 220px);
+  min-height: 0;
+  height: 100%;
+  max-height: none;
   overflow-y: auto;
   scrollbar-width: thin;
   scrollbar-color: rgba(41, 72, 58, 0.18) transparent;
@@ -6972,6 +6990,9 @@ function goQuizChallenge() {
 
 .graph-panel {
   position: relative;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
 }
 
 .graph-panel--fullscreen {
@@ -7133,7 +7154,7 @@ function goQuizChallenge() {
 
 .viewer-shell {
   position: relative;
-  min-height: 580px;
+  min-height: 0;
   height: 100%;
   border-radius: 24px;
   overflow: hidden;
@@ -7402,7 +7423,8 @@ function goQuizChallenge() {
 
 .graph-stage {
   position: relative;
-  min-height: 340px;
+  flex: 1 1 340px;
+  min-height: 300px;
   border-radius: 22px;
   background:
     linear-gradient(rgba(255, 255, 255, 0.03) 1px, transparent 1px),
@@ -7438,7 +7460,8 @@ function goQuizChallenge() {
 
 .graph-canvas {
   width: 100%;
-  height: 340px;
+  height: 100%;
+  min-height: 300px;
 }
 
 .graph-error {
@@ -8178,6 +8201,14 @@ function goQuizChallenge() {
     display: none;
   }
 
+  .trail-hero::after {
+    display: none;
+  }
+
+  .hero-board {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
   .trail-stagebar__stats {
     justify-content: flex-start;
   }
@@ -8187,10 +8218,29 @@ function goQuizChallenge() {
     height: auto;
   }
 
+  .immersive-grid {
+    height: auto;
+    min-height: 0;
+    align-items: start;
+  }
+
+  .viewer-shell {
+    min-height: 460px;
+  }
+
   .insight-panel {
+    height: auto;
     max-height: none;
     overflow: visible;
     padding-right: 0;
+  }
+
+  .graph-stage {
+    flex: none;
+  }
+
+  .graph-canvas {
+    height: 340px;
   }
 }
 
@@ -8266,6 +8316,51 @@ function goQuizChallenge() {
   .trail-hero {
     padding: 16px;
     gap: 10px;
+  }
+
+  .hero-copy {
+    padding: 18px 4px 10px;
+  }
+
+  .hero-copy h1 {
+    font-size: 32px;
+  }
+
+  .hero-subtitle {
+    font-size: 14px;
+  }
+
+  .hero-board {
+    grid-template-columns: 1fr;
+    padding: 10px;
+    border-radius: 18px;
+  }
+
+  .board-card {
+    padding: 14px 16px;
+    border-radius: 14px;
+  }
+
+  .board-card strong {
+    font-size: 30px;
+  }
+
+  .stage-overview--single {
+    max-width: none;
+  }
+
+  .stage-overview__card {
+    min-height: 0;
+    padding: 22px 18px 22px 22px;
+    border-radius: 20px;
+  }
+
+  .stage-overview__card strong {
+    font-size: 28px;
+  }
+
+  .stage-overview__card p {
+    font-size: 14px;
   }
 
   .trail-nav {
@@ -8352,8 +8447,6 @@ function goQuizChallenge() {
     align-items: flex-start;
   }
 
-  .hero-copy,
-  .hero-board,
   .filter-panel,
   .artifact-section,
   .immersive-section,

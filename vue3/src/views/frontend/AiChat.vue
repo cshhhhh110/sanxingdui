@@ -7,17 +7,6 @@
 
       <div class="hero-copy">
         <p class="hero-kicker">玄喵讲解</p>
-        <h1>让玄喵把你刚看过的文物串起来讲</h1>
-        <div class="hero-subtitle">
-          <span class="line-dot" aria-hidden="true"></span>
-          它不是通用聊天框，而是一位会记得你刚才站在哪里的讲解员
-          <span class="line-dot" aria-hidden="true"></span>
-        </div>
-      </div>
-
-      <div class="hero-status showcase-card-hover">
-        <span class="status-light" aria-hidden="true"></span>
-        图谱增强解说模式
       </div>
     </section>
 
@@ -984,7 +973,7 @@ function getCurrentTime() {
   min-height: calc(100vh - 64px);
   overflow-x: hidden;
   overflow-y: auto;
-  padding: 10px 40px 30px;
+  padding: 24px 40px 34px;
   color: var(--ink);
   background:
     linear-gradient(180deg, rgba(255, 253, 247, 0.88), rgba(244, 240, 230, 0.88)),
@@ -1030,55 +1019,132 @@ function getCurrentTime() {
   grid-template-columns: 1fr;
   justify-items: center;
   align-items: center;
-  min-height: 138px;
-  padding: 14px 36px 18px;
-  overflow: hidden;
+  min-height: 188px;
+  padding: 34px 36px 54px;
+  overflow: visible;
   background:
-    linear-gradient(90deg, rgba(255, 253, 248, 0.34), rgba(255, 253, 248, 0.08)),
-    radial-gradient(circle at 16% 50%, rgba(214, 189, 130, 0.16), transparent 28%);
+    radial-gradient(circle at 12% 56%, rgba(214, 189, 130, 0.2), transparent 28%),
+    radial-gradient(circle at 88% 14%, rgba(66, 102, 79, 0.1), transparent 30%);
   border-bottom: 1px solid rgba(214, 189, 130, 0.28);
+}
+
+.guide-hero::after {
+  content: '';
+  position: absolute;
+  left: 220px;
+  right: 220px;
+  bottom: 30px;
+  height: 1px;
+  pointer-events: none;
+  background:
+    linear-gradient(90deg, transparent, rgba(214, 189, 130, 0.82), transparent);
 }
 
 .hero-avatar {
   position: absolute;
-  left: 36px;
-  top: 50%;
-  transform: translateY(-50%);
+  left: 52px;
+  bottom: 22px;
   display: grid;
-  width: 104px;
-  height: 104px;
+  width: 122px;
+  height: 122px;
   place-items: center;
+  z-index: 3;
   border: 1px solid rgba(214, 189, 130, 0.76);
   border-radius: 50%;
   background:
     radial-gradient(circle, rgba(255, 255, 255, 0.94) 0 46%, rgba(232, 216, 181, 0.78) 47% 58%, rgba(255, 253, 247, 0.88) 59%);
-  box-shadow: 0 18px 42px rgba(66, 102, 79, 0.16);
+  box-shadow:
+    0 20px 48px rgba(66, 102, 79, 0.18),
+    0 0 0 12px rgba(255, 253, 248, 0.58);
 }
 
 .hero-avatar::before {
   content: '';
   position: absolute;
-  inset: 9px;
+  inset: 10px;
   border: 1px dashed rgba(66, 102, 79, 0.32);
   border-radius: 50%;
+}
+
+.hero-avatar::after {
+  content: '';
+  position: absolute;
+  inset: -9px;
+  border-radius: 50%;
+  border: 1px solid rgba(214, 189, 130, 0.28);
 }
 
 .hero-avatar img {
   position: relative;
   z-index: 1;
-  width: 68px;
-  height: 68px;
+  width: 78px;
+  height: 78px;
   object-fit: cover;
   border-radius: 50%;
 }
 
 .hero-copy {
+  position: relative;
   min-width: 0;
   width: min(860px, calc(100% - 360px));
   text-align: center;
 }
 
-.hero-kicker,
+.hero-kicker {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 16px;
+  margin: 0;
+  color: var(--primary);
+  font-size: clamp(22px, 2.2vw, 34px);
+  font-weight: 800;
+  letter-spacing: 0.18em;
+  text-shadow: 0 8px 20px rgba(66, 102, 79, 0.12);
+}
+
+.hero-kicker::before {
+  content: '';
+  width: 86px;
+  height: 14px;
+  background:
+    linear-gradient(90deg, transparent, rgba(214, 189, 130, 0.82)),
+    radial-gradient(circle at right, rgba(214, 189, 130, 0.95) 0 3px, transparent 4px);
+  mask: linear-gradient(#000 0 0) center / 100% 1px no-repeat,
+    radial-gradient(ellipse at center, #000 0 52%, transparent 54%) right / 20px 14px no-repeat;
+}
+
+.hero-kicker::after {
+  content: '';
+  width: 86px;
+  height: 14px;
+  background:
+    linear-gradient(90deg, rgba(214, 189, 130, 0.82), transparent),
+    radial-gradient(circle at left, rgba(214, 189, 130, 0.95) 0 3px, transparent 4px);
+  mask: linear-gradient(#000 0 0) center / 100% 1px no-repeat,
+    radial-gradient(ellipse at center, #000 0 52%, transparent 54%) left / 20px 14px no-repeat;
+}
+
+.hero-copy::before,
+.hero-copy::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  width: 12px;
+  height: 12px;
+  border: 2px solid rgba(214, 189, 130, 0.8);
+  border-radius: 999px;
+  transform: translateY(-50%);
+}
+
+.hero-copy::before {
+  left: calc(50% - 170px);
+}
+
+.hero-copy::after {
+  right: calc(50% - 170px);
+}
+
 .context-kicker {
   margin: 0 0 6px;
   color: var(--primary);
@@ -1250,8 +1316,9 @@ function getCurrentTime() {
   grid-template-columns: 276px minmax(0, 1fr);
   grid-template-areas: 'quick chat';
   gap: 20px;
-  height: clamp(560px, calc(100vh - 236px), 680px);
+  height: clamp(560px, calc(100vh - 312px), 680px);
   min-height: 0;
+  margin-top: 24px;
   padding: 24px 28px;
   overflow: hidden;
   background: rgba(255, 253, 248, 0.9);
@@ -1644,19 +1711,19 @@ function getCurrentTime() {
   }
 
   .guide-hero {
-    min-height: 118px;
-    padding: 10px 26px 14px;
+    min-height: 172px;
+    padding: 34px 26px 38px;
   }
 
   .hero-avatar {
-    left: 26px;
-    width: 86px;
-    height: 86px;
+    left: 34px;
+    width: 104px;
+    height: 104px;
   }
 
   .hero-avatar img {
-    width: 56px;
-    height: 56px;
+    width: 68px;
+    height: 68px;
   }
 
   .hero-copy h1 {
@@ -1684,7 +1751,7 @@ function getCurrentTime() {
   .chat-shell {
     grid-template-columns: 260px minmax(0, 1fr);
     gap: 18px;
-    height: clamp(520px, calc(100vh - 210px), 640px);
+    height: clamp(520px, calc(100vh - 290px), 640px);
     padding: 22px;
   }
 }
@@ -1723,6 +1790,8 @@ function getCurrentTime() {
 
   .guide-hero {
     gap: 16px;
+    min-height: 210px;
+    padding: 28px 18px 34px;
     text-align: center;
   }
 
@@ -1730,6 +1799,7 @@ function getCurrentTime() {
     position: relative;
     left: auto;
     top: auto;
+    bottom: auto;
     transform: none;
   }
 
@@ -1737,21 +1807,15 @@ function getCurrentTime() {
     width: 100%;
   }
 
-  .hero-copy h1 {
-    font-size: 36px;
-    letter-spacing: 0.08em;
+  .hero-kicker {
+    gap: 12px;
+    font-size: 24px;
+    letter-spacing: 0.12em;
   }
 
-  .hero-subtitle {
-    justify-content: center;
-    font-size: 15px;
-    letter-spacing: 0.08em;
-  }
-
-  .hero-subtitle::before,
-  .hero-subtitle::after,
-  .line-dot {
-    display: none;
+  .hero-kicker::before,
+  .hero-kicker::after {
+    width: 38px;
   }
 
   .hero-status {

@@ -241,6 +241,9 @@ export default {
     document.addEventListener('click', this._onDocClick);
     window.addEventListener('xuanmiao:say', this.handleExternalSpeech);
     window.addEventListener('xuanmiao:stop', this.handleExternalStop);
+    window.addEventListener('resize', this.applyAvatarPosition);
+    window.visualViewport?.addEventListener('resize', this.applyAvatarPosition);
+    window.visualViewport?.addEventListener('scroll', this.applyAvatarPosition);
     this.initMcpClient();
   },
 
@@ -841,11 +844,42 @@ export default {
 
     getSafeAvatarPosition() {
       if (this.avatarPosition.x || this.avatarPosition.y) {
-        return this.avatarPosition;
+        return this.clampAvatarPosition(this.avatarPosition);
       }
+      const viewport = this.getViewportSize();
+      const avatar = this.getAvatarSize();
       return {
-        x: Math.max(12, window.innerWidth - 190),
-        y: Math.max(80, window.innerHeight - 360)
+        x: Math.max(12, viewport.width - avatar.width - 12),
+        y: Math.max(80, viewport.height - avatar.height - 12)
+      };
+    },
+
+    getViewportSize() {
+      const viewport = window.visualViewport;
+      return {
+        width: Math.max(320, Math.floor(viewport?.width || window.innerWidth || document.documentElement.clientWidth || 320)),
+        height: Math.max(360, Math.floor(viewport?.height || window.innerHeight || document.documentElement.clientHeight || 360))
+      };
+    },
+
+    getAvatarSize() {
+      const rect = this.live2dCanvas?.getBoundingClientRect?.();
+      return {
+        width: Math.max(120, Math.round(rect?.width || this.live2dCanvas?.offsetWidth || 180)),
+        height: Math.max(220, Math.round(rect?.height || this.live2dCanvas?.offsetHeight || 360))
+      };
+    },
+
+    clampAvatarPosition(position) {
+      const viewport = this.getViewportSize();
+      const avatar = this.getAvatarSize();
+      const minX = 8;
+      const minY = 72;
+      const maxX = Math.max(minX, viewport.width - avatar.width - 8);
+      const maxY = Math.max(minY, viewport.height - avatar.height - 8);
+      return {
+        x: Math.max(minX, Math.min(maxX, Number(position?.x) || maxX)),
+        y: Math.max(minY, Math.min(maxY, Number(position?.y) || maxY))
       };
     },
 
@@ -862,16 +896,12 @@ export default {
 
     applyAvatarPosition() {
       if (!this.live2dCanvas) return;
-      const width = this.live2dCanvas.offsetWidth || 180;
-      const height = this.live2dCanvas.offsetHeight || 360;
-      const x = Math.max(8, Math.min(window.innerWidth - width - 8, this.avatarPosition.x));
-      const y = Math.max(72, Math.min(window.innerHeight - height - 8, this.avatarPosition.y));
-      this.avatarPosition = { x, y };
+      this.avatarPosition = this.clampAvatarPosition(this.avatarPosition);
 
       Object.assign(this.live2dCanvas.style, {
         position: 'fixed',
-        left: `${x}px`,
-        top: `${y}px`,
+        left: `${this.avatarPosition.x}px`,
+        top: `${this.avatarPosition.y}px`,
         right: 'auto',
         bottom: 'auto'
       });
@@ -1841,6 +1871,9 @@ export default {
     }
     window.removeEventListener('xuanmiao:say', this.handleExternalSpeech);
     window.removeEventListener('xuanmiao:stop', this.handleExternalStop);
+    window.removeEventListener('resize', this.applyAvatarPosition);
+    window.visualViewport?.removeEventListener('resize', this.applyAvatarPosition);
+    window.visualViewport?.removeEventListener('scroll', this.applyAvatarPosition);
     this.cleanupMcpListeners();
   }
 }

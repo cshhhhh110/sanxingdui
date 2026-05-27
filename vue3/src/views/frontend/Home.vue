@@ -52,7 +52,7 @@
           <span class="title-decor"></span>精选作品<span class="title-sub">EXQUISITE ARTIFACTS</span>
         </h2>
 
-        <a-button type="link" @click="viewAllCourses">
+        <a-button type="link" @click="viewAllHeritageItems">
           查看更多.. <img :src="'/righ.png'" class="arrow-icon" />
         </a-button>
       </div>
@@ -130,7 +130,7 @@
         <h2 class="section-title">
           <span class="title-decor"></span>近期活动<span class="title-sub">EVENT ACTIVITY</span>
         </h2>
-        <a-button type="link" @click="viewAllCourses">
+        <a-button type="link" @click="viewAllActivities">
           查看更多.. <img :src="'/righ.png'" class="arrow-icon" />
         </a-button>
       </div>
@@ -393,7 +393,9 @@ const exploreHeritage = () => router.push('/tanmi')
 const learnCourses = () => router.push('/course')
 const viewItemDetail = (id) => router.push(`/heritage/${id}`)
 const viewActivityDetail = (id) => router.push(`/activity/${id}`)
+const viewAllHeritageItems = () => router.push('/heritage')
 const viewAllCourses = () => router.push('/course')
+const viewAllActivities = () => router.push('/activity')
 const viewCourseDetail = (id) => router.push(`/course/${id}`)
 </script>
 
@@ -1087,16 +1089,19 @@ const viewCourseDetail = (id) => router.push(`/course/${id}`)
 
 .activity-list {
   display: flex;
-  width: max-content;
-  gap: 60px;
-  padding: 0 40px;
+  width: 100%;
+  gap: 32px;
+  justify-content: space-between;
+  padding: 0;
 }
 
 .activity-item {
   display: flex;
+  flex: 1 1 0;
   flex-direction: column;
   align-items: center;
-  min-width: 260px;
+  min-width: 0;
+  max-width: 260px;
 }
 
 .activity-item.top {
@@ -1108,7 +1113,7 @@ const viewCourseDetail = (id) => router.push(`/course/${id}`)
 }
 
 .activity-card {
-  width: 260px;
+  width: 100%;
   overflow: hidden;
   background: #ffffff;
   border: 1px solid #e3eae6;
@@ -1224,6 +1229,21 @@ const viewCourseDetail = (id) => router.push(`/course/${id}`)
 
   .course-scroll-row {
     grid-template-columns: 1fr;
+  }
+
+  .activity-timeline-horizontal {
+    overflow-x: auto;
+  }
+
+  .activity-list {
+    width: max-content;
+    gap: 32px;
+    padding: 0 16px;
+  }
+
+  .activity-item {
+    flex: 0 0 260px;
+    max-width: 260px;
   }
 
   .mist {

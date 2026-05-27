@@ -175,6 +175,7 @@ export default {
       controls: null,
       glbModel: null,
       animationId: 0,
+      modelViewport: { width: 0, height: 0 },
 
       graphLoading: false,
       graphError: "",
@@ -322,6 +323,7 @@ export default {
       this.renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
       this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
       this.renderer.toneMappingExposure = 1.2;
+      this.updateModelViewport();
 
       this.controls = markRaw(new OrbitControls(this.camera, this.renderer.domElement));
       this.controls.enableDamping = true;
@@ -381,6 +383,7 @@ export default {
       this.animationId = requestAnimationFrame(() => this.animate());
       if (this.controls) this.controls.update();
       if (this.renderer && this.scene && this.camera) {
+        this.applyModelViewport();
         this.renderer.render(this.scene, this.camera);
       }
     },
@@ -797,13 +800,46 @@ export default {
       }
     },
 
+    getModelViewportSize() {
+      const wrapper = this.$refs.wrapperRef;
+      if (!wrapper) return { width: 0, height: 0 };
+
+      const width = wrapper.clientWidth;
+      const height = wrapper.clientHeight;
+      if (width <= 780) {
+        return { width, height };
+      }
+
+      const panelWidth = Math.min(430, Math.max(width - 40, 0));
+      const reservedRight = panelWidth + 40;
+      return {
+        width: Math.max(360, width - reservedRight),
+        height,
+      };
+    },
+
+    updateModelViewport() {
+      if (!this.$refs.wrapperRef || !this.camera || !this.renderer) return;
+
+      const wrapperWidth = this.$refs.wrapperRef.clientWidth;
+      const wrapperHeight = this.$refs.wrapperRef.clientHeight;
+      this.modelViewport = this.getModelViewportSize();
+
+      this.camera.aspect = this.modelViewport.width / this.modelViewport.height;
+      this.camera.updateProjectionMatrix();
+      this.renderer.setSize(wrapperWidth, wrapperHeight);
+    },
+
+    applyModelViewport() {
+      if (!this.renderer || !this.modelViewport.width || !this.modelViewport.height) return;
+      this.renderer.setViewport(0, 0, this.modelViewport.width, this.modelViewport.height);
+      this.renderer.setScissor(0, 0, this.modelViewport.width, this.modelViewport.height);
+      this.renderer.setScissorTest(true);
+    },
+
     onWindowResize() {
       if (!this.$refs.wrapperRef || !this.camera || !this.renderer) return;
-      const w = this.$refs.wrapperRef.clientWidth;
-      const h = this.$refs.wrapperRef.clientHeight;
-      this.camera.aspect = w / h;
-      this.camera.updateProjectionMatrix();
-      this.renderer.setSize(w, h);
+      this.updateModelViewport();
       if (this.graphInstance && this.$refs.graphRef) {
         const graphWidth = Math.max(this.$refs.graphRef.clientWidth || 0, 320);
         const graphHeight = Math.max(this.$refs.graphRef.clientHeight || 0, 300);
@@ -923,7 +959,10 @@ canvas {
   display: flex;
   flex-direction: column;
   gap: 14px;
+  min-height: 0;
   padding: 18px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
   color: #f7ecd7;
   background:
     linear-gradient(180deg, rgba(26, 31, 25, 0.9), rgba(14, 16, 13, 0.86)),
@@ -1046,8 +1085,9 @@ canvas {
 
 .graph-board {
   position: relative;
-  min-height: 330px;
-  flex: 1 1 340px;
+  height: clamp(280px, 38vh, 360px);
+  min-height: 0;
+  flex: 0 0 auto;
   overflow: hidden;
   background:
     linear-gradient(135deg, rgba(216, 180, 98, 0.08), transparent 34%),
@@ -1060,7 +1100,7 @@ canvas {
 .g6-graph {
   width: 100%;
   height: 100%;
-  min-height: 330px;
+  min-height: 0;
   cursor: grab;
 }
 
@@ -1109,6 +1149,7 @@ canvas {
 
 .node-inspector {
   display: flex;
+  flex: 0 0 auto;
   flex-direction: column;
   gap: 10px;
   padding: 14px;
@@ -1344,12 +1385,11 @@ canvas {
   }
 
   .graph-board {
-    min-height: 260px;
-    flex-basis: 260px;
+    height: 260px;
   }
 
   .g6-graph {
-    min-height: 260px;
+    min-height: 0;
   }
 
   .graph-stats {
