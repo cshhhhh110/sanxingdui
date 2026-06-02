@@ -67,7 +67,7 @@ spring:
 # ========== 小米 MiMo 模型配置 ==========
 mimo:
   api-key: YOUR_MIMO_API_KEY
-  base-url: https://token-plan-cn.xiaomimimo.com/v1
+  base-url: https://token-plan-sgp.xiaomimimo.com/v1
   chat:
     model: mimo-v2.5-pro
   tts:

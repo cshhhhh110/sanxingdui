@@ -32,6 +32,9 @@ springboot/files/bussiness/**/*.pdf
 # === 本地私有配置（不要提交真实密码/API Key） ===
 springboot/src/main/resources/application.yml
 XunFeiTest/src/main/resources/application.yml
+tools/voiceover-cli/.env
+tools/voiceover-cli/voiceover_output/
+vue3/voiceover_output/
 
 # === 操作系统 ===
 .DS_Store

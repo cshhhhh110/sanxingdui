@@ -1,0 +1,13 @@
+{
+  "name": "voiceover-cli",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Interactive local voiceover recorder that calls an existing TTS HTTP endpoint.",
+  "scripts": {
+    "start": "node voiceover-tool.mjs"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}

@@ -1379,7 +1379,7 @@ const voiceGuideError = ref('')
 const voiceGuideScrolledAway = ref(false)
 const voiceGuidePeekVisible = ref(false)
 
-const QUIZ_PROMO_SESSION_KEY = 'sanxingdui.trail.quizPromo.seen'
+const QUIZ_PROMO_SESSION_KEY = 'sanxingdui.trail.quizPromo.dismissed.v2'
 const QUIZ_PROMO_TRIGGER_ROUNDS = 2
 const TRAIL_LOOP_NUDGE_TRIGGER_ROUNDS = 1
 
@@ -4843,13 +4843,19 @@ async function sendMessage(presetQuestion = '') {
     time: getCurrentTime()
   })
   const quizPromoRound = registerGuideUserQuestion()
+  let quizPromoRevealChecked = false
+  const revealQuizPromoOnce = () => {
+    if (quizPromoRevealChecked) return
+    quizPromoRevealChecked = true
+    maybeRevealQuizPromo(quizPromoRound)
+  }
   draft.value = ''
   scrollMessagesToBottom()
   const assistantPlaceholderId = appendAssistantPlaceholder()
 
   if (fixedAnswer) {
     await typeAssistantMessageById(assistantPlaceholderId, fixedAnswer.reply)
-    maybeRevealQuizPromo(quizPromoRound)
+    revealQuizPromoOnce()
     return
   }
 
@@ -4868,7 +4874,7 @@ async function sendMessage(presetQuestion = '') {
 
   if (!currentSessionId.value) {
     updateAssistantMessageById(assistantPlaceholderId, getMockReply(question, docs))
-    maybeRevealQuizPromo(quizPromoRound)
+    revealQuizPromoOnce()
     return
   }
 
@@ -4899,13 +4905,13 @@ async function sendMessage(presetQuestion = '') {
           if (!aiResponse) {
             updateAssistantMessageById(assistantPlaceholderId, getMockReply(question, docs))
           }
-          maybeRevealQuizPromo(quizPromoRound)
+          revealQuizPromoOnce()
           return
         }
         if (event.data.startsWith('[ERROR]')) {
           isThinking.value = false
           updateAssistantMessageById(assistantPlaceholderId, getMockReply(question, docs))
-          maybeRevealQuizPromo(quizPromoRound)
+          revealQuizPromoOnce()
           return
         }
         aiResponse += event.data
@@ -4915,18 +4921,21 @@ async function sendMessage(presetQuestion = '') {
         console.error('AI SSE 连接失败:', error)
         isThinking.value = false
         updateAssistantMessageById(assistantPlaceholderId, getMockReply(question, docs))
-        maybeRevealQuizPromo(quizPromoRound)
+        revealQuizPromoOnce()
         return 999999999
       },
       onclose() {
         isThinking.value = false
+        if (aiResponse) {
+          revealQuizPromoOnce()
+        }
       }
     })
   } catch (error) {
     console.error('发送 AI 消息失败:', error)
     isThinking.value = false
     updateAssistantMessageById(assistantPlaceholderId, getMockReply(question, docs))
-    maybeRevealQuizPromo(quizPromoRound)
+    revealQuizPromoOnce()
   } finally {
     chatAbortController = null
   }
@@ -4987,7 +4996,6 @@ function maybeRevealQuizPromo(roundCount) {
 
   showQuizPromo.value = true
   trailNextCardDismissed.value = false
-  markQuizPromoSeen()
   scrollMessagesToBottom()
 }
 
