@@ -62,6 +62,30 @@ public class TtsService {
             Map.of("key", "sweet", "label", "\u751c\u7f8e\u5973\u58f0", "desc", "\u8309\u8389")
     );
 
+    @Value("${zhipu.api-key:}")
+    private String zhipuApiKey;
+
+    @Value("${zhipu.base-url:https://open.bigmodel.cn/api/paas/v4}")
+    private String zhipuBaseUrl;
+
+    @Value("${zhipu.tts.model:glm-tts}")
+    private String zhipuTtsModel;
+
+    private static final Map<String, String> ZHIPU_VOICE_MAP = Map.of(
+            "default", "tongtong",
+            "zh_female", "xiaochen",
+            "sweet", "chuichui",
+            "tongtong", "tongtong",
+            "xiaochen", "xiaochen",
+            "chuichui", "chuichui"
+    );
+
+    private static final List<Map<String, String>> ZHIPU_VOICE_LIST = List.of(
+            Map.of("key", "default", "label", "\u5f64\u5f64", "desc", "tongtong"),
+            Map.of("key", "zh_female", "label", "\u5c0f\u9648", "desc", "xiaochen"),
+            Map.of("key", "sweet", "label", "\u9524\u9524", "desc", "chuichui")
+    );
+
     @Value("${tts.provider:siliconflow}")
     private String provider;
 
@@ -69,7 +93,11 @@ public class TtsService {
     private String localTtsUrl;
 
     public List<Map<String, String>> getVoiceList() {
-        return "mimo".equalsIgnoreCase(provider) ? MIMO_VOICE_LIST : SF_VOICE_LIST;
+        return switch (provider.toLowerCase()) {
+            case "mimo" -> MIMO_VOICE_LIST;
+            case "zhipu" -> ZHIPU_VOICE_LIST;
+            default -> SF_VOICE_LIST;
+        };
     }
 
     public byte[] synthesize(String text, String voice, float speed) {
@@ -80,9 +108,11 @@ public class TtsService {
         }
 
         try {
-            byte[] audio = "mimo".equalsIgnoreCase(provider)
-                    ? synthesizeMiMo(safeText, voice)
-                    : synthesizeSiFlow(safeText, voice);
+            byte[] audio = switch (provider.toLowerCase()) {
+                case "mimo" -> synthesizeMiMo(safeText, voice);
+                case "zhipu" -> synthesizeZhipu(safeText, voice, speed);
+                default -> synthesizeSiFlow(safeText, voice);
+            };
             log.info("TTS success provider:{} text:{} audio:{}bytes", provider, safeText.length(), audio.length);
             return audio;
         } catch (Exception e) {
@@ -153,6 +183,23 @@ public class TtsService {
             throw new RuntimeException("MiMo TTS returned no audio data");
         }
         return Base64.getDecoder().decode(b64);
+    }
+
+    private byte[] synthesizeZhipu(String text, String voice, float speed) throws Exception {
+        if (zhipuApiKey == null || zhipuApiKey.isBlank() || zhipuApiKey.startsWith("YOUR_")) {
+            throw new IllegalStateException("Zhipu API key is not configured");
+        }
+
+        String voiceId = ZHIPU_VOICE_MAP.getOrDefault(voice != null ? voice : "default", "tongtong");
+        String body = objectMapper.writeValueAsString(Map.of(
+                "model", zhipuTtsModel,
+                "input", text,
+                "voice", voiceId,
+                "response_format", "wav",
+                "speed", speed
+        ));
+
+        return doHttpPost(zhipuBaseUrl + "/audio/speech", body, zhipuApiKey);
     }
 
     private byte[] doHttpPost(String url, String body, String apiKey) throws Exception {

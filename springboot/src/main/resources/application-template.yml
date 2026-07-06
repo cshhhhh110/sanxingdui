@@ -73,6 +73,13 @@ mimo:
   tts:
     model: mimo-v2.5-tts
 
+# ========== Zhipu GLM-TTS configuration ==========
+zhipu:
+  api-key: ${ZHIPU_API_KEY:}
+  base-url: https://open.bigmodel.cn/api/paas/v4
+  tts:
+    model: glm-tts
+
 # ========== DeepSeek 模型配置（备选 AI Provider） ==========
 # OpenAI 兼容协议，base-url: https://api.deepseek.com
 # 模型：deepseek-v4-flash / deepseek-v4-pro
@@ -84,7 +91,7 @@ deepseek:
 
 # ========== TTS Provider 切换 ==========
 tts:
-  provider: mimo
+  provider: zhipu
 
 # 服务器配置
 server:

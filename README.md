@@ -60,6 +60,7 @@ copy springboot\src\main\resources\application-template.yml springboot\src\main\
 - `spring.datasource.password`
 - `jwt.secret`
 - `spring.ai.openai.api-key`（需要 AI 对话时）
+- `zhipu.api-key`（使用智谱 GLM-TTS 时，推荐通过 `ZHIPU_API_KEY` 环境变量配置）
 - `mimo.api-key` 或 `deepseek.api-key`（需要对应能力时）
 - `graph.neo4j.password`（启用 Neo4j 时）
 
