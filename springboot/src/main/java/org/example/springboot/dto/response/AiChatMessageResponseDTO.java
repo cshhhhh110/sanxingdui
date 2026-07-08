@@ -7,28 +7,33 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.time.LocalDateTime;
+import java.util.List;
 
 /**
- * AI聊天消息响应DTO
- * @author system
+ * AI chat message response DTO.
  */
 @Data
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-@Schema(description = "AI聊天消息响应DTO")
+@Schema(description = "AI chat message response")
 public class AiChatMessageResponseDTO {
 
-    @Schema(description = "消息ID")
+    @Schema(description = "Message id")
     private Long id;
 
-    @Schema(description = "角色：user-用户，assistant-AI助手")
+    @Schema(description = "Role: user or assistant")
     private String role;
 
-    @Schema(description = "消息内容")
+    @Schema(description = "Display content")
     private String content;
 
-    @Schema(description = "创建时间")
+    @Schema(description = "Message type: TEXT/MULTIMODAL/SYSTEM")
+    private String messageType;
+
+    @Schema(description = "Attachments")
+    private List<AiChatMessageAttachmentResponseDTO> attachments;
+
+    @Schema(description = "Create time")
     private LocalDateTime createTime;
 }
-

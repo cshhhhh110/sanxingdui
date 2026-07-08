@@ -1,6 +1,10 @@
 package org.example.springboot.entity;
 
-import com.baomidou.mybatisplus.annotation.*;
+import com.baomidou.mybatisplus.annotation.FieldFill;
+import com.baomidou.mybatisplus.annotation.IdType;
+import com.baomidou.mybatisplus.annotation.TableField;
+import com.baomidou.mybatisplus.annotation.TableId;
+import com.baomidou.mybatisplus.annotation.TableName;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -10,33 +14,43 @@ import lombok.NoArgsConstructor;
 import java.time.LocalDateTime;
 
 /**
- * AI聊天消息实体类
- * @author system
+ * AI chat message entity.
  */
 @Data
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
 @TableName("ai_chat_message")
-@Schema(description = "AI聊天消息实体类")
+@Schema(description = "AI chat message")
 public class AiChatMessage {
 
     @TableId(type = IdType.AUTO)
-    @Schema(description = "消息ID")
+    @Schema(description = "Message id")
     private Long id;
 
-    @Schema(description = "会话ID")
     @TableField("session_id")
+    @Schema(description = "Session id")
     private String sessionId;
 
-    @Schema(description = "角色：user-用户，assistant-AI助手")
+    @Schema(description = "Role: user or assistant")
     private String role;
 
-    @Schema(description = "消息内容")
+    @Schema(description = "Display content")
     private String content;
 
-    @Schema(description = "创建时间")
+    @TableField("message_type")
+    @Schema(description = "Message type: TEXT/MULTIMODAL/SYSTEM")
+    private String messageType;
+
+    @TableField("raw_content")
+    @Schema(description = "Original user content")
+    private String rawContent;
+
+    @TableField("processed_content")
+    @Schema(description = "Model-readable content")
+    private String processedContent;
+
     @TableField(value = "create_time", fill = FieldFill.INSERT)
+    @Schema(description = "Create time")
     private LocalDateTime createTime;
 }
-

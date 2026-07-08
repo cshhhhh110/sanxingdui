@@ -64,6 +64,9 @@
 
     <section class="chat-shell showcase-enter" style="--delay: 0.14s" aria-label="三星堆智能问答区">
       <aside class="quick-panel" aria-label="快捷问题分类">
+        <div class="quick-panel-tab" aria-hidden="true">
+          <i class="fas fa-list-ul"></i>
+        </div>
         <button
           v-for="card in quickCards"
           :key="card.key"
@@ -99,6 +102,45 @@
               <div class="message-bubble">
                 <p v-for="line in messageItem.content" :key="line">{{ line }}</p>
               </div>
+              <div v-if="messageItem.attachments?.length" class="message-attachments">
+                <div
+                  v-for="attachment in messageItem.attachments"
+                  :key="attachment.uid || attachment.id || attachment.fileId || attachment.fileName"
+                  class="attachment-card"
+                >
+                  <img
+                    v-if="attachment.mediaType === 'IMAGE'"
+                    class="attachment-image"
+                    :src="normalizeAttachmentUrl(attachment.filePath || attachment.previewUrl)"
+                    :alt="attachment.fileName"
+                  />
+                  <video
+                    v-else-if="attachment.mediaType === 'VIDEO'"
+                    class="attachment-video"
+                    :src="normalizeAttachmentUrl(attachment.filePath || attachment.previewUrl)"
+                    controls
+                  ></video>
+                  <audio
+                    v-else-if="attachment.mediaType === 'AUDIO'"
+                    class="attachment-audio"
+                    :src="normalizeAttachmentUrl(attachment.filePath || attachment.previewUrl)"
+                    controls
+                  ></audio>
+                  <div v-else class="attachment-file-icon">
+                    <i class="fas fa-file-lines"></i>
+                  </div>
+                  <div class="attachment-meta">
+                    <strong>{{ attachment.fileName || '附件' }}</strong>
+                    <small>{{ attachment.mediaType || 'FILE' }} · {{ formatFileSize(attachment.fileSize) }}</small>
+                  </div>
+                  <div v-if="attachment.analysisStatus || attachment.extractedText" class="attachment-analysis">
+                    <small v-if="attachment.analysisStatus">
+                      {{ formatAnalysisStatus(attachment.analysisStatus) }}
+                    </small>
+                    <p v-if="attachment.extractedText">{{ attachment.extractedText }}</p>
+                  </div>
+                </div>
+              </div>
               <time>{{ messageItem.time }}</time>
             </div>
 
@@ -133,6 +175,14 @@
         </div>
 
         <form class="composer" @submit.prevent="sendMessage()">
+          <input
+            ref="fileInputRef"
+            class="file-input"
+            type="file"
+            multiple
+            accept="image/*,audio/*,video/*,.pdf,.doc,.docx,.txt,.md"
+            @change="handleAttachmentSelected"
+          />
           <div class="input-wrap">
             <textarea
               v-model="draft"
@@ -145,24 +195,54 @@
 
           <button
             type="button"
+            class="attach-button showcase-button-hover"
+            :disabled="isThinking"
+            title="添加图片、音频、视频或文件"
+            @click="openAttachmentPicker"
+          >
+            <i class="fas fa-paperclip"></i>
+          </button>
+
+          <button
+            type="button"
             class="voice-button showcase-button-hover"
             :class="{ 'voice-button--active': isListening }"
-            :disabled="!voiceInputSupported || isThinking"
-            :title="voiceInputSupported ? (isListening ? '停止语音输入' : '开始语音输入') : '当前浏览器不支持语音输入'"
-            @click="toggleVoiceInput"
+            :disabled="!voiceInputSupported || isThinking || isTranscribingVoice"
+            :title="voiceButtonTitle"
+            @click="toggleVoiceRecording"
           >
-            <i :class="isListening ? 'fas fa-stop' : 'fas fa-microphone'"></i>
+            <i :class="isTranscribingVoice ? 'fas fa-spinner fa-spin' : (isListening ? 'fas fa-stop' : 'fas fa-microphone')"></i>
           </button>
 
           <button
             class="send-button showcase-button-hover"
             type="submit"
-            :disabled="!draft.trim() || isThinking"
+            :disabled="(!draft.trim() && pendingAttachments.length === 0) || isThinking || isUploadingAttachments || isListening || isTranscribingVoice"
           >
             <i class="fas fa-paper-plane"></i>
-            {{ competitionActionLabels.send }}
+            {{ isUploadingAttachments ? '上传中' : competitionActionLabels.send }}
           </button>
         </form>
+        <div v-if="pendingAttachments.length" class="pending-attachments">
+          <div
+            v-for="attachment in pendingAttachments"
+            :key="attachment.uid"
+            class="pending-attachment"
+            :class="`pending-attachment--${attachment.status}`"
+          >
+            <img
+              v-if="attachment.mediaType === 'IMAGE'"
+              :src="attachment.previewUrl"
+              :alt="attachment.fileName"
+            />
+            <i v-else :class="getAttachmentIcon(attachment.mediaType)"></i>
+            <span>{{ attachment.fileName }}</span>
+            <small>{{ attachment.status === 'failed' ? attachment.error : formatFileSize(attachment.fileSize) }}</small>
+            <button type="button" @click="removePendingAttachment(attachment.uid)">
+              <i class="fas fa-xmark"></i>
+            </button>
+          </div>
+        </div>
       </section>
     </section>
   </main>
@@ -174,10 +254,11 @@ import { message } from 'ant-design-vue'
 import { fetchEventSource } from '@microsoft/fetch-event-source'
 import { useRoute, useRouter } from 'vue-router'
 import { useUserStore } from '@/store/user'
-import { createSession as createSessionApi, getChatStreamUrl } from '@/api/AiChatApi'
+import { createSession as createSessionApi, getChatStreamUrl, transcribeSpeechInput } from '@/api/AiChatApi'
+import { uploadTempFile } from '@/api/FileApi'
 import { matchFixedAnswer } from '@/config/chatReplyConfig'
 import { buildFallbackReply, buildRagPrompt, searchKnowledge } from '@/utils/knowledgeSearch'
-import { createBrowserSpeechRecognition, getBrowserSpeechRecognitionCtor } from '@/utils/browserSpeech'
+import { createBrowserSpeechRecognition } from '@/utils/browserSpeech'
 import { formatYearRange } from '@/data/competitionArtifacts'
 import { competitionActionLabels } from '@/data/competitionUi'
 import { getSpacetimeArtifactDetail } from '@/api/SpacetimeApi'
@@ -190,15 +271,19 @@ const userStore = useUserStore()
 
 const messagesContainer = ref(null)
 const suggestionRow = ref(null)
+const fileInputRef = ref(null)
 const suggestionLimit = ref(4)
 const draft = ref('')
 const isThinking = ref(false)
 const showThinkingBubble = ref(false)
+const isUploadingAttachments = ref(false)
 const isListening = ref(false)
+const isTranscribingVoice = ref(false)
 const currentSessionId = ref(null)
 const activeQuickCard = ref('hot')
 const artifactContext = ref(null)
 const lastAutoAskedEntityId = ref('')
+const pendingAttachments = ref([])
 
 const quickCards = [
   {
@@ -336,11 +421,30 @@ const currentUserAvatar = computed(() => {
   )
 })
 
-const voiceInputSupported = computed(() => Boolean(getBrowserSpeechRecognitionCtor()))
+const voiceInputSupported = computed(() => {
+  if (typeof window === 'undefined' || typeof navigator === 'undefined') {
+    return false
+  }
+  return Boolean(navigator.mediaDevices?.getUserMedia && (window.AudioContext || window.webkitAudioContext))
+})
+
+const voiceButtonTitle = computed(() => {
+  if (!voiceInputSupported.value) return '当前浏览器不支持麦克风录音'
+  if (isTranscribingVoice.value) return '正在识别语音'
+  if (isListening.value) return '停止语音输入'
+  return '开始语音输入'
+})
 
 let suggestionResizeObserver = null
 let lastSuggestionRowWidth = 0
 let chatAbortController = null
+let voiceAudioContext = null
+let voiceMediaStream = null
+let voiceSourceNode = null
+let voiceProcessorNode = null
+let voiceAudioChunks = []
+let voiceSampleRate = 44100
+let voiceStopTimer = null
 let speechRecognition = null
 
 const messages = ref([])
@@ -376,7 +480,12 @@ onMounted(async () => {
 onBeforeUnmount(() => {
   suggestionResizeObserver?.disconnect()
   chatAbortController?.abort?.()
-  stopVoiceInput()
+  stopVoiceRecording({ transcribe: false })
+  pendingAttachments.value.forEach((attachment) => {
+    if (attachment.previewUrl) {
+      URL.revokeObjectURL(attachment.previewUrl)
+    }
+  })
 })
 
 async function initializeConversation() {
@@ -492,13 +601,22 @@ function getCurrentArtifactEntityId() {
   return artifactContext.value?.entityId || route.query.entityId || ''
 }
 
+function sanitizeAssistantText(text) {
+  return String(text || '')
+    .replace(/【\s*资料\s*\d+\s*】/g, '')
+    .replace(/【\s*参考资料\s*\d+\s*】/g, '')
+    .trim()
+}
+
 function updateAssistantMessageById(messageId, content, fallbackTime = '') {
   const targetMessage = messages.value.find((item) => item.id === messageId)
   if (!targetMessage) {
     return
   }
 
-  targetMessage.content = Array.isArray(content) ? content : [content]
+  targetMessage.content = Array.isArray(content)
+    ? content.map(sanitizeAssistantText).filter(Boolean)
+    : [sanitizeAssistantText(content)]
   if (fallbackTime && !targetMessage.time) {
     targetMessage.time = fallbackTime
   }
@@ -737,6 +855,13 @@ function buildPromptWithContext(question, docs = []) {
   return buildRagPrompt(question, docs, getCurrentContextPayload() || {})
 }
 
+function buildAiUnavailableMessage(attachments = []) {
+  if (attachments.length) {
+    return '多模态解析已提交，但 AI 服务连接中断，请稍后重试。若是视频，请优先使用 10 秒以内、画面清晰且带音轨的 MP4。'
+  }
+  return 'AI 服务连接中断，已无法获取完整回答，请稍后重试。'
+}
+
 function handleQuickCard(key) {
   activeQuickCard.value = key
   suggestionLimit.value = 4
@@ -745,6 +870,193 @@ function handleQuickCard(key) {
 
 function handleSuggest(question) {
   sendMessage(question)
+}
+
+function openAttachmentPicker() {
+  fileInputRef.value?.click()
+}
+
+function handleAttachmentSelected(event) {
+  const files = Array.from(event.target.files || [])
+  event.target.value = ''
+  if (!files.length) {
+    return
+  }
+
+  const availableSlots = Math.max(0, 5 - pendingAttachments.value.length)
+  if (files.length > availableSlots) {
+    message.warning('单条消息最多支持 5 个附件。')
+  }
+
+  files.slice(0, availableSlots).forEach((file) => {
+    const mediaType = inferMediaType(file)
+    const limit = getAttachmentSizeLimit(mediaType)
+    if (file.size > limit * 1024 * 1024) {
+      message.error(`${file.name} 超过 ${limit}MB 限制。`)
+      return
+    }
+
+    pendingAttachments.value.push({
+      uid: `${Date.now()}-${Math.random()}`,
+      file,
+      fileId: null,
+      mediaType,
+      fileName: file.name,
+      filePath: '',
+      mimeType: file.type || '',
+      fileSize: file.size,
+      status: 'local',
+      previewUrl: mediaType === 'IMAGE' || mediaType === 'VIDEO' || mediaType === 'AUDIO'
+        ? URL.createObjectURL(file)
+        : '',
+      error: ''
+    })
+  })
+}
+
+function removePendingAttachment(uid) {
+  const target = pendingAttachments.value.find((item) => item.uid === uid)
+  if (target?.previewUrl) {
+    URL.revokeObjectURL(target.previewUrl)
+  }
+  pendingAttachments.value = pendingAttachments.value.filter((item) => item.uid !== uid)
+}
+
+async function ensureAttachmentsUploaded(attachments) {
+  if (!attachments.length) {
+    return []
+  }
+
+  isUploadingAttachments.value = true
+  try {
+    const result = []
+    for (const attachment of attachments) {
+      if (attachment.fileId) {
+        result.push(toRequestAttachment(attachment))
+        continue
+      }
+
+      attachment.status = 'uploading'
+      const uploaded = await uploadTempFile(attachment.file, {
+        showDefaultMsg: false,
+        errorMsg: '附件上传失败'
+      })
+
+      attachment.fileId = uploaded.id
+      attachment.filePath = uploaded.filePath
+      attachment.fileName = uploaded.originalName || attachment.fileName
+      attachment.fileSize = uploaded.fileSize || attachment.fileSize
+      attachment.mediaType = normalizeMediaType(uploaded.fileType || attachment.mediaType)
+      attachment.status = 'done'
+      result.push(toRequestAttachment(attachment))
+    }
+    return result
+  } catch (error) {
+    const failed = attachments.find((item) => item.status === 'uploading')
+    if (failed) {
+      failed.status = 'failed'
+      failed.error = '上传失败'
+    }
+    throw error
+  } finally {
+    isUploadingAttachments.value = false
+  }
+}
+
+function toRequestAttachment(attachment) {
+  return {
+    fileId: attachment.fileId,
+    mediaType: attachment.mediaType,
+    fileName: attachment.fileName,
+    filePath: attachment.filePath,
+    mimeType: attachment.mimeType,
+    fileSize: attachment.fileSize
+  }
+}
+
+function toDisplayAttachment(attachment) {
+  return {
+    uid: attachment.uid,
+    id: attachment.id,
+    fileId: attachment.fileId,
+    mediaType: attachment.mediaType,
+    fileName: attachment.fileName,
+    filePath: attachment.filePath,
+    previewUrl: attachment.previewUrl,
+    mimeType: attachment.mimeType,
+    fileSize: attachment.fileSize,
+    analysisStatus: attachment.analysisStatus,
+    extractedText: attachment.extractedText,
+    extractedMeta: attachment.extractedMeta
+  }
+}
+
+function formatAnalysisStatus(status) {
+  const statusMap = {
+    DONE: '已解析',
+    FAILED: '解析失败',
+    PENDING: '解析中',
+    SKIPPED: '未解析'
+  }
+  return statusMap[status] || status
+}
+
+function inferMediaType(file) {
+  const mime = file.type || ''
+  const name = file.name.toLowerCase()
+  if (mime.startsWith('image/')) return 'IMAGE'
+  if (mime.startsWith('audio/')) return 'AUDIO'
+  if (mime.startsWith('video/')) return 'VIDEO'
+  if (/\.(pdf|doc|docx|txt|md)$/i.test(name)) return 'DOCUMENT'
+  return 'FILE'
+}
+
+function normalizeMediaType(fileType) {
+  const type = (fileType || '').toUpperCase()
+  if (type === 'IMG' || type === 'IMAGE') return 'IMAGE'
+  if (type === 'AUDIO') return 'AUDIO'
+  if (type === 'VIDEO') return 'VIDEO'
+  if (['PDF', 'DOC', 'TXT', 'XLS', 'PPT', 'DOCUMENT'].includes(type)) return 'DOCUMENT'
+  return 'FILE'
+}
+
+function getAttachmentSizeLimit(mediaType) {
+  const limits = {
+    IMAGE: 10,
+    AUDIO: 50,
+    VIDEO: 200,
+    DOCUMENT: 20,
+    FILE: 50
+  }
+  return limits[mediaType] || 50
+}
+
+function getAttachmentIcon(mediaType) {
+  const icons = {
+    IMAGE: 'fas fa-image',
+    AUDIO: 'fas fa-file-audio',
+    VIDEO: 'fas fa-file-video',
+    DOCUMENT: 'fas fa-file-lines',
+    FILE: 'fas fa-paperclip'
+  }
+  return icons[mediaType] || icons.FILE
+}
+
+function formatFileSize(size = 0) {
+  if (!size) return '0 B'
+  if (size < 1024) return `${size} B`
+  if (size < 1024 * 1024) return `${(size / 1024).toFixed(1)} KB`
+  return `${(size / 1024 / 1024).toFixed(1)} MB`
+}
+
+function normalizeAttachmentUrl(url) {
+  if (!url) return ''
+  if (/^blob:/i.test(url) || /^https?:\/\//i.test(url)) {
+    return url
+  }
+  const baseURL = import.meta.env.VITE_APP_BASE_API || '/api'
+  const staticBaseURL = baseURL.replace(/\/api\/?$/, '')
+  return `${staticBaseURL}/${url.replace(/^\/+/, '')}`
 }
 
 function stopVoiceInput() {
@@ -831,23 +1143,210 @@ function toggleVoiceInput() {
   }
 }
 
-async function sendMessage(presetQuestion = '') {
-  const question = (presetQuestion || draft.value).trim()
-  if (!question || isThinking.value) {
+function cleanupVoiceRecorder() {
+  if (voiceStopTimer) {
+    clearTimeout(voiceStopTimer)
+    voiceStopTimer = null
+  }
+
+  try {
+    voiceProcessorNode?.disconnect()
+    voiceSourceNode?.disconnect()
+  } catch (error) {
+    console.warn('Disconnect voice recorder failed:', error)
+  }
+
+  if (voiceMediaStream) {
+    voiceMediaStream.getTracks().forEach((track) => track.stop())
+  }
+
+  if (voiceAudioContext && voiceAudioContext.state !== 'closed') {
+    void voiceAudioContext.close()
+  }
+
+  voiceAudioContext = null
+  voiceMediaStream = null
+  voiceSourceNode = null
+  voiceProcessorNode = null
+}
+
+function mergeAudioChunks(chunks) {
+  const totalLength = chunks.reduce((sum, chunk) => sum + chunk.length, 0)
+  const result = new Float32Array(totalLength)
+  let offset = 0
+  chunks.forEach((chunk) => {
+    result.set(chunk, offset)
+    offset += chunk.length
+  })
+  return result
+}
+
+function writeAscii(view, offset, text) {
+  for (let i = 0; i < text.length; i += 1) {
+    view.setUint8(offset + i, text.charCodeAt(i))
+  }
+}
+
+function encodeWav(samples, sampleRate) {
+  const bytesPerSample = 2
+  const buffer = new ArrayBuffer(44 + samples.length * bytesPerSample)
+  const view = new DataView(buffer)
+
+  writeAscii(view, 0, 'RIFF')
+  view.setUint32(4, 36 + samples.length * bytesPerSample, true)
+  writeAscii(view, 8, 'WAVE')
+  writeAscii(view, 12, 'fmt ')
+  view.setUint32(16, 16, true)
+  view.setUint16(20, 1, true)
+  view.setUint16(22, 1, true)
+  view.setUint32(24, sampleRate, true)
+  view.setUint32(28, sampleRate * bytesPerSample, true)
+  view.setUint16(32, bytesPerSample, true)
+  view.setUint16(34, 16, true)
+  writeAscii(view, 36, 'data')
+  view.setUint32(40, samples.length * bytesPerSample, true)
+
+  let offset = 44
+  for (let i = 0; i < samples.length; i += 1) {
+    const sample = Math.max(-1, Math.min(1, samples[i]))
+    view.setInt16(offset, sample < 0 ? sample * 0x8000 : sample * 0x7fff, true)
+    offset += bytesPerSample
+  }
+
+  return new Blob([view], { type: 'audio/wav' })
+}
+
+function appendVoiceTranscript(text) {
+  const transcript = (text || '').trim()
+  if (!transcript) return
+
+  draft.value = draft.value.trim()
+    ? `${draft.value.trim()}\n${transcript}`
+    : transcript
+}
+
+async function transcribeVoiceChunks(chunks, sampleRate) {
+  if (!chunks.length) {
+    message.warning('没有录到有效声音，请重试。')
     return
   }
 
-  stopVoiceInput()
+  const samples = mergeAudioChunks(chunks)
+  const durationSeconds = samples.length / sampleRate
+  if (durationSeconds < 0.4) {
+    message.warning('录音时间太短，请说完整内容后再停止。')
+    return
+  }
 
-  const fixedAnswer = matchFixedAnswer(question)
+  const audioBlob = encodeWav(samples, sampleRate)
+  const audioFile = new File([audioBlob], `voice-input-${Date.now()}.wav`, { type: 'audio/wav' })
+
+  isTranscribingVoice.value = true
+  try {
+    const transcript = await transcribeSpeechInput(audioFile, {
+      showDefaultMsg: false,
+      errorMsg: '语音识别失败，请重试或改用文字输入。'
+    })
+    appendVoiceTranscript(transcript)
+  } catch (error) {
+    console.warn('Speech input transcription failed:', error)
+  } finally {
+    isTranscribingVoice.value = false
+  }
+}
+
+async function startVoiceRecording() {
+  const AudioContextCtor = window.AudioContext || window.webkitAudioContext
+  voiceMediaStream = await navigator.mediaDevices.getUserMedia({ audio: true })
+  voiceAudioContext = new AudioContextCtor()
+  voiceSampleRate = voiceAudioContext.sampleRate
+  voiceAudioChunks = []
+
+  voiceSourceNode = voiceAudioContext.createMediaStreamSource(voiceMediaStream)
+  voiceProcessorNode = voiceAudioContext.createScriptProcessor(4096, 1, 1)
+  voiceProcessorNode.onaudioprocess = (event) => {
+    const input = event.inputBuffer.getChannelData(0)
+    voiceAudioChunks.push(new Float32Array(input))
+  }
+
+  voiceSourceNode.connect(voiceProcessorNode)
+  voiceProcessorNode.connect(voiceAudioContext.destination)
+  isListening.value = true
+  message.info('正在录音，再次点击麦克风结束识别。')
+
+  voiceStopTimer = setTimeout(() => {
+    if (isListening.value) {
+      message.info('录音已达到 60 秒，正在自动识别。')
+      void stopVoiceRecording()
+    }
+  }, 60000)
+}
+
+async function stopVoiceRecording(options = {}) {
+  const { transcribe = true } = options
+  const chunks = voiceAudioChunks.slice()
+  const sampleRate = voiceSampleRate
+
+  cleanupVoiceRecorder()
+  voiceAudioChunks = []
+  isListening.value = false
+
+  if (transcribe) {
+    await transcribeVoiceChunks(chunks, sampleRate)
+  }
+}
+
+async function toggleVoiceRecording() {
+  if (!voiceInputSupported.value) {
+    message.warning('当前浏览器不支持麦克风录音，请改用文字输入。')
+    return
+  }
+
+  if (isThinking.value || isTranscribingVoice.value) {
+    return
+  }
+
+  if (isListening.value) {
+    await stopVoiceRecording()
+    return
+  }
+
+  try {
+    await startVoiceRecording()
+  } catch (error) {
+    cleanupVoiceRecorder()
+    isListening.value = false
+    console.warn('Start voice input failed:', error)
+    message.warning('麦克风启动失败，请检查浏览器录音权限。')
+  }
+}
+
+async function sendMessage(presetQuestion = '') {
+  const question = (presetQuestion || draft.value).trim()
+  if (
+    (!question && pendingAttachments.value.length === 0) ||
+    isThinking.value ||
+    isUploadingAttachments.value ||
+    isListening.value ||
+    isTranscribingVoice.value
+  ) {
+    return
+  }
+
+  stopVoiceRecording({ transcribe: false })
+
+  const fixedAnswer = pendingAttachments.value.length ? null : matchFixedAnswer(question)
 
   messages.value.push({
     id: Date.now(),
     role: 'user',
-    content: [question],
+    content: [question || '[附件消息]'],
+    attachments: pendingAttachments.value.map(toDisplayAttachment),
     time: getCurrentTime()
   })
   draft.value = ''
+  const attachmentsToSend = [...pendingAttachments.value]
+  pendingAttachments.value = []
   scrollToBottom()
   const assistantPlaceholderId = appendAssistantPlaceholder()
 
@@ -858,12 +1357,24 @@ async function sendMessage(presetQuestion = '') {
 
   let docs = []
   let userMessage = question
+  let uploadedAttachments = []
 
   try {
-          docs = await searchKnowledge(question, 1)
-    userMessage = buildPromptWithContext(question, docs)
+    uploadedAttachments = await ensureAttachmentsUploaded(attachmentsToSend)
   } catch (error) {
-    console.warn('本地知识检索失败，降级为原始问题:', error)
+    console.error('附件上传失败:', error)
+    updateAssistantMessageById(assistantPlaceholderId, ['附件上传失败，请删除失败附件后重试。'])
+    pendingAttachments.value = attachmentsToSend
+    return
+  }
+
+  if (!uploadedAttachments.length) {
+    try {
+      docs = await searchKnowledge(question, 1)
+      userMessage = buildPromptWithContext(question, docs)
+    } catch (error) {
+      console.warn('本地知识检索失败，降级为原始问题:', error)
+    }
   }
 
   if (!currentSessionId.value) {
@@ -896,7 +1407,8 @@ async function sendMessage(presetQuestion = '') {
       headers,
       body: JSON.stringify({
         sessionId: currentSessionId.value,
-        userMessage
+        userMessage,
+        attachments: uploadedAttachments
       }),
       signal: chatAbortController.signal,
       openWhenHidden: true,
@@ -904,15 +1416,21 @@ async function sendMessage(presetQuestion = '') {
         if (event.data === '[DONE]') {
           isThinking.value = false
           if (!aiResponse) {
-            updateAssistantMessageById(assistantPlaceholderId, getMockReply(question, docs))
+            updateAssistantMessageById(
+              assistantPlaceholderId,
+              uploadedAttachments.length ? buildAiUnavailableMessage(uploadedAttachments) : getMockReply(question, docs)
+            )
           }
           return
         }
 
         if (event.data.startsWith('[ERROR]')) {
           isThinking.value = false
-          message.warning('AI 响应暂不可用，已切换为本地知识讲解')
-          updateAssistantMessageById(assistantPlaceholderId, getMockReply(question, docs))
+          message.warning('AI 响应暂不可用')
+          updateAssistantMessageById(
+            assistantPlaceholderId,
+            uploadedAttachments.length ? event.data.replace('[ERROR]', '') || buildAiUnavailableMessage(uploadedAttachments) : getMockReply(question, docs)
+          )
           return
         }
 
@@ -922,7 +1440,10 @@ async function sendMessage(presetQuestion = '') {
       onerror(error) {
         console.error('AI SSE 连接失败:', error)
         isThinking.value = false
-        updateAssistantMessageById(assistantPlaceholderId, getMockReply(question, docs))
+        updateAssistantMessageById(
+          assistantPlaceholderId,
+          uploadedAttachments.length ? buildAiUnavailableMessage(uploadedAttachments) : getMockReply(question, docs)
+        )
         return 999999999
       },
       onclose() {
@@ -932,7 +1453,10 @@ async function sendMessage(presetQuestion = '') {
   } catch (error) {
     console.error('发送 AI 消息失败:', error)
     isThinking.value = false
-    updateAssistantMessageById(assistantPlaceholderId, getMockReply(question, docs))
+    updateAssistantMessageById(
+      assistantPlaceholderId,
+      uploadedAttachments.length ? buildAiUnavailableMessage(uploadedAttachments) : getMockReply(question, docs)
+    )
   } finally {
     chatAbortController = null
   }
@@ -997,10 +1521,14 @@ function getCurrentTime() {
   --ink: #1f332c;
   --muted: #72847c;
   position: relative;
-  min-height: calc(100vh - 64px);
+  display: grid;
+  grid-template-rows: auto auto minmax(0, 1fr);
+  gap: 14px;
+  height: calc(100vh - 64px);
+  min-height: 0;
   overflow-x: hidden;
-  overflow-y: auto;
-  padding: 24px 40px 34px;
+  overflow-y: hidden;
+  padding: 18px 40px 20px;
   color: var(--ink);
   background:
     linear-gradient(180deg, rgba(255, 253, 247, 0.88), rgba(244, 240, 230, 0.88)),
@@ -1042,12 +1570,13 @@ function getCurrentTime() {
 }
 
 .guide-hero {
+  grid-row: 1;
   display: grid;
   grid-template-columns: 1fr;
   justify-items: center;
   align-items: center;
-  min-height: 188px;
-  padding: 34px 36px 54px;
+  min-height: 150px;
+  padding: 24px 36px 34px;
   overflow: visible;
   background:
     radial-gradient(circle at 12% 56%, rgba(214, 189, 130, 0.2), transparent 28%),
@@ -1060,7 +1589,7 @@ function getCurrentTime() {
   position: absolute;
   left: 220px;
   right: 220px;
-  bottom: 30px;
+  bottom: 22px;
   height: 1px;
   pointer-events: none;
   background:
@@ -1070,10 +1599,10 @@ function getCurrentTime() {
 .hero-avatar {
   position: absolute;
   left: 52px;
-  bottom: 22px;
+  bottom: 18px;
   display: grid;
-  width: 122px;
-  height: 122px;
+  width: 104px;
+  height: 104px;
   place-items: center;
   z-index: 3;
   border: 1px solid rgba(214, 189, 130, 0.76);
@@ -1104,8 +1633,8 @@ function getCurrentTime() {
 .hero-avatar img {
   position: relative;
   z-index: 1;
-  width: 78px;
-  height: 78px;
+  width: 68px;
+  height: 68px;
   object-fit: cover;
   border-radius: 50%;
 }
@@ -1256,11 +1785,14 @@ function getCurrentTime() {
 }
 
 .context-banner {
+  grid-row: 2;
   display: grid;
   grid-template-columns: minmax(0, 1.1fr) minmax(280px, 0.9fr) auto;
   gap: 18px;
-  margin: 18px auto 22px;
-  padding: 22px 24px;
+  max-height: 118px;
+  margin: 0 auto;
+  padding: 14px 18px;
+  overflow-y: auto;
   background:
     linear-gradient(135deg, rgba(255, 253, 248, 0.92), rgba(245, 241, 232, 0.86)),
     radial-gradient(circle at top right, rgba(214, 189, 130, 0.18), transparent 26%);
@@ -1270,20 +1802,20 @@ function getCurrentTime() {
 }
 
 .context-copy h2 {
-  font-size: clamp(28px, 3vw, 40px);
+  font-size: clamp(22px, 2.4vw, 30px);
   line-height: 1.12;
   letter-spacing: 0.08em;
 }
 
 .context-journey-line {
-  margin: 12px 0 0;
+  margin: 8px 0 0;
   color: var(--ink);
   font-size: 14px;
   line-height: 1.78;
 }
 
 .context-summary {
-  margin: 12px 0 0;
+  margin: 8px 0 0;
   color: var(--muted);
   line-height: 1.8;
 }
@@ -1296,7 +1828,7 @@ function getCurrentTime() {
 }
 
 .context-facts div {
-  padding: 14px 16px;
+  padding: 10px 12px;
   background: rgba(255, 255, 255, 0.58);
   border: 1px solid rgba(214, 189, 130, 0.3);
   border-radius: 18px;
@@ -1339,14 +1871,15 @@ function getCurrentTime() {
 }
 
 .chat-shell {
+  grid-row: 3;
+  position: relative;
   display: grid;
-  grid-template-columns: 276px minmax(0, 1fr);
-  grid-template-areas: 'quick chat';
-  gap: 20px;
-  height: clamp(560px, calc(100vh - 312px), 680px);
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-areas: 'chat';
+  height: 100%;
   min-height: 0;
-  margin-top: 24px;
-  padding: 24px 28px;
+  margin-top: 0;
+  padding: 24px 28px 24px 58px;
   overflow: hidden;
   background: rgba(255, 253, 248, 0.9);
   border: 1px solid rgba(214, 189, 130, 0.58);
@@ -1357,17 +1890,48 @@ function getCurrentTime() {
 }
 
 .quick-panel {
+  position: absolute;
+  top: 38px;
+  left: 18px;
+  z-index: 8;
   display: grid;
   grid-template-columns: 1fr;
   align-content: start;
   gap: 12px;
+  width: 72px;
   min-width: 0;
-  height: 100%;
+  height: auto;
   min-height: 0;
-  padding: 14px;
-  background: linear-gradient(180deg, rgba(255, 253, 248, 0.96), rgba(248, 243, 232, 0.72));
-  border: 1px solid rgba(214, 189, 130, 0.4);
-  border-radius: 22px;
+  padding: 0;
+  overflow: visible;
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+}
+
+.quick-panel:hover,
+.quick-panel:focus-within {
+  background: transparent;
+}
+
+.quick-panel-tab {
+  position: absolute;
+  top: 0;
+  left: 0;
+  display: grid;
+  width: 52px;
+  height: 68px;
+  place-items: center;
+  color: #fff;
+  pointer-events: none;
+  background: linear-gradient(135deg, #42664f, #2d5140);
+  border: 1px solid rgba(66, 102, 79, 0.7);
+  border-radius: 0 16px 16px 0;
+  box-shadow: 0 12px 22px rgba(66, 102, 79, 0.18);
+}
+
+.quick-panel-tab i {
+  font-size: 17px;
 }
 
 .quick-card {
@@ -1375,7 +1939,9 @@ function getCurrentTime() {
   grid-template-columns: 38px minmax(0, 1fr);
   gap: 11px;
   align-items: center;
+  width: 238px;
   min-height: 70px;
+  margin-left: 0;
   padding: 11px 12px;
   color: var(--primary);
   text-align: left;
@@ -1383,6 +1949,42 @@ function getCurrentTime() {
   background: rgba(255, 253, 248, 0.9);
   border: 1px solid rgba(214, 189, 130, 0.46);
   border-radius: 15px;
+  opacity: 0;
+  pointer-events: none;
+  transform: translateX(-260px);
+  transition:
+    opacity 0.2s ease,
+    transform 0.28s cubic-bezier(0.2, 0.8, 0.2, 1),
+    background 0.18s ease,
+    border-color 0.18s ease,
+    box-shadow 0.18s ease;
+}
+
+.quick-panel:hover .quick-card,
+.quick-panel:focus-within .quick-card {
+  opacity: 1;
+  pointer-events: auto;
+  transform: translateX(60px);
+}
+
+.quick-panel:hover .quick-card:nth-of-type(1),
+.quick-panel:focus-within .quick-card:nth-of-type(1) {
+  transition-delay: 0.02s;
+}
+
+.quick-panel:hover .quick-card:nth-of-type(2),
+.quick-panel:focus-within .quick-card:nth-of-type(2) {
+  transition-delay: 0.07s;
+}
+
+.quick-panel:hover .quick-card:nth-of-type(3),
+.quick-panel:focus-within .quick-card:nth-of-type(3) {
+  transition-delay: 0.12s;
+}
+
+.quick-panel:hover .quick-card:nth-of-type(4),
+.quick-panel:focus-within .quick-card:nth-of-type(4) {
+  transition-delay: 0.17s;
 }
 
 .quick-card--active,
@@ -1563,6 +2165,92 @@ function getCurrentTime() {
   font-size: 13px;
 }
 
+.message-attachments {
+  display: grid;
+  gap: 10px;
+  margin-top: 10px;
+}
+
+.attachment-card {
+  display: grid;
+  grid-template-columns: 96px minmax(0, 1fr);
+  gap: 12px;
+  align-items: center;
+  max-width: 460px;
+  padding: 10px;
+  background: rgba(255, 253, 248, 0.86);
+  border: 1px solid rgba(214, 189, 130, 0.46);
+  border-radius: 14px;
+}
+
+.attachment-image,
+.attachment-video {
+  width: 96px;
+  height: 72px;
+  object-fit: cover;
+  background: rgba(66, 102, 79, 0.08);
+  border-radius: 10px;
+}
+
+.attachment-audio {
+  grid-column: 1 / -1;
+  width: 100%;
+}
+
+.attachment-file-icon {
+  display: grid;
+  width: 56px;
+  height: 56px;
+  place-items: center;
+  color: var(--primary);
+  font-size: 24px;
+  background: rgba(66, 102, 79, 0.1);
+  border-radius: 12px;
+}
+
+.attachment-meta {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+}
+
+.attachment-meta strong {
+  overflow: hidden;
+  color: var(--primary-dark);
+  font-size: 14px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.attachment-meta small {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.attachment-analysis {
+  grid-column: 1 / -1;
+  display: grid;
+  gap: 4px;
+  padding-top: 2px;
+}
+
+.attachment-analysis small {
+  color: var(--primary);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.attachment-analysis p {
+  display: -webkit-box;
+  overflow: hidden;
+  margin: 0;
+  color: #53615b;
+  font-size: 12px;
+  line-height: 1.45;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
+}
+
 .thinking-bubble {
   display: inline-flex;
   gap: 6px;
@@ -1622,7 +2310,7 @@ function getCurrentTime() {
 
 .composer {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 54px 154px;
+  grid-template-columns: minmax(0, 1fr) 54px 54px 154px;
   gap: 14px;
   align-items: stretch;
   padding: 16px;
@@ -1630,6 +2318,10 @@ function getCurrentTime() {
   border: 1px solid rgba(214, 189, 130, 0.68);
   border-radius: 20px;
   box-shadow: 0 14px 34px rgba(66, 102, 79, 0.1);
+}
+
+.file-input {
+  display: none;
 }
 
 .input-wrap {
@@ -1648,6 +2340,7 @@ function getCurrentTime() {
   max-height: 120px;
   padding: 20px 20px 16px 24px;
   resize: none;
+  overflow-y: auto;
   color: var(--ink);
   font: inherit;
   line-height: 1.55;
@@ -1686,6 +2379,7 @@ function getCurrentTime() {
   opacity: 0.55;
 }
 
+.attach-button,
 .voice-button {
   display: inline-flex;
   align-items: center;
@@ -1699,6 +2393,7 @@ function getCurrentTime() {
   transition: transform 0.18s ease, background 0.18s ease, border-color 0.18s ease, box-shadow 0.18s ease;
 }
 
+.attach-button:hover:not(:disabled),
 .voice-button:hover:not(:disabled) {
   transform: translateY(-1px);
   background: #e0efe5;
@@ -1713,9 +2408,77 @@ function getCurrentTime() {
   box-shadow: 0 16px 26px rgba(66, 102, 79, 0.24);
 }
 
+.attach-button:disabled,
 .voice-button:disabled {
   cursor: not-allowed;
   opacity: 0.45;
+}
+
+.pending-attachments {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  padding: 10px 16px 0;
+}
+
+.pending-attachment {
+  display: grid;
+  grid-template-columns: 36px minmax(90px, 180px) auto 28px;
+  gap: 8px;
+  align-items: center;
+  min-height: 44px;
+  padding: 6px 8px;
+  color: var(--primary-dark);
+  background: rgba(255, 253, 248, 0.92);
+  border: 1px solid rgba(214, 189, 130, 0.58);
+  border-radius: 12px;
+}
+
+.pending-attachment img {
+  width: 36px;
+  height: 36px;
+  object-fit: cover;
+  border-radius: 8px;
+}
+
+.pending-attachment > i {
+  display: grid;
+  width: 36px;
+  height: 36px;
+  place-items: center;
+  color: var(--primary);
+  background: rgba(66, 102, 79, 0.1);
+  border-radius: 8px;
+}
+
+.pending-attachment span {
+  overflow: hidden;
+  font-size: 13px;
+  font-weight: 700;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.pending-attachment small {
+  color: var(--muted);
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+.pending-attachment button {
+  display: grid;
+  width: 28px;
+  height: 28px;
+  place-items: center;
+  color: var(--primary);
+  cursor: pointer;
+  background: transparent;
+  border: 0;
+  border-radius: 8px;
+}
+
+.pending-attachment--failed {
+  border-color: rgba(180, 60, 52, 0.55);
 }
 
 @keyframes thinkingPulse {
@@ -1734,12 +2497,13 @@ function getCurrentTime() {
 
 @media (max-width: 1366px) {
   .ai-guide-page {
-    padding: 16px 28px 26px;
+    gap: 12px;
+    padding: 14px 28px 16px;
   }
 
   .guide-hero {
-    min-height: 172px;
-    padding: 34px 26px 38px;
+    min-height: 132px;
+    padding: 20px 26px 28px;
   }
 
   .hero-avatar {
@@ -1778,7 +2542,7 @@ function getCurrentTime() {
   .chat-shell {
     grid-template-columns: 260px minmax(0, 1fr);
     gap: 18px;
-    height: clamp(520px, calc(100vh - 290px), 640px);
+    height: 100%;
     padding: 22px;
   }
 }
@@ -1794,31 +2558,40 @@ function getCurrentTime() {
 
   .chat-shell {
     grid-template-columns: 1fr;
-    height: auto;
+    height: 100%;
+    min-height: 0;
     max-height: none;
+    padding-left: 54px;
   }
 
   .quick-panel {
-    grid-template-columns: repeat(4, minmax(0, 1fr));
-    height: auto;
+    top: 18px;
+    width: 68px;
+    max-height: calc(100% - 36px);
+    overflow: visible;
   }
 
   .quick-card {
-    grid-template-columns: 1fr;
-    justify-items: center;
-    text-align: center;
+    width: min(238px, calc(100vw - 116px));
+  }
+
+  .quick-card {
+    grid-template-columns: 38px minmax(0, 1fr);
+    justify-items: stretch;
+    text-align: left;
   }
 }
 
 @media (max-width: 768px) {
   .ai-guide-page {
-    padding: 18px 14px 26px;
+    gap: 10px;
+    padding: 10px 14px 12px;
   }
 
   .guide-hero {
     gap: 16px;
-    min-height: 210px;
-    padding: 28px 18px 34px;
+    min-height: 128px;
+    padding: 18px;
     text-align: center;
   }
 

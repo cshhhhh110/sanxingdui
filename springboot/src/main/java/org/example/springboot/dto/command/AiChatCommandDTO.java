@@ -1,23 +1,23 @@
 package org.example.springboot.dto.command;
 
 import io.swagger.v3.oas.annotations.media.Schema;
-import jakarta.validation.constraints.NotBlank;
 import lombok.Data;
 
+import java.util.List;
+
 /**
- * AI聊天请求DTO
- * @author system
+ * AI chat request DTO.
  */
 @Data
-@Schema(description = "AI聊天请求DTO")
+@Schema(description = "AI chat request")
 public class AiChatCommandDTO {
 
-    @Schema(description = "会话ID", required = true)
-    @NotBlank(message = "会话ID不能为空")
+    @Schema(description = "Session id", requiredMode = Schema.RequiredMode.REQUIRED)
     private String sessionId;
 
-    @Schema(description = "用户消息", required = true)
-    @NotBlank(message = "用户消息不能为空")
+    @Schema(description = "User text message")
     private String userMessage;
-}
 
+    @Schema(description = "Multimodal attachments")
+    private List<AiChatAttachmentDTO> attachments;
+}

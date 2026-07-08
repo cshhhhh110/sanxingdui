@@ -2,44 +2,55 @@ package org.example.springboot.controller;
 
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
-import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.example.springboot.ai.HeritageAssistantService;
 import org.example.springboot.common.Result;
 import org.example.springboot.common.ResultCode;
+import org.example.springboot.dto.FileInfoDTO;
+import org.example.springboot.dto.command.AiChatAttachmentDTO;
 import org.example.springboot.dto.command.AiChatCommandDTO;
+import org.example.springboot.dto.response.AiChatMessageAttachmentResponseDTO;
 import org.example.springboot.dto.response.AiChatMessageResponseDTO;
 import org.example.springboot.dto.response.AiChatSessionResponseDTO;
 import org.example.springboot.entity.AiChatMessage;
+import org.example.springboot.entity.AiChatMessageAttachment;
 import org.example.springboot.entity.AiChatSession;
+import org.example.springboot.exception.BusinessException;
 import org.example.springboot.service.AiChatSessionService;
+import org.example.springboot.service.AudioTranscriptionService;
+import org.example.springboot.service.FileService;
 import org.example.springboot.util.JwtTokenUtils;
-
 import org.springframework.http.MediaType;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.multipart.MultipartFile;
 import reactor.core.publisher.Flux;
 
 import java.util.List;
-import java.util.stream.Collectors;
 
 /**
- * AI智能助手控制器
- * @author system
+ * AI chat controller.
  */
 @Slf4j
 @RestController
 @RequestMapping("/ai-chat")
 @RequiredArgsConstructor
-@Tag(name = "AI智能助手", description = "非遗知识问答AI服务")
+@Tag(name = "AI智能助手", description = "三星堆知识问答AI服务")
 public class AiChatController {
 
     private final HeritageAssistantService aiService;
     private final AiChatSessionService sessionService;
+    private final FileService fileService;
+    private final AudioTranscriptionService audioTranscriptionService;
 
-    /**
-     * 开发测试兜底：未登录时使用固定访客ID，登录后仍使用JWT中的真实用户ID。
-     */
     private Long getCurrentUserId() {
         return JwtTokenUtils.getCurrentUserId();
     }
@@ -48,9 +59,6 @@ public class AiChatController {
         return Result.error(ResultCode.UNAUTHORIZED.getCode(), "请先登录后使用AI助手");
     }
 
-    /**
-     * 创建新会话
-     */
     @PostMapping("/session/start")
     @Operation(summary = "创建新会话")
     public Result<String> startSession(@RequestParam(required = false) String title) {
@@ -58,13 +66,9 @@ public class AiChatController {
         if (userId == null) {
             return unauthorized();
         }
-        String sessionId = sessionService.createSession(userId, title);
-        return Result.success(sessionId);
+        return Result.success(sessionService.createSession(userId, title));
     }
 
-    /**
-     * 获取用户所有会话列表
-     */
     @GetMapping("/session/list")
     @Operation(summary = "获取会话列表")
     public Result<List<AiChatSessionResponseDTO>> getSessionList() {
@@ -72,23 +76,19 @@ public class AiChatController {
         if (userId == null) {
             return unauthorized();
         }
-        List<AiChatSession> sessions = sessionService.getUserSessions(userId);
 
-        List<AiChatSessionResponseDTO> dtoList = sessions.stream()
+        List<AiChatSessionResponseDTO> dtoList = sessionService.getUserSessions(userId).stream()
                 .map(session -> AiChatSessionResponseDTO.builder()
                         .sessionId(session.getSessionId())
                         .title(session.getTitle())
                         .createTime(session.getCreateTime())
                         .updateTime(session.getUpdateTime())
                         .build())
-                .collect(Collectors.toList());
+                .toList();
 
         return Result.success(dtoList);
     }
 
-    /**
-     * 获取会话消息历史
-     */
     @GetMapping("/session/{sessionId}/messages")
     @Operation(summary = "获取会话消息历史")
     public Result<List<AiChatMessageResponseDTO>> getSessionMessages(@PathVariable String sessionId) {
@@ -97,92 +97,98 @@ public class AiChatController {
             return unauthorized();
         }
 
-        // 验证权限
         if (!sessionService.isSessionOwnedByUser(sessionId, userId)) {
-            return Result.error( "无权访问此会话");
+            return Result.error("无权访问此会话");
         }
 
-        List<AiChatMessage> messages = sessionService.getSessionMessages(sessionId);
-
-        List<AiChatMessageResponseDTO> dtoList = messages.stream()
-                .map(msg -> AiChatMessageResponseDTO.builder()
-                        .id(msg.getId())
-                        .role(msg.getRole())
-                        .content(msg.getContent())
-                        .createTime(msg.getCreateTime())
-                        .build())
-                .collect(Collectors.toList());
+        List<AiChatMessageResponseDTO> dtoList = sessionService.getSessionMessages(sessionId).stream()
+                .map(this::toMessageResponse)
+                .toList();
 
         return Result.success(dtoList);
     }
 
-    /**
-     * 流式对话接口（SSE）
-     * 返回 Flux<String> 让 Spring WebFlux 自动处理 SSE 流
-     */
     @PostMapping(value = "/stream", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
-    @Operation(summary = "流式对话（SSE）")
-    public Flux<String> chatStream(@Valid @RequestBody AiChatCommandDTO dto) {
+    @Operation(summary = "流式对话")
+    public Flux<String> chatStream(@RequestBody AiChatCommandDTO dto) {
         Long userId = getCurrentUserId();
         if (userId == null) {
             return Flux.just("[ERROR]请先登录后使用AI助手");
         }
 
-        // 验证权限
-        if (!sessionService.isSessionOwnedByUser(dto.getSessionId(), userId)) {
-            return Flux.just("data: 无权访问此会话\n\n");
+        try {
+            validateChatCommand(dto);
+        } catch (BusinessException e) {
+            return Flux.just("[ERROR]" + e.getMessage());
         }
 
-        log.info("开始流式对话，sessionId: {}, userId: {}", dto.getSessionId(), userId);
+        if (!sessionService.isSessionOwnedByUser(dto.getSessionId(), userId)) {
+            return Flux.just("[ERROR]无权访问此会话");
+        }
 
-        // 返回 Flux，Spring WebFlux 会自动处理 SSE 流
-        // Spring 会自动为每个元素添加 "data: " 前缀和 "\n\n" 后缀
-        // 所以我们只需要返回内容本身即可
-        return aiService.chatStream(dto.getSessionId(), dto.getUserMessage())
+        log.info("Start AI chat stream, sessionId: {}, userId: {}, attachments: {}",
+                dto.getSessionId(), userId, dto.getAttachments() == null ? 0 : dto.getAttachments().size());
+
+        return aiService.chatStream(dto.getSessionId(), dto.getUserMessage(), dto.getAttachments())
                 .concatWith(Flux.just("[DONE]"))
-                .doOnError(error -> {
-                    log.error("AI对话流失败", error);
-                })
-                .onErrorResume(error ->
-                        Flux.just("[ERROR]" + error.getMessage())
-                );
+                .doOnError(error -> log.error("AI chat stream failed", error))
+                .onErrorResume(error -> Flux.just("[ERROR]" + error.getMessage()));
     }
 
-    /**
-     * 非流式对话接口
-     */
     @PostMapping("/chat")
     @Operation(summary = "非流式对话")
-    public Result<String> chat(@Valid @RequestBody AiChatCommandDTO dto) {
+    public Result<String> chat(@RequestBody AiChatCommandDTO dto) {
         Long userId = getCurrentUserId();
         if (userId == null) {
             return unauthorized();
         }
 
-        // 验证权限
+        validateChatCommand(dto);
+
         if (!sessionService.isSessionOwnedByUser(dto.getSessionId(), userId)) {
             return Result.error("无权访问此会话");
         }
 
-        String response = aiService.chat(dto.getSessionId(), dto.getUserMessage());
-        return Result.success(response);
+        return Result.success(aiService.chat(dto.getSessionId(), dto.getUserMessage(), dto.getAttachments()));
     }
 
-    /**
-     * 更新会话标题
-     */
+    @PostMapping(value = "/speech-input", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @Operation(summary = "语音输入转文字")
+    public Result<String> transcribeSpeechInput(@RequestParam("file") MultipartFile file) {
+        Long userId = getCurrentUserId();
+        if (userId == null) {
+            return unauthorized();
+        }
+        if (file == null || file.isEmpty()) {
+            return Result.error("录音文件不能为空");
+        }
+
+        try {
+            FileInfoDTO uploaded = fileService.uploadTempFile(file, userId);
+            AiChatAttachmentDTO attachment = new AiChatAttachmentDTO();
+            attachment.setFileId(uploaded.getId());
+            attachment.setMediaType("AUDIO");
+            attachment.setFileName(uploaded.getOriginalName());
+            attachment.setFilePath(uploaded.getFilePath());
+            attachment.setMimeType(file.getContentType());
+            attachment.setFileSize(uploaded.getFileSize());
+
+            String transcript = audioTranscriptionService.transcribe(attachment);
+            return Result.success(transcript);
+        } catch (Exception e) {
+            log.error("Speech input transcription failed, filename={}", file.getOriginalFilename(), e);
+            return Result.error("语音识别失败: " + e.getMessage());
+        }
+    }
+
     @PutMapping("/session/{sessionId}/title")
     @Operation(summary = "更新会话标题")
-    public Result<Void> updateSessionTitle(
-            @PathVariable String sessionId,
-            @RequestParam String title
-    ) {
+    public Result<Void> updateSessionTitle(@PathVariable String sessionId, @RequestParam String title) {
         Long userId = getCurrentUserId();
         if (userId == null) {
             return unauthorized();
         }
 
-        // 验证权限
         if (!sessionService.isSessionOwnedByUser(sessionId, userId)) {
             return Result.error("无权访问此会话");
         }
@@ -191,9 +197,6 @@ public class AiChatController {
         return Result.success();
     }
 
-    /**
-     * 删除会话
-     */
     @DeleteMapping("/session/{sessionId}")
     @Operation(summary = "删除会话")
     public Result<Void> deleteSession(@PathVariable String sessionId) {
@@ -202,7 +205,6 @@ public class AiChatController {
             return unauthorized();
         }
 
-        // 验证权限
         if (!sessionService.isSessionOwnedByUser(sessionId, userId)) {
             return Result.error("无权访问此会话");
         }
@@ -210,5 +212,47 @@ public class AiChatController {
         sessionService.deleteSession(sessionId);
         return Result.success();
     }
-}
 
+    private void validateChatCommand(AiChatCommandDTO dto) {
+        if (dto == null || dto.getSessionId() == null || dto.getSessionId().trim().isEmpty()) {
+            throw new BusinessException("会话ID不能为空");
+        }
+
+        boolean hasText = dto.getUserMessage() != null && !dto.getUserMessage().trim().isEmpty();
+        boolean hasAttachments = dto.getAttachments() != null && !dto.getAttachments().isEmpty();
+        if (!hasText && !hasAttachments) {
+            throw new BusinessException("消息内容和附件不能同时为空");
+        }
+    }
+
+    private AiChatMessageResponseDTO toMessageResponse(AiChatMessage msg) {
+        List<AiChatMessageAttachmentResponseDTO> attachments = sessionService.getMessageAttachments(msg.getId()).stream()
+                .map(this::toAttachmentResponse)
+                .toList();
+
+        return AiChatMessageResponseDTO.builder()
+                .id(msg.getId())
+                .role(msg.getRole())
+                .content(msg.getContent())
+                .messageType(msg.getMessageType())
+                .attachments(attachments)
+                .createTime(msg.getCreateTime())
+                .build();
+    }
+
+    private AiChatMessageAttachmentResponseDTO toAttachmentResponse(AiChatMessageAttachment item) {
+        return AiChatMessageAttachmentResponseDTO.builder()
+                .id(item.getId())
+                .messageId(item.getMessageId())
+                .fileId(item.getFileId())
+                .mediaType(item.getMediaType())
+                .fileName(item.getFileName())
+                .filePath(item.getFilePath())
+                .mimeType(item.getMimeType())
+                .fileSize(item.getFileSize())
+                .analysisStatus(item.getAnalysisStatus())
+                .extractedText(item.getExtractedText())
+                .extractedMeta(item.getExtractedMeta())
+                .build();
+    }
+}

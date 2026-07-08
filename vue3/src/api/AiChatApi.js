@@ -66,6 +66,20 @@ export function chat(sessionId, userMessage, config = {}) {
   }, config);
 }
 
+export function transcribeSpeechInput(file, config = {}) {
+  const formData = new FormData();
+  formData.append('file', file);
+
+  return request.post('/ai-chat/speech-input', formData, {
+    headers: {
+      'Content-Type': 'multipart/form-data'
+    },
+    timeout: 120000,
+    showDefaultMsg: false,
+    ...config
+  });
+}
+
 /**
  * 构建SSE流式对话URL
  * @returns {string} SSE流式对话的完整URL
