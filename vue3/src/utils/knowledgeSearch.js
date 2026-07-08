@@ -50,10 +50,10 @@ export function buildRagPrompt(question, docs = [], context = {}) {
     ? docs
         .map((doc, index) => {
           const meta = doc.entityId ? `（${doc.entityId}）` : ''
-          return `【资料${index + 1}】${doc.title}${meta}\n${extractLead(doc.content)}`
+          return `参考材料：${doc.title}${meta}\n${extractLead(doc.content)}`
         })
         .join('\n\n')
-    : '【资料】当前未检索到足够相关的本地资料，请如实说明，不要编造。'
+    : '当前未检索到足够相关的本地资料，请如实说明，不要编造。'
 
   return `
 你是“三星堆数字展馆”的专业讲解助手。请只回答简短版。
@@ -63,7 +63,8 @@ export function buildRagPrompt(question, docs = [], context = {}) {
 3. 尽量控制在 60 到 100 字，最多不超过 3 句。
 4. 资料不足时直接说“不确定”，不要编造。
 5. 不要输出未提供的编号、尺寸、年代等信息。
-6. 语气专业、简洁，保留一点“玄喵”感即可。
+6. 不要在最终回答中输出【资料1】【资料2】等资料编号或引用标记。
+7. 语气专业、简洁，保留一点“玄喵”感即可。
 【当前解说上下文】${contextSection || '无'}
 
 【检索资料】

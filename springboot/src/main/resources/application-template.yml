@@ -60,7 +60,7 @@ spring:
       base-url: https://api.siliconflow.cn
       chat:
         options:
-          model: deepseek-ai/DeepSeek-V3
+          model: Qwen/Qwen3-VL-30B-A3B-Instruct
           temperature: 0.7
         completions-path: /v1/chat/completions
 
@@ -85,6 +85,34 @@ deepseek:
 # ========== TTS Provider 切换 ==========
 tts:
   provider: mimo
+
+# ========== ASR Provider 配置 ==========
+asr:
+  openai:
+    transcriptions-path: /v1/audio/transcriptions
+    model: FunAudioLLM/SenseVoiceSmall
+    language: zh
+
+# ========== Video analysis 配置 ==========
+image:
+  analysis:
+    timeout-seconds: 25
+
+video:
+  ffmpeg:
+    path: ffmpeg
+    ffprobe-path: ffprobe
+    frame-count: 3
+    max-duration-seconds: 120
+    work-dir: ai-chat-video
+  analysis:
+    frame-timeout-seconds: 60
+    audio-timeout-seconds: 90
+
+# ========== Document extraction 配置 ==========
+document:
+  extract:
+    max-chars: 12000
 
 # 服务器配置
 server:
