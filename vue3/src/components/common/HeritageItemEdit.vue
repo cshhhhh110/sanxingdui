@@ -424,7 +424,7 @@ function handleMediaRemove(media, index) {
 </script>
 
 <style lang="scss" scoped>
-@import '@/styles/backend-minimal.scss';
+@use '@/styles/backend-minimal.scss' as *;
 
 .state-loading,
 .state-empty {
@@ -461,5 +461,5 @@ function handleMediaRemove(media, index) {
 </style>
 
 <style lang="scss">
-@import '@/styles/backend-minimal.scss';
+@use '@/styles/backend-minimal.scss' as *;
 </style>

@@ -284,7 +284,7 @@ function handleMediaRemove() {}
 </script>
 
 <style lang="scss" scoped>
-@import '@/styles/backend-minimal.scss';
+@use '@/styles/backend-minimal.scss' as *;
 
 .modal-footer-row {
   display: flex;
@@ -316,5 +316,5 @@ function handleMediaRemove() {}
 </style>
 
 <style lang="scss">
-@import '@/styles/backend-minimal.scss';
+@use '@/styles/backend-minimal.scss' as *;
 </style>

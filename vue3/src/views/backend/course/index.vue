@@ -965,11 +965,6 @@ const handleRemoveVideo = async (file) => {
   return false
 }
 
-const getStatusColor = (status) => {
-  const colors = { 0: 'default', 1: 'green', 2: 'gray' }
-  return colors[status] || 'default'
-}
-
 const getFullImagePath = (path) => {
   if (!path) return ''
   if (path.startsWith('http')) return path
@@ -1299,8 +1294,8 @@ $white: #ffffff;
   box-shadow: none !important;
 
   &:hover {
-    background: darken($accent, 6%) !important;
-    border-color: darken($accent, 6%) !important;
+    background: color.adjust($accent, $lightness: -6%) !important;
+    border-color: color.adjust($accent, $lightness: -6%) !important;
   }
 }
 
@@ -1428,8 +1423,8 @@ $white: #ffffff;
     color: $white !important;
 
     &:hover {
-      background: darken($accent, 6%) !important;
-      border-color: darken($accent, 6%) !important;
+      background: color.adjust($accent, $lightness: -6%) !important;
+      border-color: color.adjust($accent, $lightness: -6%) !important;
     }
   }
 }

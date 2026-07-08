@@ -767,8 +767,8 @@ $user-white: #ffffff;
   padding: 0 16px !important;
 
   &:hover {
-    background: darken($user-accent, 6%) !important;
-    border-color: darken($user-accent, 6%) !important;
+    background: color.adjust($user-accent, $lightness: -6%) !important;
+    border-color: color.adjust($user-accent, $lightness: -6%) !important;
   }
 }
 
@@ -820,8 +820,8 @@ $user-white: #ffffff;
   box-shadow: none !important;
 
   &:hover {
-    background: darken($user-accent, 6%) !important;
-    border-color: darken($user-accent, 6%) !important;
+    background: color.adjust($user-accent, $lightness: -6%) !important;
+    border-color: color.adjust($user-accent, $lightness: -6%) !important;
   }
 }
 
@@ -1163,8 +1163,8 @@ $user-white: #ffffff;
   border-radius: 0 !important;
 
   &:hover {
-    background: darken($user-accent, 6%) !important;
-    border-color: darken($user-accent, 6%) !important;
+    background: color.adjust($user-accent, $lightness: -6%) !important;
+    border-color: color.adjust($user-accent, $lightness: -6%) !important;
   }
 }
 
@@ -1419,8 +1419,8 @@ $user-white: #ffffff;
   border-radius: 0 !important;
 
   &:hover {
-    background: darken($user-accent, 6%) !important;
-    border-color: darken($user-accent, 6%) !important;
+    background: color.adjust($user-accent, $lightness: -6%) !important;
+    border-color: color.adjust($user-accent, $lightness: -6%) !important;
   }
 }
 

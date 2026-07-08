@@ -307,5 +307,5 @@ $bg: #fafafa;
 </style>
 
 <style lang="scss">
-@import '@/styles/backend-minimal.scss';
+@use '@/styles/backend-minimal.scss' as *;
 </style>

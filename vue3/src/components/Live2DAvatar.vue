@@ -66,6 +66,13 @@
           </select>
         </div>
         <p class="dialog-hint">请输入你想了解的问题</p>
+        <div v-if="pendingAttachments.length" class="dialog-attachment-list">
+          <span v-for="attachment in pendingAttachments" :key="attachment.fileId" class="dialog-attachment-chip">
+            <i class="fas fa-paperclip"></i>
+            <span>{{ attachment.fileName }}</span>
+            <button type="button" title="移除附件" @click="removeAttachment(attachment.fileId)">x</button>
+          </span>
+        </div>
         <textarea
             ref="dialogInput"
             v-model="inputQuestion"
@@ -75,7 +82,23 @@
             maxlength="200"
             @keydown.enter.exact.prevent="submitQuestion"
         ></textarea>
+        <input
+            ref="dialogAttachmentInput"
+            class="dialog-attachment-input"
+            type="file"
+            accept=".txt,.md,.csv,.json,.pdf,.doc,.docx,.xls,.xlsx,image/*,audio/*,video/*"
+            @change="handleAttachmentSelection"
+        />
         <div class="dialog-footer">
+          <button
+              class="dialog-btn dialog-btn-attachment"
+              type="button"
+              :disabled="trailCommandPending || isUploadingAttachment || pendingAttachments.length >= 3"
+              :title="isUploadingAttachment ? '附件解析中' : '上传图片、音频、视频或文档'"
+              @click="$refs.dialogAttachmentInput?.click()"
+          >
+            <i :class="isUploadingAttachment ? 'fas fa-spinner fa-spin' : 'fas fa-paperclip'"></i>
+          </button>
           <button
               class="dialog-btn dialog-btn-voice"
               type="button"
@@ -89,7 +112,7 @@
           </button>
           <span class="char-count">{{ inputQuestion.length }}/200</span>
           <button class="dialog-btn dialog-btn-cancel" @click="closeInputDialog">取消</button>
-          <button class="dialog-btn dialog-btn-submit" @click="submitQuestion" :disabled="!inputQuestion.trim()">
+          <button class="dialog-btn dialog-btn-submit" @click="submitQuestion" :disabled="(!inputQuestion.trim() && !pendingAttachments.length) || isUploadingAttachment">
             提问
           </button>
         </div>
@@ -104,10 +127,11 @@ import { fetchEventSource } from '@microsoft/fetch-event-source';
 import { matchFixedAnswer } from '../config/chatReplyConfig.js';
 import { createSession as createSessionApi, getChatStreamUrl } from '../api/AiChatApi.js';
 import { synthesizeSpeech, revokeSpeechUrl, getVoices } from '../api/TtsApi.js';
-import { buildFallbackReply, buildRagPrompt, searchKnowledge } from '../utils/knowledgeSearch.js';
+import { buildDirectFallbackReply, buildFallbackReply, buildRagPrompt, searchKnowledge } from '../utils/knowledgeSearch.js';
 import { createBrowserSpeechRecognition, getBrowserSpeechRecognitionCtor } from '../utils/browserSpeech.js';
 import { useUserStore } from '../store/user.js';
-import { mcpClient, parseAndExecute } from '../mcp/index.js';
+import { AgentRoute, agentOrchestrator } from '../agent/index.js';
+import { uploadTempFile } from '../api/FileApi.js';
 import { getProductPage } from '../api/ShopProductApi.js';
 import { getEnabledCategories } from '../api/ShopCategoryApi.js';
 import { createOrder } from '../api/OrderApi.js';
@@ -131,10 +155,14 @@ export default {
       userInteracted: false,
       isDestroyed: false,
       ragAbortController: null,
+      pendingAgentRoute: AgentRoute.DIRECT_ANSWER,
+      pendingAttachmentContext: '',
 
       // 杈撳叆瀵硅瘽妗?
       showInputDialog: false,
       inputQuestion: '',
+      pendingAttachments: [],
+      isUploadingAttachment: false,
       dialogPosition: { x: 0, y: 0 },
       isDragging: false,
       dragOffset: { x: 0, y: 0 },
@@ -156,6 +184,12 @@ export default {
       externalSpeechContext: null,
       ttsAbortController: null,
       speechPlaybackToken: 0,
+      speechQueue: [],
+      speechQueueActive: false,
+      speechQueueGeneration: 0,
+      speechQueueControllers: [],
+      speechQueueTranscript: '',
+      activeSpeechComplete: null,
       playDelayTimer: null,
       fullTextToSpeak: '',
       displayedText: '',
@@ -251,7 +285,7 @@ export default {
     window.addEventListener('scroll', this.repositionInputDialog, true);
     window.visualViewport?.addEventListener('resize', this.applyAvatarPosition);
     window.visualViewport?.addEventListener('scroll', this.applyAvatarPosition);
-    this.initMcpClient();
+    this.initMcpListeners();
   },
 
   methods: {
@@ -362,8 +396,7 @@ export default {
       localStorage.setItem('xuanmiao_voice', this.selectedVoice);
     },
 
-    initMcpClient() {
-      mcpClient.initialize({ debug: import.meta.env.DEV });
+    initMcpListeners() {
       this.mcpEventHandlers = {
         'mcp:start-explain': this.handleStartExplain.bind(this),
         'mcp:ask-ai': this.handleAskAi.bind(this),
@@ -664,6 +697,24 @@ export default {
       this.thinkingInterval = null;
     },
 
+    showAnswerPending() {
+      this.cancelSpeechQueue();
+      this.clearAllTimers();
+      this.stopAudio();
+      this.isSpeaking = true;
+      this.isStopped = false;
+      this.isHiding = false;
+      this.isScrollable = false;
+
+      const bubbleEl = document.getElementById('ai-bubble');
+      if (bubbleEl) {
+        bubbleEl.style.display = 'block';
+        bubbleEl.style.animation = 'fadeInUp 0.2s ease';
+        bubbleEl.classList.add('speaking');
+      }
+      this.startThinkingStatus(true);
+    },
+
     async ensureChatSession() {
       if (this.currentSessionId) {
         return this.currentSessionId;
@@ -684,10 +735,144 @@ export default {
 
     async playSpeechOnly(text) {
       return this.startTypewriterAndSpeech(text, {
-        playDelayMs: 2000,
+        playDelayMs: 120,
         charDelay: 110,
         thinkingIntervalMs: 2000
       });
+    },
+
+    splitSpeechSegments(text, flush = false) {
+      const segments = [];
+      let remainder = String(text || '');
+      const sentenceEnd = /[。！？!?；;\n]/;
+
+      while (remainder) {
+        const match = sentenceEnd.exec(remainder);
+        if (match) {
+          const end = match.index + match[0].length;
+          const segment = remainder.slice(0, end).trim();
+          remainder = remainder.slice(end);
+          if (segment) segments.push(segment);
+          continue;
+        }
+
+        if (remainder.length >= 70) {
+          const preferredCut = Math.max(
+            remainder.lastIndexOf('，', 70),
+            remainder.lastIndexOf(',', 70),
+            remainder.lastIndexOf('、', 70)
+          );
+          const end = preferredCut >= 30 ? preferredCut + 1 : 70;
+          segments.push(remainder.slice(0, end).trim());
+          remainder = remainder.slice(end);
+          continue;
+        }
+        break;
+      }
+
+      if (flush && remainder.trim()) {
+        segments.push(remainder.trim());
+        remainder = '';
+      }
+      return { segments, remainder };
+    },
+
+    queueSpeechSegment(text) {
+      const segment = String(text || '').trim();
+      if (!segment || this.isDestroyed) return;
+
+      const generation = this.speechQueueGeneration;
+      const controller = new AbortController();
+      this.speechQueueControllers.push(controller);
+      const item = {
+        text: segment,
+        generation,
+        controller,
+        audioPromise: synthesizeSpeech(segment, this.selectedVoice, 1.0, {
+          signal: controller.signal
+        }).then((audioUrl) => {
+          if (generation !== this.speechQueueGeneration || this.isDestroyed) {
+            revokeSpeechUrl(audioUrl);
+            return '';
+          }
+          return audioUrl;
+        }).catch((error) => {
+          if (error?.name !== 'CanceledError' && error?.name !== 'AbortError' && error?.code !== 'ERR_CANCELED') {
+            console.warn('玄喵分句语音生成失败:', error);
+          }
+          return '';
+        })
+      };
+      this.speechQueue.push(item);
+      this.processSpeechQueue(generation);
+    },
+
+    async processSpeechQueue(generation) {
+      if (this.speechQueueActive || generation !== this.speechQueueGeneration) return;
+      this.speechQueueActive = true;
+
+      try {
+        while (generation === this.speechQueueGeneration && this.speechQueue.length) {
+          const item = this.speechQueue.shift();
+          const audioUrl = await item.audioPromise;
+          this.speechQueueControllers = this.speechQueueControllers.filter((entry) => entry !== item.controller);
+          if (!audioUrl || generation !== this.speechQueueGeneration || this.isDestroyed) {
+            revokeSpeechUrl(audioUrl);
+            continue;
+          }
+
+          await new Promise((resolve) => {
+            this.startTypewriterAndSpeech(item.text, {
+              audioUrl,
+              playDelayMs: this.speechQueueTranscript ? 0 : 60,
+              queuePlayback: true,
+              displayPrefix: this.speechQueueTranscript,
+              subtitleLead: 1.15,
+              onComplete: resolve
+            });
+          });
+          if (generation === this.speechQueueGeneration) {
+            this.speechQueueTranscript = this.joinSpeechText(this.speechQueueTranscript, item.text);
+          }
+        }
+      } finally {
+        if (generation === this.speechQueueGeneration) {
+          this.speechQueueActive = false;
+        }
+      }
+    },
+
+    cancelSpeechQueue() {
+      this.speechQueueGeneration += 1;
+      this.speechQueueControllers.forEach((controller) => controller.abort());
+      this.speechQueueControllers = [];
+      this.speechQueue.forEach((item) => {
+        item.audioPromise.then(revokeSpeechUrl).catch(() => {});
+      });
+      this.speechQueue = [];
+      this.speechQueueActive = false;
+      this.speechQueueTranscript = '';
+      this.completeSpeechPlayback();
+    },
+
+    completeSpeechPlayback() {
+      const complete = this.activeSpeechComplete;
+      this.activeSpeechComplete = null;
+      complete?.();
+    },
+
+    joinSpeechText(prefix, text) {
+      const previous = String(prefix || '').trim();
+      const next = String(text || '').trim();
+      if (!previous) return next;
+      if (!next) return previous;
+      return `${previous}${next}`;
+    },
+
+    speakQueuedAnswer(text) {
+      this.cancelSpeechQueue();
+      const { segments } = this.splitSpeechSegments(text, true);
+      segments.forEach((segment) => this.queueSpeechSegment(segment));
     },
 
     async handleExternalSpeech(event) {
@@ -721,14 +906,21 @@ export default {
       this.stopSpeech();
     },
 
-    async askWithRag(question) {
+    async askWithRag(question, useRag = true, attachments = []) {
       try {
-      const docs = await searchKnowledge(question, 1);
-        const userMessage = buildRagPrompt(question, docs, this.getRagContextPayload());
+        let docs = [];
+        let userMessage = question;
+        if (useRag) {
+          docs = await searchKnowledge(question, 3);
+          userMessage = buildRagPrompt(question, docs, this.getRagContextPayload());
+        }
+        const getFailureReply = () => useRag
+          ? buildFallbackReply(question, docs, this.getRagContextPayload())
+          : buildDirectFallbackReply();
         const sessionId = await this.ensureChatSession();
 
         if (!sessionId) {
-          await this.startTypewriterAndSpeech(buildFallbackReply(question, docs, this.getRagContextPayload()), {
+          await this.startTypewriterAndSpeech(getFailureReply(), {
             playDelayMs: 700,
             charDelay: 72,
             thinkingIntervalMs: 1400
@@ -756,6 +948,12 @@ export default {
         this.ragAbortController = new AbortController();
 
         let streamText = '';
+        let speechBuffer = '';
+        const flushSpeechBuffer = (flush = false) => {
+          const result = this.splitSpeechSegments(speechBuffer, flush);
+          speechBuffer = result.remainder;
+          result.segments.forEach((segment) => this.queueSpeechSegment(segment));
+        };
         const headers = {
           'Content-Type': 'application/json'
         };
@@ -772,12 +970,14 @@ export default {
             headers,
             body: JSON.stringify({
               sessionId,
-              userMessage
+              userMessage,
+              attachments
             }),
             signal: this.ragAbortController.signal,
             openWhenHidden: true,
             onmessage: (event) => {
               if (event.data === '[DONE]') {
+                flushSpeechBuffer(true);
                 return;
               }
 
@@ -786,7 +986,9 @@ export default {
             }
 
             streamText += event.data;
+            speechBuffer += event.data;
             this.currentAnswer = streamText;
+            flushSpeechBuffer(false);
           },
             onerror: (error) => {
               throw error;
@@ -794,9 +996,9 @@ export default {
           });
 
           if (streamText) {
-            await this.playSpeechOnly(streamText);
+            flushSpeechBuffer(true);
           } else {
-            await this.startTypewriterAndSpeech(buildFallbackReply(question, docs, this.getRagContextPayload()), {
+            await this.startTypewriterAndSpeech(getFailureReply(), {
               playDelayMs: 700,
               charDelay: 72,
               thinkingIntervalMs: 1400
@@ -807,7 +1009,7 @@ export default {
             return;
           }
           console.error('鐜勫柕 RAG 瀵硅瘽澶辫触:', error);
-          await this.startTypewriterAndSpeech(buildFallbackReply(question, docs, this.getRagContextPayload()), {
+          await this.startTypewriterAndSpeech(getFailureReply(), {
             playDelayMs: 700,
             charDelay: 72,
             thinkingIntervalMs: 1400
@@ -818,7 +1020,7 @@ export default {
           return;
         }
         console.error('鐜勫柕妫€绱㈡垨浼氳瘽鍒濆鍖栧け璐?', error);
-        await this.startTypewriterAndSpeech(buildFallbackReply(question), {
+        await this.startTypewriterAndSpeech(useRag ? buildFallbackReply(question) : buildDirectFallbackReply(), {
           playDelayMs: 700,
           charDelay: 72,
           thinkingIntervalMs: 1400
@@ -837,6 +1039,7 @@ export default {
         this.userInteracted = true;
         this.startAutoHide();
         this.playWelcomeOnce();
+        void this.ensureChatSession();
       } else {
         this.cancelAutoHide();
       }
@@ -1134,7 +1337,7 @@ export default {
 
     // ========== 鐩戝惉 Live2D 鐢诲竷 ==========
     observeLive2DCreation() {
-      const observer = new MutationObserver((mutations) => {
+      const observer = new MutationObserver(() => {
         if (this.isDestroyed) {
           observer.disconnect();
           return;
@@ -1176,7 +1379,7 @@ export default {
     },
 
     // ========== 鐐瑰嚮浜や簰 ==========
-    handleClick(e) {
+    handleClick() {
       this.primeAudioContext();
       this.clearAllTimers();
       this.stopAudio();
@@ -1232,6 +1435,7 @@ export default {
       this.stopVoiceInput();
       this.showInputDialog = false;
       this.inputQuestion = '';
+      this.pendingAttachments = [];
       this.isDragging = false;
     },
 
@@ -1264,29 +1468,14 @@ export default {
     },
 
     async submitQuestion() {
-      const question = this.inputQuestion.trim();
-      if (!question || this.isAnswering || this.trailCommandPending) return;
+      const submittedAttachments = [...this.pendingAttachments];
+      const question = this.inputQuestion.trim() || (submittedAttachments.length ? '请分析我上传的文件。' : '');
+      if (!question || this.isAnswering || this.trailCommandPending || this.isUploadingAttachment) return;
 
       this.stopVoiceInput();
       this.closeInputDialog();
 
-      this.trailCommandPending = true;
-      let trailHandled = false;
-      try {
-        trailHandled = await this.tryHandleTrailCommand(question);
-      } finally {
-        this.trailCommandPending = false;
-      }
-      if (trailHandled) {
-        return;
-      }
-
-      const mcpHandled = await this.handleMcpCommand(question);
-      if (mcpHandled) {
-        return;
-      }
-
-      const fixedReply = matchFixedAnswer(question);
+      const fixedReply = submittedAttachments.length ? null : matchFixedAnswer(question);
       if (fixedReply) {
         this.startTypewriterAndSpeech(fixedReply.reply, {
           audioUrl: fixedReply.audioUrl,
@@ -1296,15 +1485,22 @@ export default {
         return;
       }
 
-      this.askWithRag(question);
+      this.showAnswerPending();
+      const mcpHandled = await this.handleMcpCommand(question, submittedAttachments);
+      if (mcpHandled) {
+        return;
+      }
+
+      this.askWithRag(
+          question,
+          this.pendingAgentRoute === AgentRoute.RAG,
+          submittedAttachments
+      );
     },
 
-    async handleMcpCommand(question) {
+    async handleMcpCommand(question, attachments = []) {
+      this.pendingAttachmentContext = '';
       try {
-        if (this.handleDemoCommand(question)) {
-          return true;
-        }
-
         const userStore = useUserStore();
         const context = {
           router: this.$router,
@@ -1315,13 +1511,32 @@ export default {
           userId: userStore.userInfo?.id || userStore.user?.id || null
         };
 
-        const result = await parseAndExecute(question, context);
-        if (result.needAi) {
+        const result = await agentOrchestrator.handle(question, {
+          attachments: attachments.map(({ fileId, fileName, mediaType, fileSize }) => ({
+            fileId: String(fileId),
+            fileName,
+            mediaType,
+            size: fileSize || 0
+          })),
+          routingContext: {
+            surface: 'floating_avatar',
+            ...this.getRagContextPayload()
+          },
+          toolContext: context
+        });
+        this.pendingAgentRoute = result.route;
+        this.pendingAttachmentContext = result.attachmentContext || '';
+        if (!attachments.length && !result.handled && result.route === AgentRoute.DIRECT_ANSWER && result.message) {
+          this.speakQueuedAnswer(result.message);
+          return true;
+        }
+        if (!result.handled) {
           return false;
         }
 
         if (!result.success) {
-          return false;
+          await this.startTypewriterAndSpeech(result.message || '操作执行失败，请稍后重试。', { playDelayMs: 500 });
+          return true;
         }
 
         const tool = result.tool;
@@ -1353,6 +1568,10 @@ export default {
           return true;
         }
 
+        if (result.data?.silent) {
+          return true;
+        }
+
         if (result.message) {
           this.startTypewriterAndSpeech(result.message, { playDelayMs: 500 });
           return true;
@@ -1363,6 +1582,49 @@ export default {
         console.error('[MCP] Command processing error:', error);
         return false;
       }
+    },
+
+    async handleAttachmentSelection(event) {
+      const file = event.target.files?.[0];
+      event.target.value = '';
+      if (!file) return;
+      if (this.pendingAttachments.length >= 3) {
+        message.warning('单次最多上传3个附件');
+        return;
+      }
+
+      this.isUploadingAttachment = true;
+      try {
+        const uploaded = await uploadTempFile(file, {
+          showDefaultMsg: false,
+          errorMsg: '附件上传失败'
+        });
+        const mimeType = file.type || 'application/octet-stream';
+        const mediaType = mimeType.startsWith('image/')
+          ? 'IMAGE'
+          : mimeType.startsWith('audio/')
+            ? 'AUDIO'
+            : mimeType.startsWith('video/')
+              ? 'VIDEO'
+              : 'DOCUMENT';
+        this.pendingAttachments.push({
+          fileId: uploaded.id,
+          mediaType,
+          fileName: uploaded.originalName || file.name,
+          filePath: uploaded.filePath,
+          mimeType,
+          fileSize: uploaded.fileSize || file.size
+        });
+        message.success(`${file.name} 上传完成`);
+      } catch (error) {
+        message.error(error?.message || '附件解析失败');
+      } finally {
+        this.isUploadingAttachment = false;
+      }
+    },
+
+    removeAttachment(fileId) {
+      this.pendingAttachments = this.pendingAttachments.filter((item) => item.fileId !== fileId);
     },
 
     handleDemoCommand(question) {
@@ -1637,6 +1899,7 @@ export default {
     closeBubble() {
       this.ragAbortController?.abort?.();
       this.isAnswering = false;
+      this.cancelSpeechQueue();
       this.stopAudio();
       this.clearAllTimers();
       this.isSpeaking = false;
@@ -1654,6 +1917,7 @@ export default {
     stopSpeech() {
       this.ragAbortController?.abort?.();
       this.isAnswering = false;
+      this.cancelSpeechQueue();
       this.stopAudio();
       this.clearAllTimers();
 
@@ -1710,29 +1974,49 @@ export default {
         return;
       }
 
+      if (!options.queuePlayback) {
+        this.cancelSpeechQueue();
+      }
+
       const isModelAnswer = options.playDelayMs === 3000;
       const playDelayMs = options.playDelayMs ?? 700;
       const charDelayHint = options.charDelay ?? (isModelAnswer ? 110 : 72);
       const thinkingIntervalMs = options.thinkingIntervalMs ?? (isModelAnswer ? 3000 : 1400);
+      const displayPrefix = String(options.displayPrefix || '');
+      const fullDisplayText = this.joinSpeechText(displayPrefix, finalText);
+      const subtitleLead = Math.max(1, Number(options.subtitleLead) || 1);
 
       this.notifyExternalSpeech('stopped');
       this.clearAllTimers();
       this.stopAudio();
+      this.activeSpeechComplete = typeof options.onComplete === 'function'
+        ? options.onComplete
+        : null;
       const playbackToken = this.speechPlaybackToken;
       this.externalSpeechContext = options.externalContext || null;
       this.isSpeaking = true;
       this.isStopped = false;
       this.isHiding = false;
       this.isScrollable = false;
-      this.fullTextToSpeak = finalText;
+      this.fullTextToSpeak = fullDisplayText;
 
       const bubbleEl = document.getElementById('ai-bubble');
-      if (!bubbleEl) return;
+      if (!bubbleEl) {
+        this.completeSpeechPlayback();
+        return;
+      }
       bubbleEl.style.display = 'block';
-      bubbleEl.style.animation = 'fadeInUp 0.3s ease';
+      if (!displayPrefix) {
+        bubbleEl.style.animation = 'fadeInUp 0.3s ease';
+      }
       bubbleEl.classList.add('speaking');
 
-      this.startThinkingStatus(true, thinkingIntervalMs);
+      if (displayPrefix) {
+        this.stopThinkingStatus();
+        this.displayedText = displayPrefix;
+      } else {
+        this.startThinkingStatus(true, thinkingIntervalMs);
+      }
 
       try {
         let audioUrl = options.audioUrl || '';
@@ -1776,66 +2060,82 @@ export default {
           this.stopThinkingStatus();
           clearInterval(this.typewriterInterval);
           this.typewriterInterval = null;
-          this.displayedText = finalText;
+          this.displayedText = fullDisplayText;
           this.isSpeaking = false;
           bubbleEl.classList.remove('speaking');
           this.checkScrollBar();
           this.scheduleHide();
           this.startAutoHide();
           this.notifyExternalSpeech('ended');
+          this.completeSpeechPlayback();
         };
 
         let ttsReadyFired = false;
-        const startPlaybackAndTyping = () => {
-          if (!isCurrentSpeech() || this.audioEl !== audioEl || ttsReadyFired) return;
-          ttsReadyFired = true;
+        let typingStarted = false;
+        const startSyncedTyping = (useAudioClock = true) => {
+          if (!isCurrentSpeech() || this.audioEl !== audioEl || typingStarted) return;
+          typingStarted = true;
 
           this.stopThinkingStatus();
-          const duration = audioEl.duration || 3;
-          const charDelay = Math.max(45, Math.min(140, charDelayHint || (duration * 1000) / Math.max(finalText.length, 12)));
-
-          this.displayedText = '';
-          let index = 0;
+          this.displayedText = displayPrefix;
           clearInterval(this.typewriterInterval);
+
+          const duration = Number.isFinite(audioEl.duration) && audioEl.duration > 0
+            ? audioEl.duration
+            : Math.max(1, (charDelayHint * finalText.length) / 1000);
+          const startedAt = performance.now();
           this.typewriterInterval = setInterval(() => {
-            if (!this.isSpeaking) {
+            if (!isCurrentSpeech() || this.audioEl !== audioEl) {
               clearInterval(this.typewriterInterval);
               this.typewriterInterval = null;
               return;
             }
 
-            if (index < finalText.length) {
-              this.displayedText += finalText.charAt(index);
-              index += 1;
+            const elapsed = useAudioClock
+              ? audioEl.currentTime
+              : (performance.now() - startedAt) / 1000;
+            const progress = Math.max(0, Math.min(1, (elapsed / duration) * subtitleLead));
+            const visibleLength = Math.min(finalText.length, Math.ceil(progress * finalText.length));
+            const nextDisplayedText = this.joinSpeechText(displayPrefix, finalText.slice(0, visibleLength));
+            if (nextDisplayedText.length > this.displayedText.length) {
+              this.displayedText = nextDisplayedText;
               this.checkScrollBar();
               this.scrollToBottom();
-            } else {
-              clearInterval(this.typewriterInterval);
-              this.typewriterInterval = null;
             }
-          }, charDelay);
+          }, 32);
+        };
+
+        const startPlayback = () => {
+          if (!isCurrentSpeech() || this.audioEl !== audioEl || ttsReadyFired) return;
+          ttsReadyFired = true;
 
           clearTimeout(this.playDelayTimer);
           this.playDelayTimer = setTimeout(() => {
             if (!isCurrentSpeech() || this.audioEl !== audioEl) return;
-            audioEl.play().catch(async () => {
+            audioEl.play().then(() => {
+              startSyncedTyping(true);
+            }).catch(async () => {
               if (!isCurrentSpeech() || this.audioEl !== audioEl) return;
               const played = await this.playWithAudioContext(audioUrl, isCurrentSpeech, audioEl, finishSpeech);
-              if (!played) {
+              if (played) {
+                startSyncedTyping(false);
+              } else {
                 if (fallbackToCloudTts()) return;
                 this.notifyExternalSpeech('error');
                 this.continueTypingWithoutSpeech();
                 this.startAutoHide();
+                this.completeSpeechPlayback();
               }
             });
           }, playDelayMs);
         };
 
-        audioEl.onloadedmetadata = startPlaybackAndTyping;
+        audioEl.onplaying = () => startSyncedTyping(true);
+        audioEl.onloadedmetadata = startPlayback;
         setTimeout(() => {
           if (!isCurrentSpeech() || this.audioEl !== audioEl) return;
           if (!ttsReadyFired) {
-            startPlaybackAndTyping();
+            startPlayback();
           }
         }, 500);
 
@@ -1849,6 +2149,7 @@ export default {
           this.notifyExternalSpeech('error');
           this.continueTypingWithoutSpeech();
           this.startAutoHide();
+          this.completeSpeechPlayback();
         };
       } catch (e) {
         this.ttsAbortController = null;
@@ -1860,6 +2161,7 @@ export default {
         this.notifyExternalSpeech('error');
         this.continueTypingWithoutSpeech();
         this.startAutoHide();
+        this.completeSpeechPlayback();
       }
     },
 
@@ -1944,6 +2246,7 @@ export default {
     },
 
     stopAudio() {
+      this.completeSpeechPlayback();
       this.speechPlaybackToken += 1;
       if (this.ttsAbortController) {
         this.ttsAbortController.abort();
@@ -2507,6 +2810,44 @@ export default {
   color: #c4b896;
 }
 
+.dialog-attachment-input {
+  display: none;
+}
+
+.dialog-attachment-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 10px;
+}
+
+.dialog-attachment-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  max-width: 100%;
+  padding: 5px 7px;
+  border: 1px solid rgba(139, 105, 20, 0.18);
+  border-radius: 7px;
+  background: rgba(255, 250, 241, 0.9);
+  color: #6f5320;
+  font-size: 11px;
+}
+
+.dialog-attachment-chip span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.dialog-attachment-chip button {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: #9a7650;
+  cursor: pointer;
+}
+
 .dialog-footer {
   display: flex;
   align-items: center;
@@ -2549,6 +2890,17 @@ export default {
   background: #eef4ea;
   color: #42664f;
   border: 1px solid rgba(66, 102, 79, 0.18);
+}
+
+.dialog-btn-attachment {
+  padding-inline: 11px;
+  background: #f7f0e6;
+  color: #8b6914;
+  border: 1px solid rgba(139, 105, 20, 0.18);
+}
+
+.dialog-btn-attachment:hover:not(:disabled) {
+  background: #efe1cc;
 }
 
 .dialog-btn-voice--unsupported {

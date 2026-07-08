@@ -349,8 +349,8 @@ $border: #e8e8e8;
       color: $white !important;
 
       &:hover {
-        background: darken($accent, 6%) !important;
-        border-color: darken($accent, 6%) !important;
+        background: color.adjust($accent, $lightness: -6%) !important;
+        border-color: color.adjust($accent, $lightness: -6%) !important;
       }
     }
   }

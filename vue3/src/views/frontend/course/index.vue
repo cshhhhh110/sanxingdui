@@ -107,7 +107,7 @@
 import { ref, reactive, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { getCoursePage } from '@/api/CourseApi'
-import { COURSE_LEVEL_OPTIONS, getCourseLevelName, getCourseLevelColor } from '@/config/courseLevel'
+import { COURSE_LEVEL_OPTIONS, getCourseLevelName } from '@/config/courseLevel'
 import '@/styles/scroll-header.css'
 
 const router = useRouter()

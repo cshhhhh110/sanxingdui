@@ -168,7 +168,6 @@ import { useRouter, useRoute } from 'vue-router'
 import { useUserStore } from '@/store/user'
 import siteConfig from '@/config/site'
 import {
-  UserOutlined,
   DownOutlined,
   LogoutOutlined
 } from '@ant-design/icons-vue'

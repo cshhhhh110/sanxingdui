@@ -60,3 +60,7 @@ vue3_backup_*/
 vue3_replaced_*/
 merge_backups/
 vue3/vue3/
+vue3/test-results/
+.reasonix/
+outputs/
+.push-*

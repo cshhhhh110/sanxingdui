@@ -162,7 +162,7 @@
     <Transition name="fade">
       <div v-if="isPayModalVisible" class="premium-modal-overlay" @click.self="closePayModal">
         <Transition name="slide-up">
-          <div class="premium-modal-card">
+          <div v-if="isPayModalVisible" class="premium-modal-card">
             <header class="p-modal-header">
               <div class="p-modal-title-group">
                 <span class="p-modal-subtitle">CHECKOUT</span>
@@ -222,7 +222,7 @@
     <Transition name="fade">
       <div v-if="isCancelModalVisible" class="premium-modal-overlay" @click.self="closeCancelModal">
         <Transition name="slide-up">
-          <div class="premium-modal-card alert-layout">
+          <div v-if="isCancelModalVisible" class="premium-modal-card alert-layout">
             <!-- 顶部情绪轻提示：克制的警示插图/图标 -->
             <div class="alert-icon-graphic">
               <div class="graphic-pulse-ring"></div>

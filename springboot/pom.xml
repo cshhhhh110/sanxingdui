@@ -115,10 +115,6 @@
             <artifactId>mybatis-plus</artifactId>
             <version>3.5.7</version>
         </dependency>
-        <dependency>
-            <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-starter-web</artifactId>
-        </dependency>
         <!-- Redis依赖 -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
@@ -209,12 +205,6 @@
             <version>4.39.185.ALL</version>
         </dependency>
 
-        <!-- Spring Boot Starter Web -->
-        <dependency>
-            <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-starter-web</artifactId>
-        </dependency>
-        
         <!-- Spring Boot Starter AOP -->
         <dependency>
             <groupId>org.springframework.boot</groupId>

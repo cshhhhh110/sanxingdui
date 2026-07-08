@@ -6,6 +6,7 @@
     "dev": "vite --mode development",
     "build": "vite build --mode production",
     "build:staging": "vite build --mode staging",
+    "test:e2e": "playwright test",
     "preview": "vite preview",
     "lint": "eslint . --ext .vue,.js,.jsx,.cjs,.mjs --fix --ignore-path .gitignore",
     "voice-guide:generate": "node scripts/generate-trail-voice-guide.mjs",
@@ -31,6 +32,7 @@
     "vuex": "^4.1.0"
   },
   "devDependencies": {
+    "@playwright/test": "^1.61.1",
     "@vitejs/plugin-vue": "^4.6.2",
     "eslint": "^8.57.0",
     "eslint-plugin-vue": "^9.22.0",

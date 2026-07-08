@@ -1,3 +1,6 @@
+/* eslint-disable no-useless-escape */
+import { searchAgentKnowledge } from '@/api/AgentApi'
+
 const DOC_FILES = [
   '/data/knowledge-sanxingdui.txt',
   '/data/knowledge-sacred-tree.txt',
@@ -34,6 +37,28 @@ const ALIAS_MAP = {
 let docCache = null
 
 export async function searchKnowledge(question, topK = 1) {
+  try {
+    const response = await searchAgentKnowledge(question, Math.max(1, topK))
+    const documents = Array.isArray(response?.documents) ? response.documents : []
+    if (documents.length) {
+      return documents.map((document) => ({
+        title: document.title,
+        content: document.content || document.excerpt || '',
+        excerpt: document.excerpt || '',
+        path: document.path || '',
+        type: document.type || '',
+        status: document.status || '',
+        tags: document.tags || [],
+        related: document.related || [],
+        sources: document.sources || [],
+        score: Number(document.score) || 0,
+        knowledgeSource: 'obsidian-vault'
+      }))
+    }
+  } catch (error) {
+    console.warn('Backend knowledge index unavailable; falling back to static files.', error)
+  }
+
   const docs = await loadAllDocs()
   if (!docs.length) return []
 
@@ -48,7 +73,7 @@ export function buildRagPrompt(question, docs = [], context = {}) {
   const contextSection = buildContextSection(context)
   const knowledgeSection = docs.length
     ? docs
-        .map((doc, index) => {
+        .map((doc) => {
           const meta = doc.entityId ? `（${doc.entityId}）` : ''
           return `参考材料：${doc.title}${meta}\n${extractLead(doc.content)}`
         })
@@ -92,6 +117,10 @@ export function buildFallbackReply(question, docs = [], context = {}) {
   return title
     ? `${questionPrefix}${prefix}暂时没有检索到足够明确的本地资料，我不会编造。你可以换个角度继续问。`
     : `${questionPrefix}这个问题暂时没有匹配到足够明确的本地资料，我不会编造。你可以换个角度继续问。`
+}
+
+export function buildDirectFallbackReply() {
+  return '抱歉，AI 服务暂时不可用，请稍后再试。你的问题不受三星堆主题限制。'
 }
 
 function buildQuestionIntro(questionText) {

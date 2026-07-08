@@ -61,7 +61,7 @@ export async function synthesizeSpeechStream(text, voice = 'default', { onChunk,
   const decoder = new TextDecoder()
   let buffer = ''
 
-  while (true) {
+  for (;;) {
     const { done, value } = await reader.read()
     if (done) break
 

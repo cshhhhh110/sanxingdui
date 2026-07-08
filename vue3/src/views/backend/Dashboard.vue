@@ -154,10 +154,23 @@ import {
   OrderedListOutlined,
   ReadOutlined
 } from '@ant-design/icons-vue'
-import * as echarts from 'echarts'
+import * as echarts from 'echarts/core'
+import { BarChart, LineChart, PieChart } from 'echarts/charts'
+import { GridComponent, LegendComponent, TooltipComponent } from 'echarts/components'
+import { CanvasRenderer } from 'echarts/renderers'
 import { getDashboardStatistics } from '@/api/dashboard'
 
 const router = useRouter()
+
+echarts.use([
+  BarChart,
+  LineChart,
+  PieChart,
+  GridComponent,
+  LegendComponent,
+  TooltipComponent,
+  CanvasRenderer
+])
 const userStore = useUserStore()
 const userInfo = computed(() => userStore.userInfo)
 
@@ -595,8 +608,8 @@ $white: #ffffff;
   box-shadow: none !important;
 
   &:hover {
-    background: darken($accent, 6%) !important;
-    border-color: darken($accent, 6%) !important;
+    background: color.adjust($accent, $lightness: -6%) !important;
+    border-color: color.adjust($accent, $lightness: -6%) !important;
   }
 }
 

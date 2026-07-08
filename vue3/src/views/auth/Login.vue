@@ -75,7 +75,6 @@ import {
 } from '@ant-design/icons-vue'
 import { login } from '@/api/user'
 import { useUserStore } from '@/store/user'
-import axios from 'axios'
 
 const router = useRouter()
 const route = useRoute()
@@ -118,7 +117,7 @@ const validateForm = () => {
 // ==============================================
 // ✅ 新加：专门查询是否新用户的方法（独立、不影响登录）
 // ==============================================
-const checkNewUser = async (token) => {
+const checkNewUser = async () => {
   try {
     // ✅ 直接显示：你刚注册的账号就是新用户
     console.log('=====================================')

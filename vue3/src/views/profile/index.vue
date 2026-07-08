@@ -324,7 +324,6 @@ const uploadAction = "#";
 const userStore = useUserStore();
 const router = useRouter();
 
-const currentAnchor = ref("basic");
 const showCreateModal = ref(false);
 const showEditModal = ref(false);
 const currentEditItemId = ref(null);
@@ -438,7 +437,9 @@ const submitUserInfo = async () => {
     await userFormRef.value.validate();
     await updateUser(userForm.id, { name: userForm.name, email: userForm.email, phone: userForm.phone, sex: userForm.sex });
     message.success("古蜀档案刻录成功!");
-  } catch (e) {}
+  } catch (error) {
+    console.debug("用户资料校验未通过:", error);
+  }
 };
 
 const submitPassword = async () => {
@@ -449,7 +450,9 @@ const submitPassword = async () => {
       title: "契约变动", content: "密码已重塑，请重新登录。", okText: "谨遵神谕",
       onOk: async () => { await userStore.logout(); window.location.href = "/auth/login"; }
     });
-  } catch (e) {}
+  } catch (error) {
+    console.debug("密码表单校验未通过:", error);
+  }
 };
 
 const fetchMyHeritage = () => {

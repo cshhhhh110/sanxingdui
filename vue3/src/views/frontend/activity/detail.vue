@@ -99,7 +99,7 @@
 
             <div class="process-steps" aria-label="活动流程">
               <div
-                v-for="(step, index) in processSteps"
+                v-for="step in processSteps"
                 :key="step.title"
                 class="process-card"
               >

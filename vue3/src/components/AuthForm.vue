@@ -20,21 +20,21 @@
           </span>
           <input
             v-if="field.type !== 'password'"
-            v-model="formData[field.prop]"
+            v-model="localFormData[field.prop]"
             :type="field.type || 'text'"
             :placeholder="errors[field.prop] || field.placeholder"
             @keypress.enter="handleSubmit"
             @blur="validateField(field.prop)"
-            @input="clearError(field.prop)"
+            @input="handleInput(field.prop)"
           />
           <input
             v-else
-            v-model="formData[field.prop]"
+            v-model="localFormData[field.prop]"
             type="password"
             :placeholder="errors[field.prop] || field.placeholder"
             @keypress.enter="handleSubmit"
             @blur="validateField(field.prop)"
-            @input="clearError(field.prop)"
+            @input="handleInput(field.prop)"
           />
         </div>
       </div>
@@ -62,7 +62,7 @@
 </template>
 
 <script setup>
-import { ref, reactive } from 'vue'
+import { ref, reactive, watch } from 'vue'
 
 const props = defineProps({
   title: {
@@ -95,17 +95,22 @@ const props = defineProps({
   }
 })
 
-const emit = defineEmits(['submit'])
+const emit = defineEmits(['submit', 'update:formData'])
 
 const formRef = ref(null)
 const errors = reactive({})
+const localFormData = reactive({ ...props.formData })
+
+watch(() => props.formData, (value) => {
+  Object.assign(localFormData, value)
+}, { deep: true })
 
 // 验证单个字段
 const validateField = (fieldName) => {
   const fieldRules = props.rules[fieldName]
   if (!fieldRules) return true
 
-  const value = props.formData[fieldName]
+  const value = localFormData[fieldName]
 
   for (const rule of fieldRules) {
     // 必填验证
@@ -168,6 +173,11 @@ const clearError = (fieldName) => {
   delete errors[fieldName]
 }
 
+const handleInput = (fieldName) => {
+  clearError(fieldName)
+  emit('update:formData', { ...localFormData })
+}
+
 // 验证所有字段
 const validateForm = () => {
   let isValid = true
@@ -181,7 +191,7 @@ const validateForm = () => {
 
 const handleSubmit = () => {
   if (validateForm()) {
-    emit('submit')
+    emit('submit', { ...localFormData })
   }
 }
 

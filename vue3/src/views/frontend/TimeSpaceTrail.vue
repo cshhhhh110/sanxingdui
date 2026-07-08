@@ -1166,24 +1166,6 @@ const PIT_VOICE_GUIDE_PRESETS = {
   }
 }
 
-const TRAIL_COMMAND_NAV_WORDS = [
-  '带我',
-  '带路',
-  '去',
-  '看',
-  '看看',
-  '想看',
-  '我要看',
-  '打开',
-  '进入',
-  '跳到',
-  '切到',
-  '转到',
-  '回到',
-  '回',
-  '导览'
-]
-
 const TRAIL_COMMAND_ARTIFACTS = [
   {
     entityId: 'HI-2025-002',
@@ -1498,7 +1480,6 @@ const sceneSteps = [
   { id: 4, title: '玄喵讲解', subtitle: '让故事开始往下讲' }
 ]
 
-const activeSceneMeta = computed(() => sceneSteps.find((item) => item.id === activeScene.value) || sceneSteps[0])
 const showTrailLoopNudge = computed(() => (
   activeScene.value === 4 &&
   guideExpanded.value &&
@@ -1597,32 +1578,6 @@ const stageNarrative = computed(() => {
   const craft = selectedArtifactDetail.value.craftLabel || '它背后的工艺线索'
 
   return `${selectedArtifactDetail.value.displayTitle} 正站在 ${site} 与 ${era} 的交汇点上。走近它，再顺着 ${craft} 和关系网络继续往下。`
-})
-
-const compactStageTitle = computed(() => {
-  if (activeScene.value === 2) {
-    return selectedArtifact.value?.displayTitle || '先在展厅停下一件文物'
-  }
-  if (activeScene.value === 3) {
-    return selectedArtifactDetail.value?.displayTitle || selectedArtifact.value?.displayTitle || '走近一件文物'
-  }
-  if (activeScene.value === 4) {
-    return selectedArtifactDetail.value?.displayTitle || '让玄喵继续开讲'
-  }
-  return '沿古蜀线索继续向前'
-})
-
-const compactStageLine = computed(() => {
-  if (activeScene.value === 2) {
-    return searchNarrative.value.resultLine || resultNarrative.value
-  }
-  if (activeScene.value === 3) {
-    return stageNarrative.value
-  }
-  if (activeScene.value === 4) {
-    return guideJourneyLine.value
-  }
-  return heroNarrative.value
 })
 
 const hasModel = computed(() => Boolean(selectedArtifactDetail.value?.resolvedGlbUrl))
@@ -2366,114 +2321,31 @@ function announcePitVoiceGuide(text, key) {
   )
 }
 
-function normalizeTrailCommandText(text) {
-  return String(text || '')
-    .toLowerCase()
-    .replace(/\s+/g, '')
-    .replace(/[，。！？,.!?;；:：、"'“”‘’（）()[\]{}<>《》]/g, '')
-}
-
-function trailTextIncludesAny(normalizedText, words = []) {
-  return words.some((word) => normalizedText.includes(normalizeTrailCommandText(word)))
-}
-
-function hasTrailNavigationIntent(normalizedText) {
-  return trailTextIncludesAny(normalizedText, TRAIL_COMMAND_NAV_WORDS)
-}
-
-function findTrailArtifactMatches(normalizedText) {
-  const matches = TRAIL_COMMAND_ARTIFACTS.filter((artifact) => {
-    return artifact.aliases.some((alias) => normalizedText.includes(normalizeTrailCommandText(alias)))
-  })
-
-  const unique = new Map(matches.map((item) => [item.entityId, item]))
-  return [...unique.values()]
-}
-
-function findTrailPitMatch(normalizedText) {
-  return TRAIL_COMMAND_PITS.find((pit) => {
-    return pit.aliases.some((alias) => normalizedText.includes(normalizeTrailCommandText(alias)))
-  }) || null
-}
-
-function findTrailGraphTarget(normalizedText) {
-  return TRAIL_COMMAND_GRAPH_TARGETS.find((target) => {
-    return target.aliases.some((alias) => normalizedText.includes(normalizeTrailCommandText(alias)))
-  }) || null
-}
-
-function parseTrailCommand(text) {
-  const normalizedText = normalizeTrailCommandText(text)
-  if (!normalizedText) return null
-
-  const hasNavIntent = hasTrailNavigationIntent(normalizedText)
-  const hasQuestionCue = trailTextIncludesAny(normalizedText, ['什么', '为什么', '含义', '意义', '代表', '怎么', '如何'])
-  const hasStrongNavIntent = trailTextIncludesAny(normalizedText, [
-    '带我',
-    '带路',
-    '去',
-    '打开',
-    '进入',
-    '跳到',
-    '切到',
-    '转到',
-    '回到',
-    '回',
-    '导览',
-    '我要看',
-    '想看'
-  ])
-  const hasDirectLookIntent = normalizedText.startsWith('看') && !hasQuestionCue
-  const hasCommandIntent = hasStrongNavIntent || hasDirectLookIntent
-  const hasGraphCue = trailTextIncludesAny(normalizedText, ['图谱', '关系', '节点', '网络', '关联'])
-  const hasStageCue = trailTextIncludesAny(normalizedText, ['3d', '三维', '模型', '展品现场', '现场', '旋转'])
-  const hasGuideCue = trailTextIncludesAny(normalizedText, ['继续讲解', '继续讲', '玄喵讲', '开讲', '讲解这件', '听讲解', '听玄喵'])
-  const hasQuizCue = trailTextIncludesAny(normalizedText, ['答题', '证书', 'quiz', '挑战'])
-  const hasSceneOneCue = trailTextIncludesAny(normalizedText, ['第一幕', '时空定点', '回地图', '回筛选', '回坐标'])
-  const hasArtifactListCue = trailTextIncludesAny(normalizedText, ['文物列表', '第二幕', '命中文物', '看命中文物'])
-
-  if (hasQuizCue && (hasNavIntent || trailTextIncludesAny(normalizedText, ['赢证书', '去答题']))) {
-    return { action: 'startQuiz' }
+function normalizeStructuredTrailCommand(input) {
+  if (!input || typeof input !== 'object') return null
+  const actionMap = {
+    go_scene_one: 'goSceneOne',
+    go_artifact_list: 'goArtifactList',
+    open_stage: 'openStage',
+    open_guide: 'openGuide',
+    start_quiz: 'startQuiz'
   }
+  if (actionMap[input.action]) return { action: actionMap[input.action] }
 
-  if (hasSceneOneCue && hasNavIntent) {
-    return { action: 'goSceneOne' }
+  if (input.action === 'open_artifact') {
+    const artifact = TRAIL_COMMAND_ARTIFACTS.find((item) => item.entityId === input.artifact_id)
+    return artifact ? { action: 'goToArtifact', artifact } : null
   }
-
-  if (hasArtifactListCue && hasNavIntent) {
-    return { action: 'goArtifactList' }
+  if (input.action === 'select_pit') {
+    const pit = TRAIL_COMMAND_PITS.find((item) => item.pitCode === input.pit_code)
+    return pit ? { action: 'selectPit', pit } : null
   }
-
-  if (hasCommandIntent) {
-    const artifactsMatched = findTrailArtifactMatches(normalizedText)
-    if (artifactsMatched.length === 1) {
-      return { action: 'goToArtifact', artifact: artifactsMatched[0] }
-    }
-    if (artifactsMatched.length > 1 || (normalizedText.includes('面具') && !artifactsMatched.length)) {
-      return {
-        action: 'ambiguous',
-        message: '你说的“面具”可能指金面具，也可能指青铜纵目面具。你可以说“带我看金面具”或“带我看纵目面具”。'
-      }
-    }
-
-    const pitMatched = findTrailPitMatch(normalizedText)
-    if (pitMatched) {
-      return { action: 'selectPit', pit: pitMatched }
-    }
+  if (input.action === 'focus_graph') {
+    const target = input.graph_target
+      ? TRAIL_COMMAND_GRAPH_TARGETS.find((item) => item.type === input.graph_target)
+      : null
+    return { action: 'focusGraphNode', target, rawText: input.graph_target || '' }
   }
-
-  if (hasGraphCue) {
-    return { action: 'focusGraphNode', target: findTrailGraphTarget(normalizedText), rawText: normalizedText }
-  }
-
-  if (hasStageCue && (hasNavIntent || trailTextIncludesAny(normalizedText, ['3d', '三维']))) {
-    return { action: 'openStage' }
-  }
-
-  if (hasGuideCue && (hasNavIntent || trailTextIncludesAny(normalizedText, ['讲解', '玄喵']))) {
-    return { action: 'openGuide' }
-  }
-
   return null
 }
 
@@ -2586,7 +2458,7 @@ function handleTrailCommandEvent(event) {
 
   let command = null
   try {
-    command = parseTrailCommand(detail.text)
+    command = normalizeStructuredTrailCommand(detail.command)
   } catch (error) {
     console.error('玄喵展线命令解析失败:', error)
     respond({ handled: false })
@@ -2788,6 +2660,13 @@ async function executeTrailOpenGuide() {
   sayTrailCommand(`好，我们进入玄喵讲解。我会围绕${selectedArtifactDetail.value?.displayTitle || '这件文物'}继续讲它的背景、工艺和关系。`, 'guide')
 }
 
+function normalizeTrailGraphText(text) {
+  return String(text || '')
+    .toLowerCase()
+    .replace(/\s+/g, '')
+    .replace(/[，。！？,.!?;；:：、"'“”‘’（）()[\]{}<>《》]/g, '')
+}
+
 function findGraphNodeByTrailCommand(target, rawText) {
   const nodes = graphPayload.value.nodes || []
   if (!nodes.length) return null
@@ -2796,7 +2675,7 @@ function findGraphNodeByTrailCommand(target, rawText) {
     return nodes.find((node) => node.id === graphPayload.value.centerNodeId) || nodes[0]
   }
 
-  const aliases = target.aliases.map((alias) => normalizeTrailCommandText(alias))
+  const aliases = target.aliases.map((alias) => normalizeTrailGraphText(alias))
   const typedNodes = nodes.filter((node) => node.type === target.type)
   const scoredNodes = typedNodes
     .map((node) => ({
@@ -2810,7 +2689,7 @@ function findGraphNodeByTrailCommand(target, rawText) {
 }
 
 function scoreGraphNodeForTrailCommand(node, rawText, aliases, target) {
-  const haystack = normalizeTrailCommandText(`${node.label || ''}${node.summary || ''}${node.routeTarget || ''}${node.entityId || ''}`)
+  const haystack = normalizeTrailGraphText(`${node.label || ''}${node.summary || ''}${node.routeTarget || ''}${node.entityId || ''}`)
   let score = node.type === target.type ? 5 : 0
 
   aliases.forEach((alias) => {
@@ -3427,6 +3306,8 @@ function rememberVoiceGuideNarration(key) {
   }
 }
 
+// Retained as a compatibility reference for older generated voice manifests.
+// eslint-disable-next-line no-unused-vars
 function buildVoiceGuideNarration() {
   const entityId = selectedArtifactDetail.value?.entityId || selectedArtifact.value?.entityId || 'none'
   const title = selectedArtifactDetail.value?.displayTitle || selectedArtifact.value?.displayTitle || ''
@@ -4691,6 +4572,7 @@ async function maybeAutoStartGuide() {
   const entityId = getCurrentArtifactEntityId()
   if (!entityId || entityId === lastAutoAskedEntityId.value) return
   lastAutoAskedEntityId.value = entityId
+  if (!userStore.isLoggedIn) return
   await requestAutoGuide(entityId)
 }
 
@@ -4789,6 +4671,11 @@ async function requestAutoGuide(expectedEntityId) {
 }
 
 async function createSession() {
+  if (!userStore.isLoggedIn) {
+    currentSessionId.value = null
+    return
+  }
+
   try {
     const title = selectedArtifactDetail.value
       ? `时空展线讲解 - ${selectedArtifactDetail.value.displayTitle}`
@@ -4939,17 +4826,6 @@ async function sendMessage(presetQuestion = '') {
   } finally {
     chatAbortController = null
   }
-}
-
-function appendAssistantMessage(content) {
-  const lines = Array.isArray(content) ? content : [content]
-  messages.value.push({
-    id: Date.now() + Math.random(),
-    role: 'assistant',
-    content: lines,
-    time: getCurrentTime()
-  })
-  scrollMessagesToBottom()
 }
 
 function scrollMessagesToBottom() {

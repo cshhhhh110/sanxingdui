@@ -4,6 +4,7 @@
  */
 
 import { ROUTE_MAPPINGS, MCP_TOOL_CATEGORIES } from './config'
+import { getAgentCurrentDateTime, getAgentWeather } from '@/api/AgentApi'
 
 /**
  * MCP 工具基类
@@ -286,7 +287,7 @@ const playVoiceIntroTool = new MCPTool({
     },
     required: ['artifact_id']
   },
-  handler: async (params, context) => {
+  handler: async (params) => {
     const { artifact_id, voice_type } = params
     
     // 触发语音播放事件
@@ -550,7 +551,7 @@ const addToCartTool = new MCPTool({
     },
     required: ['product_id']
   },
-  handler: async (params, context) => {
+  handler: async (params) => {
     const { product_id, quantity } = params
     
     // 触发加入购物车事件
@@ -618,7 +619,7 @@ const createOrderTool = new MCPTool({
     },
     required: ['product_id']
   },
-  handler: async (params, context) => {
+  handler: async (params) => {
     const { product_id, quantity, address_id, remark } = params
     
     // 触发创建订单事件
@@ -765,7 +766,7 @@ const batchPayOrdersTool = new MCPTool({
       }
     }
   },
-  handler: async (params, context) => {
+  handler: async (params) => {
     // 触发批量支付事件
     setTimeout(() => {
       window.dispatchEvent(new CustomEvent('mcp:batch-pay-orders', {
@@ -789,7 +790,7 @@ const batchCancelOrdersTool = new MCPTool({
     type: 'object',
     properties: {}
   },
-  handler: async (params, context) => {
+  handler: async () => {
     // 触发批量取消事件
     setTimeout(() => {
       window.dispatchEvent(new CustomEvent('mcp:batch-cancel-orders', {
@@ -855,6 +856,118 @@ const viewCoursesTool = new MCPTool({
   }
 })
 
+const getWeatherTool = new MCPTool({
+  name: 'get_weather',
+  description: '查询指定城市的实时天气和今日预报',
+  category: MCP_TOOL_CATEGORIES.INFO,
+  requireAuth: false,
+  inputSchema: {
+    type: 'object',
+    properties: {
+      city: {
+        type: 'string',
+        description: '城市名称，例如成都、北京'
+      }
+    },
+    required: ['city']
+  },
+  handler: async ({ city }) => getAgentWeather(city)
+})
+
+const getCurrentDateTimeTool = new MCPTool({
+  name: 'get_current_datetime',
+  description: '查询当前北京时间和日期',
+  category: MCP_TOOL_CATEGORIES.INFO,
+  requireAuth: false,
+  inputSchema: {
+    type: 'object',
+    properties: {}
+  },
+  handler: async () => getAgentCurrentDateTime()
+})
+
+const TRAIL_ARTIFACT_PITS = {
+  'HI-2025-002': 'K5',
+  'HI-2025-003': 'K2',
+  'HI-2025-004': 'K1',
+  'HI-2025-005': 'K2',
+  'HI-2025-006': 'K2'
+}
+
+async function dispatchTrailControl(command) {
+  return new Promise((resolve, reject) => {
+    const timer = window.setTimeout(() => reject(new Error('时空展线响应超时')), 3000)
+    window.dispatchEvent(new CustomEvent('xuanmiao:trail-command', {
+      detail: {
+        command,
+        source: 'agent-tool',
+        respond(payload = {}) {
+          window.clearTimeout(timer)
+          if (payload.handled) resolve(payload)
+          else reject(new Error(payload.message || '当前展线无法执行该操作'))
+        }
+      }
+    }))
+  })
+}
+
+const controlTrailTool = new MCPTool({
+  name: 'control_trail',
+  description: '控制时空展线中的文物、祭祀坑、场景、3D现场、讲解和图谱',
+  category: MCP_TOOL_CATEGORIES.INTERACTION,
+  requireAuth: false,
+  inputSchema: {
+    type: 'object',
+    properties: {
+      action: { type: 'string' },
+      artifact_id: { type: 'string' },
+      pit_code: { type: 'string' },
+      graph_target: { type: 'string' }
+    },
+    required: ['action']
+  },
+  handler: async (params, context) => {
+    if (params.action === 'start_quiz') {
+      await context.router.push('/quiz')
+      return { message: '正在打开答题挑战。' }
+    }
+
+    const onTrail = context.router.currentRoute.value.path === '/trail'
+    if (!onTrail && params.action === 'open_artifact') {
+      await context.router.push({
+        path: '/trail',
+        query: {
+          entityId: params.artifact_id,
+          pitCode: TRAIL_ARTIFACT_PITS[params.artifact_id]
+        }
+      })
+      return { message: '已进入时空展线并定位目标文物。' }
+    }
+
+    if (!onTrail) {
+      await context.router.push('/trail')
+      await new Promise((resolve) => window.requestAnimationFrame(() => window.requestAnimationFrame(resolve)))
+    }
+    await dispatchTrailControl(params)
+    return { silent: true }
+  }
+})
+
+const viewProfileTool = new MCPTool({
+  name: 'view_profile',
+  description: '打开当前用户的个人中心',
+  category: MCP_TOOL_CATEGORIES.BUSINESS,
+  requireAuth: true,
+  inputSchema: {
+    type: 'object',
+    properties: {}
+  },
+  handler: async (params, context) => {
+    await context.router.push('/profile')
+    return { message: '正在打开个人中心。' }
+  }
+})
+
 // 退出登录工具
 const logoutTool = new MCPTool({
   name: 'logout',
@@ -865,7 +978,7 @@ const logoutTool = new MCPTool({
     type: 'object',
     properties: {}
   },
-  handler: async (params, context) => {
+  handler: async () => {
     window.dispatchEvent(new CustomEvent('mcp:logout', {
       detail: {}
     }))
@@ -899,6 +1012,10 @@ export const MCP_TOOLS = {
   // 其他
   search_activity: searchActivityTool,
   view_courses: viewCoursesTool,
+  get_weather: getWeatherTool,
+  get_current_datetime: getCurrentDateTimeTool,
+  control_trail: controlTrailTool,
+  view_profile: viewProfileTool,
   // 账户
   logout: logoutTool,
 }

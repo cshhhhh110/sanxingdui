@@ -181,3 +181,10 @@ graph:
     username: neo4j
     password: YOUR_NEO4J_PASSWORD
     database:
+
+# Obsidian Vault read-only knowledge index.
+agent:
+  knowledge:
+    enabled: ${KNOWLEDGE_ENABLED:true}
+    path: ${KNOWLEDGE_VAULT_PATH:./knowledge-vault/wiki}
+    refresh-ms: ${KNOWLEDGE_REFRESH_MS:60000}

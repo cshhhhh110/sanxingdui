@@ -116,7 +116,6 @@ import { ref, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { message } from 'ant-design-vue'
 import { getCourseDetail, getCourseChapters } from '@/api/CourseApi'
-import { getCourseLevelName, getCourseLevelColor } from '@/config/courseLevel'
 
 const route = useRoute()
 const router = useRouter()

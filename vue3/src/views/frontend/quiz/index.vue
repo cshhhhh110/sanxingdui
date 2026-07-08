@@ -703,11 +703,6 @@ const resultDesc = computed(() => {
   return descs[resultClass.value]
 })
 
-const resultIcon = computed(() => {
-  const icons = { excellent: 'fas fa-crown', good: 'fas fa-star', pass: 'fas fa-thumbs-up', fail: 'fas fa-book' }
-  return icons[resultClass.value]
-})
-
 const scorePercent = computed(() => Math.round((score.value / quizData.totalScore) * 100))
 
 const scoreColor = computed(() => {
@@ -975,7 +970,9 @@ const shareCert = async () => {
         message.success('分享成功！')
         return
       }
-    } catch (e) {}
+    } catch (error) {
+      console.debug('系统分享不可用，回退到剪贴板:', error)
+    }
   }
   
   try {

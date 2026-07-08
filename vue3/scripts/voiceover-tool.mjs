@@ -42,6 +42,7 @@ function sanitizeFilenamePart(value, fallback = 'voiceover') {
   const cleaned = String(value || '')
     .trim()
     .replace(/\s+/g, '')
+    // eslint-disable-next-line no-control-regex
     .replace(/[<>:"/\\|?*\u0000-\u001F]/g, '')
     .slice(0, 12)
   return cleaned || fallback
@@ -206,7 +207,7 @@ async function main() {
 
   const rl = readline.createInterface({ input, output })
   try {
-    while (true) {
+    for (;;) {
       let line
       try {
         line = await rl.question('\n口播> ')

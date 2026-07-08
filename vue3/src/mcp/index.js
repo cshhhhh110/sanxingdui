@@ -9,16 +9,12 @@ export { MCP_CONFIG, MCP_TOOL_CATEGORIES, INTENT_KEYWORDS, ROUTE_MAPPINGS, INTEN
 // 导出工具
 export { MCP_TOOLS, getToolList, MCPTool } from './tools'
 
-// 导出意图解析器
-export { IntentParser, intentParser, parseAndExecute, IntentType } from './intentParser'
-
 // 导出 API 客户端
 export { mcpApiClient } from './api'
 
 // 导入主要功能
-import { MCP_CONFIG, MCP_TOOL_CATEGORIES } from './config'
-import { MCP_TOOLS, getToolList } from './tools'
-import { IntentParser, intentParser, parseAndExecute } from './intentParser'
+import { MCP_CONFIG } from './config'
+import { MCP_TOOLS } from './tools'
 import { mcpApiClient } from './api'
 
 /**
@@ -28,7 +24,6 @@ import { mcpApiClient } from './api'
 class MCPClient {
   constructor() {
     this.config = MCP_CONFIG
-    this.parser = new IntentParser()
     this.tools = MCP_TOOLS
     this.isInitialized = false
     this.listeners = new Map()
@@ -62,49 +57,29 @@ class MCPClient {
     }
   }
 
-  /**
-   * 处理用户输入
-   */
-  async processInput(text, context = {}) {
+  async executeTool(toolName, arguments_ = {}, context = {}) {
     if (!this.isInitialized) {
       await this.initialize()
     }
 
-    // 优先使用后端 MCP Server
-    if (this.config.useBackend) {
-      try {
-        return await this.processWithBackend(text, context)
-      } catch (error) {
-        console.warn('[MCP] Backend call failed, falling back to local:', error)
-      }
-    }
-
-    // 使用本地意图解析器处理
-    return await parseAndExecute(text, {
-      ...context,
-      mcpClient: this
-    })
-  }
-
-  /**
-   * 使用后端 MCP Server 处理
-   */
-  async processWithBackend(text, context = {}) {
-    // 先用本地解析器解析意图
-    const parsed = intentParser.parse(text)
-    
-    if (!parsed.tool) {
+    const tool = this.tools[toolName]
+    if (!tool) {
       return {
         success: false,
-        message: '无法理解您的意图，请换个说法'
+        tool: toolName,
+        message: '模型选择的工具在当前客户端不可用'
       }
     }
 
-    // 调用后端 API
-    const userId = context.userId || null
-    const result = await mcpApiClient.callTool(parsed.tool, parsed.params, userId)
-    
-    return result
+    const execution = await tool.execute(arguments_, context)
+    return {
+      success: execution.success,
+      tool: toolName,
+      data: execution.data,
+      message: execution.success
+        ? execution.data?.message || '操作已执行'
+        : execution.error || '工具执行失败'
+    }
   }
 
   /**

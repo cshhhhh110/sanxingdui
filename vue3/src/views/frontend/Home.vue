@@ -245,7 +245,9 @@ onMounted(async () => {
       { showDefaultMsg: false }
     )
     courses.value = coursesRes?.records || []
-  } catch (error) {}
+  } catch (error) {
+    console.warn('首页课程加载失败:', error)
+  }
 
   const el = timelineRef.value
   if (!el) {
@@ -389,8 +391,6 @@ const getActivityTypeColor = (type) => {
   return colorMap[type] || 'default'
 }
 
-const exploreHeritage = () => router.push('/tanmi')
-const learnCourses = () => router.push('/course')
 const viewItemDetail = (id) => router.push(`/heritage/${id}`)
 const viewActivityDetail = (id) => router.push(`/activity/${id}`)
 const viewAllHeritageItems = () => router.push('/heritage')

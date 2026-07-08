@@ -51,16 +51,15 @@ export const useHeritageStore = defineStore('heritage', {
 
     // 更新项状态
     updateItemStatus(itemId, status) {
+      const statusMap = {
+        0: '草稿',
+        1: '待审',
+        2: '已发布',
+        3: '下架'
+      }
       const item = this.heritageList.find(item => item.id === itemId)
       if (item) {
         item.status = status
-        // 更新状态名称
-        const statusMap = {
-          0: '草稿',
-          1: '待审',
-          2: '已发布',
-          3: '下架'
-        }
         item.statusName = statusMap[status]
       }
       

@@ -771,16 +771,6 @@ const handleCheckIn = (id) => {
   )
 }
 
-const getStatusColor = (status) => {
-  const colors = { 0: 'default', 1: 'blue', 2: 'green', 3: 'gray' }
-  return colors[status] || 'default'
-}
-
-const getSignupStatusColor = (status) => {
-  const colors = { 0: 'orange', 1: 'green', 2: 'red', 3: 'blue' }
-  return colors[status] || 'default'
-}
-
 const formatDate = (dateStr) => {
   return dateStr ? dayjs(dateStr).format('YYYY-MM-DD HH:mm') : '-'
 }
@@ -1120,8 +1110,8 @@ $user-white: #ffffff;
   box-shadow: none !important;
 
   &:hover {
-    background: darken($user-accent, 6%) !important;
-    border-color: darken($user-accent, 6%) !important;
+    background: color.adjust($user-accent, $lightness: -6%) !important;
+    border-color: color.adjust($user-accent, $lightness: -6%) !important;
   }
 }
 
@@ -1251,8 +1241,8 @@ $white: #ffffff;
     color: $white !important;
 
     &:hover {
-      background: darken($accent, 6%) !important;
-      border-color: darken($accent, 6%) !important;
+      background: color.adjust($accent, $lightness: -6%) !important;
+      border-color: color.adjust($accent, $lightness: -6%) !important;
     }
   }
 }

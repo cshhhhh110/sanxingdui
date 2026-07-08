@@ -59,11 +59,6 @@ const route = useRoute();
 const inheritor = ref(null);
 const loading = ref(false);
 
-const formatDate = (dateStr) => {
-  if (!dateStr) return '-';
-  return new Date(dateStr).toLocaleDateString('zh-CN');
-};
-
 const getShortSummary = (summary) => summary?.length > 100 ? summary.substring(0, 100) + '...' : summary;
 
 const goToItemDetail = (itemId) => router.push(`/heritage/${itemId}`);

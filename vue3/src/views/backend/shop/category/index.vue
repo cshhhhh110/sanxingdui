@@ -602,7 +602,7 @@ $white: #ffffff;
   height: 34px !important;
   font-size: 13px !important;
   box-shadow: none !important;
-  &:hover { background: darken($accent, 6%) !important; border-color: darken($accent, 6%) !important; }
+  &:hover { background: color.adjust($accent, $lightness: -6%) !important; border-color: color.adjust($accent, $lightness: -6%) !important; }
 }
 
 .btn-ghost {

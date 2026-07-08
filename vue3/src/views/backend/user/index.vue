@@ -852,8 +852,8 @@ $user-white: #ffffff;
   box-shadow: none !important;
 
   &:hover {
-    background: darken($user-accent, 6%) !important;
-    border-color: darken($user-accent, 6%) !important;
+    background: color.adjust($user-accent, $lightness: -6%) !important;
+    border-color: color.adjust($user-accent, $lightness: -6%) !important;
   }
 }
 
@@ -1035,8 +1035,8 @@ $border: #e8e8e8;
     color: $white !important;
 
     &:hover {
-      background: darken($accent, 6%) !important;
-      border-color: darken($accent, 6%) !important;
+      background: color.adjust($accent, $lightness: -6%) !important;
+      border-color: color.adjust($accent, $lightness: -6%) !important;
     }
   }
 

@@ -170,6 +170,22 @@ function normalizeMessage(message) {
     .toLowerCase()
 }
 
+const ACTION_REQUEST_PATTERN = /(打开|进入|前往|跳转|带我去|带我到|搜索|搜一下|查找|购买|下单|加入购物车|查看|播放|开始|继续|返回|定位)/
+const SAFE_FIXED_REPLY_IDS = new Set([
+  'welcome',
+  'hello',
+  'identity',
+  'capability',
+  'how-to-ask',
+  'enter-museum',
+  'voice-question',
+  'searching',
+  'not-understood',
+  'network-error',
+  'login-required',
+  'navigate-done'
+])
+
 export function getPresetAudioUrl(id, voice = 'default') {
   return `${PRESET_AUDIO_BASE}/preset.${id}.${voice}.wav`
 }
@@ -177,8 +193,10 @@ export function getPresetAudioUrl(id, voice = 'default') {
 export function matchFixedAnswer(message) {
   const msg = normalizeMessage(message)
   if (!msg) return null
+  if (ACTION_REQUEST_PATTERN.test(msg)) return null
 
   for (const rule of FIXED_REPLY_PRESETS) {
+    if (!SAFE_FIXED_REPLY_IDS.has(rule.id)) continue
     if (rule.patterns.some((pattern) => pattern.test(msg))) {
       return {
         id: rule.id,
