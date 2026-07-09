@@ -290,7 +290,13 @@ public class FileController {
      */
     private Long getCurrentUserId() {
         try {
-            return JwtTokenUtils.getCurrentUserId();
+            Long userId = JwtTokenUtils.getCurrentUserId();
+            if (userId != null) {
+                return userId;
+            }
+            Long defaultUserId = 1L;
+            log.warn("未登录文件请求，使用默认测试用户ID: {}", defaultUserId);
+            return defaultUserId;
         } catch (Exception e) {
             Long defaultUserId = 1L;
             log.warn("获取用户ID失败，使用默认测试用户ID: {}", defaultUserId);

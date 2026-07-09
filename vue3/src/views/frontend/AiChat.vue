@@ -102,6 +102,27 @@
               <div class="message-bubble">
                 <p v-for="line in messageItem.content" :key="line">{{ line }}</p>
               </div>
+              <details v-if="messageItem.references?.length" class="message-references">
+                <summary class="references-title">
+                  <span>
+                    <i class="fas fa-book-open"></i>
+                    资料来源
+                  </span>
+                  <small>{{ messageItem.references.length }} 条</small>
+                </summary>
+                <ul>
+                  <li
+                    v-for="(reference, referenceIndex) in messageItem.references"
+                    :key="getReferenceKey(reference, referenceIndex)"
+                  >
+                    <span class="reference-index">{{ referenceIndex + 1 }}</span>
+                    <span class="reference-copy">
+                      <strong>{{ reference.title || '知识库文档' }}</strong>
+                      <small>{{ formatReferenceMeta(reference) }}</small>
+                    </span>
+                  </li>
+                </ul>
+              </details>
               <div v-if="messageItem.attachments?.length" class="message-attachments">
                 <div
                   v-for="attachment in messageItem.attachments"
@@ -257,7 +278,7 @@ import { useUserStore } from '@/store/user'
 import { createSession as createSessionApi, getChatStreamUrl, transcribeSpeechInput } from '@/api/AiChatApi'
 import { uploadTempFile } from '@/api/FileApi'
 import { matchFixedAnswer } from '@/config/chatReplyConfig'
-import { buildFallbackReply, buildRagPrompt, searchKnowledge } from '@/utils/knowledgeSearch'
+import { buildRagPrompt, searchKnowledge } from '@/utils/knowledgeSearch'
 import { createBrowserSpeechRecognition } from '@/utils/browserSpeech'
 import { formatYearRange } from '@/data/competitionArtifacts'
 import { competitionActionLabels } from '@/data/competitionUi'
@@ -284,6 +305,31 @@ const activeQuickCard = ref('hot')
 const artifactContext = ref(null)
 const lastAutoAskedEntityId = ref('')
 const pendingAttachments = ref([])
+
+const HERITAGE_KNOWLEDGE_KEYWORDS = [
+  '三星堆',
+  '金沙',
+  '文物',
+  '遗址',
+  '考古',
+  '青铜',
+  '金器',
+  '金面具',
+  '祭祀坑',
+  '神树',
+  '面具',
+  '大立人',
+  '金杖',
+  '古蜀',
+  '展陈',
+  '博物馆',
+  '文明',
+  '纹饰',
+  '器物',
+  '文化遗产'
+]
+const RAG_BLOCKED_MEDIA_TYPES = new Set(['IMAGE', 'AUDIO', 'VIDEO'])
+const MIN_REFERENCE_SCORE = 0
 
 const quickCards = [
   {
@@ -623,6 +669,77 @@ function updateAssistantMessageById(messageId, content, fallbackTime = '') {
   scrollToBottom()
 }
 
+function updateAssistantReferencesById(messageId, docs = []) {
+  const targetMessage = messages.value.find((item) => item.id === messageId)
+  if (!targetMessage) {
+    return
+  }
+
+  targetMessage.references = normalizeKnowledgeReferences(docs)
+  scrollToBottom()
+}
+
+function normalizeKnowledgeReferences(docs = []) {
+  const seen = new Set()
+  return docs
+    .map((doc) => ({
+      title: doc.title || getFileNameFromPath(doc.path || doc.file) || '知识库文档',
+      path: doc.path || doc.file || '',
+      type: doc.type || doc.knowledgeSource || '',
+      score: Number(doc.score) || 0,
+      obsidianUri: doc.obsidianUri || '',
+      openUrl: doc.openUrl || '',
+      sources: Array.isArray(doc.sources) ? doc.sources : []
+    }))
+    .filter((doc) => doc.score > MIN_REFERENCE_SCORE)
+    .filter((doc) => {
+      const key = `${doc.title}::${doc.path}`
+      if (seen.has(key)) {
+        return false
+      }
+      seen.add(key)
+      return true
+    })
+    .slice(0, 4)
+}
+
+function hasRagBlockedAttachment(attachments = []) {
+  return attachments.some((attachment) => RAG_BLOCKED_MEDIA_TYPES.has(attachment.mediaType))
+}
+
+function shouldUseKnowledge(question, attachments = []) {
+  const normalizedQuestion = String(question || '').trim().toLowerCase()
+  if (!normalizedQuestion || hasRagBlockedAttachment(attachments)) {
+    return false
+  }
+
+  return HERITAGE_KNOWLEDGE_KEYWORDS.some((keyword) => normalizedQuestion.includes(keyword.toLowerCase()))
+}
+
+function getFileNameFromPath(path = '') {
+  const normalized = String(path || '').replace(/\\/g, '/')
+  return normalized.split('/').filter(Boolean).pop() || ''
+}
+
+function getReferenceKey(reference, index) {
+  return `${reference.path || reference.title || 'reference'}-${index}`
+}
+
+function formatReferenceMeta(reference = {}) {
+  const parts = []
+  const path = reference.path || reference.sources?.[0] || ''
+  if (path) {
+    parts.push(path)
+  }
+  if (reference.score) {
+    parts.push(`匹配度 ${Math.round(reference.score)}`)
+  }
+  if (reference.type && !parts.includes(reference.type)) {
+    parts.push(reference.type)
+  }
+  return parts.join(' · ') || '本地知识库'
+}
+
 function wait(ms) {
   return new Promise((resolve) => window.setTimeout(resolve, ms))
 }
@@ -679,6 +796,7 @@ async function maybeAutoStartGuide() {
 async function requestAutoGuide(expectedEntityId) {
   const question = buildAutoGuideQuestion()
   let docs = []
+  let pendingReferences = []
   let userMessage = question
 
   const placeholderId = Date.now() + Math.random()
@@ -693,6 +811,7 @@ async function requestAutoGuide(expectedEntityId) {
 
   try {
     docs = await searchKnowledge(question, 1)
+    pendingReferences = normalizeKnowledgeReferences(docs)
     userMessage = buildPromptWithContext(question, docs)
   } catch (error) {
     console.warn('自动讲解检索失败，继续使用当前文物上下文生成讲解。', error)
@@ -737,6 +856,8 @@ async function requestAutoGuide(expectedEntityId) {
           isThinking.value = false
           if (!aiResponse) {
             updateAssistantMessageById(placeholderId, getMockReply(question, docs))
+          } else if (pendingReferences.length) {
+            updateAssistantReferencesById(placeholderId, pendingReferences)
           }
           return
         }
@@ -848,7 +969,7 @@ function getCurrentContextPayload() {
 }
 
 function getMockReply(question = '', docs = []) {
-  return buildFallbackReply(question, docs, getCurrentContextPayload() || {})
+  return buildAiUnavailableMessage([])
 }
 
 function buildPromptWithContext(question, docs = []) {
@@ -1356,6 +1477,7 @@ async function sendMessage(presetQuestion = '') {
   }
 
   let docs = []
+  let pendingReferences = []
   let userMessage = question
   let uploadedAttachments = []
 
@@ -1368,12 +1490,12 @@ async function sendMessage(presetQuestion = '') {
     return
   }
 
-  if (!uploadedAttachments.length) {
+  if (shouldUseKnowledge(question, attachmentsToSend)) {
     try {
-      docs = await searchKnowledge(question, 1)
-      userMessage = buildPromptWithContext(question, docs)
+      docs = await searchKnowledge(question, 3)
+      pendingReferences = normalizeKnowledgeReferences(docs)
     } catch (error) {
-      console.warn('本地知识检索失败，降级为原始问题:', error)
+      console.warn('Knowledge reference lookup failed; continuing AI chat without visible references.', error)
     }
   }
 
@@ -1420,6 +1542,8 @@ async function sendMessage(presetQuestion = '') {
               assistantPlaceholderId,
               uploadedAttachments.length ? buildAiUnavailableMessage(uploadedAttachments) : getMockReply(question, docs)
             )
+          } else if (pendingReferences.length) {
+            updateAssistantReferencesById(assistantPlaceholderId, pendingReferences)
           }
           return
         }
@@ -2163,6 +2287,108 @@ function getCurrentTime() {
 .message-stack time {
   color: #8e9b96;
   font-size: 13px;
+}
+
+.message-references {
+  display: grid;
+  gap: 9px;
+  max-width: 620px;
+  padding: 11px 13px 12px;
+  color: #42584f;
+  background: rgba(255, 253, 248, 0.72);
+  border: 1px solid rgba(214, 189, 130, 0.42);
+  border-radius: 14px;
+}
+
+.references-title {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  color: var(--primary);
+  font-size: 13px;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  cursor: pointer;
+  list-style: none;
+}
+
+.references-title::-webkit-details-marker {
+  display: none;
+}
+
+.references-title span {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.references-title small {
+  color: #6f7d76;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0;
+}
+
+.references-title::after {
+  color: #7b6a3e;
+  font-size: 11px;
+  content: '展开';
+}
+
+.message-references[open] .references-title::after {
+  content: '收起';
+}
+
+.message-references ul {
+  display: grid;
+  gap: 8px;
+  padding: 0;
+  margin: 0;
+  list-style: none;
+}
+
+.message-references li {
+  display: grid;
+  grid-template-columns: 24px minmax(0, 1fr);
+  gap: 8px;
+  align-items: start;
+}
+
+.reference-index {
+  display: grid;
+  width: 22px;
+  height: 22px;
+  place-items: center;
+  color: #fff;
+  font-size: 12px;
+  font-weight: 800;
+  background: linear-gradient(135deg, #42664f, #2d5140);
+  border-radius: 999px;
+}
+
+.reference-copy {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+}
+
+.reference-copy strong {
+  overflow: hidden;
+  color: var(--primary-dark);
+  font-size: 13px;
+  line-height: 1.35;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.reference-copy small {
+  overflow: hidden;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.35;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .message-attachments {

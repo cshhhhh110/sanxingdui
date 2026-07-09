@@ -1,7 +1,11 @@
 import { defineConfig } from 'vite'
 import vue from '@vitejs/plugin-vue'
 import { resolve } from 'path'
+import { existsSync, realpathSync } from 'fs'
 const serverPort=8889
+const projectRoot = resolve(__dirname)
+const nodeModulesPath = resolve(__dirname, 'node_modules')
+const nodeModulesRealPath = existsSync(nodeModulesPath) ? realpathSync(nodeModulesPath) : nodeModulesPath
 // https://vitejs.dev/config/
 export default defineConfig({
   plugins: [vue()],
@@ -14,6 +18,9 @@ export default defineConfig({
     port: 8800,
     open: true,
     compress:false,
+    fs: {
+      allow: [projectRoot, nodeModulesPath, nodeModulesRealPath]
+    },
     proxy: {
       '/api': {
         target: 'http://localhost:'+serverPort,

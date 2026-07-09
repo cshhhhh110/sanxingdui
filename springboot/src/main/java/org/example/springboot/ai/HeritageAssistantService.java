@@ -16,9 +16,6 @@ import reactor.core.publisher.Flux;
 
 import java.util.List;
 
-/**
- * Sanxingdui heritage assistant AI service.
- */
 @Slf4j
 @Service
 @RequiredArgsConstructor
@@ -62,8 +59,7 @@ public class HeritageAssistantService {
         Flux<String> responseFlux = chatClient.prompt()
                 .system(PromptManage.HERITAGE_ASSISTANT_PROMPT)
                 .user(modelInput)
-                .advisors(advisorSpec -> advisorSpec
-                        .param(ChatMemory.CONVERSATION_ID, sessionId))
+                .advisors(advisorSpec -> advisorSpec.param(ChatMemory.CONVERSATION_ID, sessionId))
                 .stream()
                 .content();
 
@@ -103,8 +99,7 @@ public class HeritageAssistantService {
             String assistantMessage = chatClient.prompt()
                     .system(PromptManage.HERITAGE_ASSISTANT_PROMPT)
                     .user(modelInput)
-                    .advisors(advisorSpec -> advisorSpec
-                            .param(ChatMemory.CONVERSATION_ID, sessionId))
+                    .advisors(advisorSpec -> advisorSpec.param(ChatMemory.CONVERSATION_ID, sessionId))
                     .call()
                     .content();
 
@@ -115,7 +110,7 @@ public class HeritageAssistantService {
             return assistantMessage;
         } catch (Exception e) {
             log.error("AI chat failed, sessionId: {}", sessionId, e);
-            throw new RuntimeException("AI服务调用失败: " + e.getMessage(), e);
+            throw new RuntimeException("AI service call failed: " + e.getMessage(), e);
         }
     }
 
@@ -133,13 +128,15 @@ public class HeritageAssistantService {
             }
 
             return """
-                    【检索资料】
+                    [Retrieved knowledge]
                     %s
 
-                    【用户输入】
+                    [User input and attachment context]
                     %s
 
-                    请优先依据【检索资料】和用户上传附件的解析结果回答。若资料与附件不足以支持结论，请明确说明不确定。
+                    Answer in Chinese. Use the retrieved knowledge and uploaded attachment analysis as references.
+                    Do not copy raw Markdown headings, metadata, or source labels into the final answer.
+                    Summarize naturally in 1 to 3 concise sentences. If the evidence is insufficient, say it is uncertain.
                     """.formatted(searchResult.context(), baseInput);
         } catch (Exception error) {
             log.warn("Knowledge retrieval failed, fallback to raw model input. error={}", error.getMessage());

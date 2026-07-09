@@ -86,7 +86,7 @@
             ref="dialogAttachmentInput"
             class="dialog-attachment-input"
             type="file"
-            accept=".txt,.md,.csv,.json,.pdf,.doc,.docx,.xls,.xlsx,image/*,audio/*,video/*"
+            accept=".txt,.md,.csv,.json"
             @change="handleAttachmentSelection"
         />
         <div class="dialog-footer">
@@ -94,7 +94,7 @@
               class="dialog-btn dialog-btn-attachment"
               type="button"
               :disabled="trailCommandPending || isUploadingAttachment || pendingAttachments.length >= 3"
-              :title="isUploadingAttachment ? '附件解析中' : '上传图片、音频、视频或文档'"
+              :title="isUploadingAttachment ? '附件解析中' : '上传 txt、md、csv 或 json 文本文档'"
               @click="$refs.dialogAttachmentInput?.click()"
           >
             <i :class="isUploadingAttachment ? 'fas fa-spinner fa-spin' : 'fas fa-paperclip'"></i>
@@ -906,15 +906,25 @@ export default {
       this.stopSpeech();
     },
 
+    hasUnsupportedFloatingAttachment(attachments = []) {
+      return attachments.some((attachment) => attachment.mediaType && attachment.mediaType !== 'DOCUMENT');
+    },
+
+    isSupportedFloatingAttachment(file) {
+      const fileName = String(file?.name || '').toLowerCase();
+      return ['.txt', '.md', '.csv', '.json'].some((extension) => fileName.endsWith(extension));
+    },
+
     async askWithRag(question, useRag = true, attachments = []) {
       try {
         let docs = [];
         let userMessage = question;
-        if (useRag) {
+        const canUseRag = useRag && !this.hasUnsupportedFloatingAttachment(attachments);
+        if (canUseRag) {
           docs = await searchKnowledge(question, 3);
           userMessage = buildRagPrompt(question, docs, this.getRagContextPayload());
         }
-        const getFailureReply = () => useRag
+        const getFailureReply = () => canUseRag
           ? buildFallbackReply(question, docs, this.getRagContextPayload())
           : buildDirectFallbackReply();
         const sessionId = await this.ensureChatSession();
@@ -1592,6 +1602,10 @@ export default {
         message.warning('单次最多上传3个附件');
         return;
       }
+      if (!this.isSupportedFloatingAttachment(file)) {
+        message.warning('复杂文件请到 AI文博助手上传处理');
+        return;
+      }
 
       this.isUploadingAttachment = true;
       try {
@@ -1600,16 +1614,9 @@ export default {
           errorMsg: '附件上传失败'
         });
         const mimeType = file.type || 'application/octet-stream';
-        const mediaType = mimeType.startsWith('image/')
-          ? 'IMAGE'
-          : mimeType.startsWith('audio/')
-            ? 'AUDIO'
-            : mimeType.startsWith('video/')
-              ? 'VIDEO'
-              : 'DOCUMENT';
         this.pendingAttachments.push({
           fileId: uploaded.id,
-          mediaType,
+          mediaType: 'DOCUMENT',
           fileName: uploaded.originalName || file.name,
           filePath: uploaded.filePath,
           mimeType,
