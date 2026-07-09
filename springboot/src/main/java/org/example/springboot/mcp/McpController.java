@@ -18,7 +18,7 @@ import java.util.Map;
  */
 @Slf4j
 @RestController
-@RequestMapping("/api/mcp")
+@RequestMapping("/mcp")
 @RequiredArgsConstructor
 public class McpController {
     
