@@ -52,6 +52,8 @@ export async function searchKnowledge(question, topK = 1) {
         related: document.related || [],
         sources: document.sources || [],
         score: Number(document.score) || 0,
+        obsidianUri: document.obsidianUri || '',
+        openUrl: document.openUrl || '',
         knowledgeSource: 'obsidian-vault'
       }))
     }

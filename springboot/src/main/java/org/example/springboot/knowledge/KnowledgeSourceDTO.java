@@ -12,6 +12,8 @@ public record KnowledgeSourceDTO(
         List<String> sources,
         String excerpt,
         String content,
-        double score
+        double score,
+        String obsidianUri,
+        String openUrl
 ) {
 }

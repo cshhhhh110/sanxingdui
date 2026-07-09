@@ -187,4 +187,5 @@ agent:
   knowledge:
     enabled: ${KNOWLEDGE_ENABLED:true}
     path: ${KNOWLEDGE_VAULT_PATH:./knowledge-vault/wiki}
+    obsidian-vault-name: ${OBSIDIAN_VAULT_NAME:青铜数元}
     refresh-ms: ${KNOWLEDGE_REFRESH_MS:60000}

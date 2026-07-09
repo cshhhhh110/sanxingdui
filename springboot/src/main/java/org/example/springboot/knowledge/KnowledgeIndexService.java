@@ -8,6 +8,8 @@ import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 
 import java.io.IOException;
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.LinkOption;
 import java.nio.file.Path;
@@ -43,6 +45,9 @@ public class KnowledgeIndexService {
 
     @Value("${agent.knowledge.path:./knowledge-vault/wiki}")
     private String configuredRoot;
+
+    @Value("${agent.knowledge.obsidian-vault-name:青铜数元}")
+    private String obsidianVaultName;
 
     @PostConstruct
     public void initialize() {
@@ -222,8 +227,46 @@ public class KnowledgeIndexService {
                 document.sources(),
                 excerpt(document.plainText(), queryTerms),
                 clip(document.markdown(), MAX_DOCUMENT_CONTEXT_CHARS),
-                Math.round(score * 1000.0) / 1000.0
+                Math.round(score * 1000.0) / 1000.0,
+                buildObsidianUri(document.path()),
+                ""
         );
+    }
+
+    private String buildObsidianUri(String documentPath) {
+        String safeVaultName = String.valueOf(obsidianVaultName == null ? "" : obsidianVaultName).trim();
+        String safeDocumentPath = String.valueOf(documentPath == null ? "" : documentPath).trim().replace('\\', '/');
+        if (safeVaultName.isBlank() || safeDocumentPath.isBlank()) {
+            return "";
+        }
+
+        String rootFolder = "";
+        Path rootFileName = Path.of(configuredRoot).toAbsolutePath().normalize().getFileName();
+        if (rootFileName != null) {
+            rootFolder = rootFileName.toString().trim().replace('\\', '/');
+        }
+        String vaultFilePath = rootFolder.isBlank() ? safeDocumentPath : rootFolder + "/" + safeDocumentPath;
+        return "obsidian://open?vault=" + encodeUriComponent(safeVaultName)
+                + "&file=" + encodeObsidianFilePath(vaultFilePath);
+    }
+
+    private String encodeObsidianFilePath(String path) {
+        String normalized = String.valueOf(path == null ? "" : path).replace('\\', '/');
+        StringBuilder encoded = new StringBuilder();
+        for (String segment : normalized.split("/")) {
+            if (segment.isBlank()) {
+                continue;
+            }
+            if (encoded.length() > 0) {
+                encoded.append('/');
+            }
+            encoded.append(encodeUriComponent(segment));
+        }
+        return encoded.toString();
+    }
+
+    private String encodeUriComponent(String value) {
+        return URLEncoder.encode(value, StandardCharsets.UTF_8).replace("+", "%20");
     }
 
     private String excerpt(String text, List<String> queryTerms) {

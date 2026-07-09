@@ -116,10 +116,15 @@
                     :key="getReferenceKey(reference, referenceIndex)"
                   >
                     <span class="reference-index">{{ referenceIndex + 1 }}</span>
-                    <span class="reference-copy">
+                    <button
+                      type="button"
+                      class="reference-copy reference-copy--button"
+                      :disabled="!getReferenceOpenTarget(reference)"
+                      @click="openReference(reference)"
+                    >
                       <strong>{{ reference.title || '知识库文档' }}</strong>
                       <small>{{ formatReferenceMeta(reference) }}</small>
-                    </span>
+                    </button>
                   </li>
                 </ul>
               </details>
@@ -723,6 +728,19 @@ function getFileNameFromPath(path = '') {
 
 function getReferenceKey(reference, index) {
   return `${reference.path || reference.title || 'reference'}-${index}`
+}
+
+function getReferenceOpenTarget(reference = {}) {
+  return reference.obsidianUri || reference.openUrl || ''
+}
+
+function openReference(reference = {}) {
+  const target = getReferenceOpenTarget(reference)
+  if (!target) {
+    message.info('当前来源暂不支持跳转')
+    return
+  }
+  window.location.href = target
 }
 
 function formatReferenceMeta(reference = {}) {
@@ -2371,6 +2389,25 @@ function getCurrentTime() {
   display: grid;
   gap: 3px;
   min-width: 0;
+}
+
+.reference-copy--button {
+  width: 100%;
+  padding: 0;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  background: transparent;
+  border: 0;
+}
+
+.reference-copy--button:not(:disabled):hover strong {
+  color: #8a622b;
+  text-decoration: underline;
+}
+
+.reference-copy--button:disabled {
+  cursor: default;
 }
 
 .reference-copy strong {
