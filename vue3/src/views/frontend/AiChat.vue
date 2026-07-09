@@ -8,15 +8,6 @@
       <div class="hero-copy">
         <p class="hero-kicker">玄喵讲解</p>
       </div>
-
-      <div
-        class="hero-status"
-        :class="{ 'hero-status--offline': knowledgeStatus && !knowledgeStatus.available }"
-        :title="knowledgeStatusTitle"
-      >
-        <span class="status-light"></span>
-        <span>{{ knowledgeStatusLabel }}</span>
-      </div>
     </section>
 
     <section
@@ -150,18 +141,6 @@
                   </div>
                 </div>
               </div>
-              <div v-if="messageItem.role === 'assistant' && messageItem.sources?.length" class="message-sources">
-                <span class="message-sources__label">参考知识库</span>
-                <span
-                  v-for="source in messageItem.sources"
-                  :key="source.path || source.title"
-                  class="message-source-chip"
-                  :title="source.path"
-                >
-                  <i class="fas fa-book-open"></i>
-                  {{ source.title }}
-                </span>
-              </div>
               <time>{{ messageItem.time }}</time>
             </div>
 
@@ -285,8 +264,6 @@ import { competitionActionLabels } from '@/data/competitionUi'
 import { getSpacetimeArtifactDetail } from '@/api/SpacetimeApi'
 import aiAvatar from '@/assets/sanxingdui-ai-chat/xuanmiao-avatar.png'
 import { getRecentArtifactTrail, pushCompetitionTrail } from '@/utils/competitionTrail'
-import { AgentRoute, agentOrchestrator } from '@/agent'
-import { getAgentKnowledgeStatus } from '@/api/AgentApi'
 
 const route = useRoute()
 const router = useRouter()
@@ -307,7 +284,6 @@ const activeQuickCard = ref('hot')
 const artifactContext = ref(null)
 const lastAutoAskedEntityId = ref('')
 const pendingAttachments = ref([])
-const knowledgeStatus = ref(null)
 
 const quickCards = [
   {
@@ -445,17 +421,6 @@ const currentUserAvatar = computed(() => {
   )
 })
 
-const knowledgeStatusLabel = computed(() => {
-  if (!knowledgeStatus.value) return '知识库连接中'
-  if (!knowledgeStatus.value.available) return '静态知识降级'
-  return `第二大脑 · ${knowledgeStatus.value.indexedDocuments} 条`
-})
-
-const knowledgeStatusTitle = computed(() => {
-  if (!knowledgeStatus.value?.available) return 'Obsidian 知识索引当前不可用，将自动使用静态知识文件。'
-  return `Obsidian 知识索引已连接，最近同步：${knowledgeStatus.value.lastSyncAt || '刚刚'}`
-})
-
 const voiceInputSupported = computed(() => {
   if (typeof window === 'undefined' || typeof navigator === 'undefined') {
     return false
@@ -492,12 +457,6 @@ watch(
 )
 
 onMounted(async () => {
-  try {
-    knowledgeStatus.value = await getAgentKnowledgeStatus()
-  } catch (error) {
-    console.warn('Failed to read knowledge index status:', error)
-    knowledgeStatus.value = { available: false, indexedDocuments: 0 }
-  }
   await initializeConversation()
 
   nextTick(() => {
@@ -662,14 +621,6 @@ function updateAssistantMessageById(messageId, content, fallbackTime = '') {
     targetMessage.time = fallbackTime
   }
   scrollToBottom()
-}
-
-function updateAssistantSourcesById(messageId, docs = []) {
-  const targetMessage = messages.value.find((item) => item.id === messageId)
-  if (!targetMessage) return
-  targetMessage.sources = docs
-    .filter((doc) => doc?.title)
-    .map((doc) => ({ title: doc.title, path: doc.path || '' }))
 }
 
 function wait(ms) {
@@ -851,7 +802,6 @@ function scrollToBottom() {
   })
 }
 
-// eslint-disable-next-line no-unused-vars
 function appendAssistantMessage(content) {
   const lines = Array.isArray(content) ? content : [content]
   messages.value.push({
@@ -1164,7 +1114,6 @@ function ensureVoiceInput() {
   return speechRecognition
 }
 
-// eslint-disable-next-line no-unused-vars
 function toggleVoiceInput() {
   if (!voiceInputSupported.value) {
     message.warning('当前浏览器不支持语音输入。')
@@ -1409,7 +1358,6 @@ async function sendMessage(presetQuestion = '') {
   let docs = []
   let userMessage = question
   let uploadedAttachments = []
-  let agentResult = { route: AgentRoute.DIRECT_ANSWER, handled: false }
 
   try {
     uploadedAttachments = await ensureAttachmentsUploaded(attachmentsToSend)
@@ -1420,43 +1368,9 @@ async function sendMessage(presetQuestion = '') {
     return
   }
 
-  try {
-    agentResult = await agentOrchestrator.handle(question || '请分析我上传的文件。', {
-      attachments: uploadedAttachments.map(({ fileId, fileName, mediaType, fileSize }) => ({
-        fileId: String(fileId),
-        fileName,
-        mediaType,
-        size: fileSize || 0
-      })),
-      routingContext: {
-        surface: 'web_chat',
-        ...getCurrentContextPayload()
-      },
-      toolContext: {
-        router,
-        isAuthenticated: userStore.isLoggedIn,
-        userId: userStore.userInfo?.id || userStore.user?.id || null
-      }
-    })
-    if (agentResult.handled) {
-      updateAssistantMessageById(
-        assistantPlaceholderId,
-        agentResult.message || (agentResult.success ? '操作已执行。' : '操作执行失败。')
-      )
-      return
-    }
-    if (!uploadedAttachments.length && agentResult.route === AgentRoute.DIRECT_ANSWER && agentResult.message) {
-      await typeAssistantMessageById(assistantPlaceholderId, agentResult.message)
-      return
-    }
-  } catch (error) {
-    console.warn('Agent routing failed; continuing with normal chat.', error)
-  }
-
-  if (!uploadedAttachments.length && agentResult.route === AgentRoute.RAG) {
+  if (!uploadedAttachments.length) {
     try {
-      docs = await searchKnowledge(question, 3)
-      updateAssistantSourcesById(assistantPlaceholderId, docs)
+      docs = await searchKnowledge(question, 1)
       userMessage = buildPromptWithContext(question, docs)
     } catch (error) {
       console.warn('本地知识检索失败，降级为原始问题:', error)
@@ -2240,34 +2154,6 @@ function getCurrentTime() {
   border-top-right-radius: 6px;
   background: #e9f4ec;
   border-color: rgba(66, 102, 79, 0.18);
-}
-
-.message-sources {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 7px;
-  align-items: center;
-}
-
-.message-sources__label {
-  color: #7b887f;
-  font-size: 12px;
-}
-
-.message-source-chip {
-  display: inline-flex;
-  gap: 6px;
-  align-items: center;
-  max-width: 240px;
-  padding: 5px 9px;
-  overflow: hidden;
-  color: #4f6958;
-  font-size: 12px;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  background: rgba(236, 244, 237, 0.9);
-  border: 1px solid rgba(66, 102, 79, 0.16);
-  border-radius: 999px;
 }
 
 .message-bubble p {
