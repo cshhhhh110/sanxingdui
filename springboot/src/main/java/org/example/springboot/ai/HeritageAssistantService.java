@@ -3,6 +3,8 @@ package org.example.springboot.ai;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.example.springboot.dto.command.AiChatAttachmentDTO;
+import org.example.springboot.knowledge.KnowledgeIndexService;
+import org.example.springboot.knowledge.KnowledgeSearchResponseDTO;
 import org.example.springboot.service.AiChatSessionService;
 import org.example.springboot.service.MultimodalContentService;
 import org.springframework.ai.chat.client.ChatClient;
@@ -34,6 +36,9 @@ public class HeritageAssistantService {
     @Autowired
     private MultimodalContentService multimodalContentService;
 
+    @Autowired
+    private KnowledgeIndexService knowledgeIndexService;
+
     public Flux<String> chatStream(String sessionId, String userMessage) {
         return chatStream(sessionId, userMessage, null);
     }
@@ -53,9 +58,10 @@ public class HeritageAssistantService {
                 prompt.getAttachments()
         );
 
+        String modelInput = buildModelInputWithKnowledge(prompt);
         Flux<String> responseFlux = chatClient.prompt()
                 .system(PromptManage.HERITAGE_ASSISTANT_PROMPT)
-                .user(prompt.getModelText())
+                .user(modelInput)
                 .advisors(advisorSpec -> advisorSpec
                         .param(ChatMemory.CONVERSATION_ID, sessionId))
                 .stream()
@@ -93,9 +99,10 @@ public class HeritageAssistantService {
         );
 
         try {
+            String modelInput = buildModelInputWithKnowledge(prompt);
             String assistantMessage = chatClient.prompt()
                     .system(PromptManage.HERITAGE_ASSISTANT_PROMPT)
-                    .user(prompt.getModelText())
+                    .user(modelInput)
                     .advisors(advisorSpec -> advisorSpec
                             .param(ChatMemory.CONVERSATION_ID, sessionId))
                     .call()
@@ -109,6 +116,34 @@ public class HeritageAssistantService {
         } catch (Exception e) {
             log.error("AI chat failed, sessionId: {}", sessionId, e);
             throw new RuntimeException("AI服务调用失败: " + e.getMessage(), e);
+        }
+    }
+
+    private String buildModelInputWithKnowledge(MultimodalContentService.MultimodalPrompt prompt) {
+        String baseInput = prompt.getModelText();
+        String query = prompt.getRawContent();
+        if (query == null || query.isBlank()) {
+            query = baseInput;
+        }
+
+        try {
+            KnowledgeSearchResponseDTO searchResult = knowledgeIndexService.search(query, 3);
+            if (searchResult.context() == null || searchResult.context().isBlank()) {
+                return baseInput;
+            }
+
+            return """
+                    【检索资料】
+                    %s
+
+                    【用户输入】
+                    %s
+
+                    请优先依据【检索资料】和用户上传附件的解析结果回答。若资料与附件不足以支持结论，请明确说明不确定。
+                    """.formatted(searchResult.context(), baseInput);
+        } catch (Exception error) {
+            log.warn("Knowledge retrieval failed, fallback to raw model input. error={}", error.getMessage());
+            return baseInput;
         }
     }
 }
