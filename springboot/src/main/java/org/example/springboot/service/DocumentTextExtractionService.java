@@ -43,7 +43,8 @@ public class DocumentTextExtractionService {
                 text = extractDocx(path);
             } else if (fileName.endsWith(".doc")) {
                 text = extractDoc(path);
-            } else if (fileName.endsWith(".txt") || fileName.endsWith(".md") || fileName.endsWith(".log")) {
+            } else if (fileName.endsWith(".txt") || fileName.endsWith(".md") || fileName.endsWith(".log")
+                    || fileName.endsWith(".csv") || fileName.endsWith(".json")) {
                 text = extractPlainText(path);
             } else {
                 throw new BusinessException("暂不支持该文档格式: " + fileName);

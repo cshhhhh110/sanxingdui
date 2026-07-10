@@ -86,7 +86,7 @@
             ref="dialogAttachmentInput"
             class="dialog-attachment-input"
             type="file"
-            accept=".txt,.md,.csv,.json"
+            accept="image/*,audio/*,video/*,.pdf,.doc,.docx,.txt,.md,.csv,.json"
             @change="handleAttachmentSelection"
         />
         <div class="dialog-footer">
@@ -94,7 +94,7 @@
               class="dialog-btn dialog-btn-attachment"
               type="button"
               :disabled="trailCommandPending || isUploadingAttachment || pendingAttachments.length >= 3"
-              :title="isUploadingAttachment ? '附件解析中' : '上传 txt、md、csv 或 json 文本文档'"
+              :title="isUploadingAttachment ? '附件解析中' : '上传图片、音频、视频、文档等文件'"
               @click="$refs.dialogAttachmentInput?.click()"
           >
             <i :class="isUploadingAttachment ? 'fas fa-spinner fa-spin' : 'fas fa-paperclip'"></i>
@@ -784,24 +784,32 @@ export default {
       const generation = this.speechQueueGeneration;
       const controller = new AbortController();
       this.speechQueueControllers.push(controller);
+
+      // 添加5秒超时保护
+      const ttsTimeout = new Promise((resolve) => {
+        setTimeout(() => resolve(''), 5000); // 5秒后返回空字符串
+      });
+
+      const ttsPromise = synthesizeSpeech(segment, this.selectedVoice, 1.0, {
+        signal: controller.signal
+      }).then((audioUrl) => {
+        if (generation !== this.speechQueueGeneration || this.isDestroyed) {
+          revokeSpeechUrl(audioUrl);
+          return '';
+        }
+        return audioUrl;
+      }).catch((error) => {
+        if (error?.name !== 'CanceledError' && error?.name !== 'AbortError' && error?.code !== 'ERR_CANCELED') {
+          console.warn('玄喵分句语音生成失败:', error);
+        }
+        return '';
+      });
+
       const item = {
         text: segment,
         generation,
         controller,
-        audioPromise: synthesizeSpeech(segment, this.selectedVoice, 1.0, {
-          signal: controller.signal
-        }).then((audioUrl) => {
-          if (generation !== this.speechQueueGeneration || this.isDestroyed) {
-            revokeSpeechUrl(audioUrl);
-            return '';
-          }
-          return audioUrl;
-        }).catch((error) => {
-          if (error?.name !== 'CanceledError' && error?.name !== 'AbortError' && error?.code !== 'ERR_CANCELED') {
-            console.warn('玄喵分句语音生成失败:', error);
-          }
-          return '';
-        })
+        audioPromise: Promise.race([ttsPromise, ttsTimeout]) // 使用race，5秒内未完成就返回空
       };
       this.speechQueue.push(item);
       this.processSpeechQueue(generation);
@@ -816,14 +824,17 @@ export default {
           const item = this.speechQueue.shift();
           const audioUrl = await item.audioPromise;
           this.speechQueueControllers = this.speechQueueControllers.filter((entry) => entry !== item.controller);
-          if (!audioUrl || generation !== this.speechQueueGeneration || this.isDestroyed) {
+
+          // 检查generation和destroyed状态
+          if (generation !== this.speechQueueGeneration || this.isDestroyed) {
             revokeSpeechUrl(audioUrl);
             continue;
           }
 
+          // TTS失败时（audioUrl为空），仍然显示文字，只是不播放语音
           await new Promise((resolve) => {
             this.startTypewriterAndSpeech(item.text, {
-              audioUrl,
+              audioUrl: audioUrl || '',  // 空字符串会触发纯文字显示
               playDelayMs: this.speechQueueTranscript ? 0 : 60,
               queuePlayback: true,
               displayPrefix: this.speechQueueTranscript,
@@ -907,12 +918,35 @@ export default {
     },
 
     hasUnsupportedFloatingAttachment(attachments = []) {
-      return attachments.some((attachment) => attachment.mediaType && attachment.mediaType !== 'DOCUMENT');
+      // 现在支持所有类型的附件，不再限制
+      return false;
     },
 
     isSupportedFloatingAttachment(file) {
       const fileName = String(file?.name || '').toLowerCase();
-      return ['.txt', '.md', '.csv', '.json'].some((extension) => fileName.endsWith(extension));
+      const mimeType = String(file?.type || '').toLowerCase();
+
+      // 支持的文件扩展名
+      const supportedExtensions = [
+        '.txt', '.md', '.csv', '.json',  // 文本文件
+        '.pdf', '.doc', '.docx',          // 文档
+        '.jpg', '.jpeg', '.png', '.gif', '.bmp', '.webp',  // 图片
+        '.mp3', '.wav', '.m4a', '.ogg', '.flac',  // 音频
+        '.mp4', '.avi', '.mov', '.wmv', '.webm'   // 视频
+      ];
+
+      // 检查扩展名
+      const hasValidExtension = supportedExtensions.some((ext) => fileName.endsWith(ext));
+
+      // 检查MIME类型
+      const hasValidMimeType = mimeType.startsWith('image/') ||
+                               mimeType.startsWith('audio/') ||
+                               mimeType.startsWith('video/') ||
+                               mimeType.includes('pdf') ||
+                               mimeType.includes('document') ||
+                               mimeType.includes('text/');
+
+      return hasValidExtension || hasValidMimeType;
     },
 
     async askWithRag(question, useRag = true, attachments = []) {
@@ -936,6 +970,17 @@ export default {
             thinkingIntervalMs: 1400
           });
           return;
+        }
+
+        // 检查是否有视频或音频附件，提前给出处理提示
+        const hasVideoOrAudio = attachments.some(att =>
+          att.mediaType === 'VIDEO' || att.mediaType === 'AUDIO'
+        );
+        if (hasVideoOrAudio) {
+          await this.startTypewriterAndSpeech('正在解析视频/音频内容，可能需要1-2分钟，请稍候...', {
+            playDelayMs: 300,
+            charDelay: 60
+          });
         }
 
         this.isAnswering = true;
@@ -1603,7 +1648,7 @@ export default {
         return;
       }
       if (!this.isSupportedFloatingAttachment(file)) {
-        message.warning('复杂文件请到 AI文博助手上传处理');
+        message.warning('不支持的文件格式');
         return;
       }
 
@@ -1614,9 +1659,20 @@ export default {
           errorMsg: '附件上传失败'
         });
         const mimeType = file.type || 'application/octet-stream';
+
+        // 根据文件类型判断mediaType
+        let mediaType = 'DOCUMENT';
+        if (mimeType.startsWith('image/')) {
+          mediaType = 'IMAGE';
+        } else if (mimeType.startsWith('audio/')) {
+          mediaType = 'AUDIO';
+        } else if (mimeType.startsWith('video/')) {
+          mediaType = 'VIDEO';
+        }
+
         this.pendingAttachments.push({
           fileId: uploaded.id,
-          mediaType: 'DOCUMENT',
+          mediaType: mediaType,
           fileName: uploaded.originalName || file.name,
           filePath: uploaded.filePath,
           mimeType,

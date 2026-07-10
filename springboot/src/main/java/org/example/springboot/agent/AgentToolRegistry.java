@@ -50,7 +50,8 @@ public class AgentToolRegistry {
         register(new ToolDefinition("start_quiz", "打开知识问答，可选topic和difficulty", RiskLevel.SAFE));
         register(new ToolDefinition("search_activity", "搜索活动，keyword必填", RiskLevel.SAFE));
         register(new ToolDefinition("view_courses", "打开在线课程页面，无参数", RiskLevel.SAFE));
-        register(new ToolDefinition("get_weather", "查询城市实时天气和今日预报，city必填；仅天气问题使用", RiskLevel.SAFE));
+        register(new ToolDefinition("get_user_location", "获取用户当前位置（返回城市名称），无参数，直接调用即可", RiskLevel.SAFE));
+        register(new ToolDefinition("get_weather", "查询指定城市的实时天气和今日预报，参数={city:城市名}。若用户未指定城市（如'今天天气怎么样'），应先调用get_user_location获取城市，再用返回的城市名调用本工具", RiskLevel.SAFE));
         register(new ToolDefinition("get_current_datetime", "查询当前北京时间和日期，无参数", RiskLevel.SAFE));
         register(new ToolDefinition(
                 "control_trail",
