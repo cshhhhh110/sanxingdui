@@ -59,6 +59,7 @@ public class SecurityConfig {
         "/api/user/add",         // 用户添加
         "/api/file/**",          // 临时公开
         "/api/**",
+        "/agent/**",
         // 公开信息接口
         "/api/user/{id}",        // 用户信息查询（公开）
         

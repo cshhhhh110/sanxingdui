@@ -55,14 +55,17 @@ public class AgentToolRegistry {
         register(new ToolDefinition("get_current_datetime", "查询当前北京时间和日期，无参数", RiskLevel.SAFE));
         register(new ToolDefinition(
                 "control_trail",
-                "控制时空展线；action可选open_artifact/select_pit/go_scene_one/go_artifact_list/open_stage/open_guide/focus_graph/start_quiz。文物映射：金面具=HI-2025-002，纵目面具=HI-2025-003，金杖=HI-2025-004，大立人=HI-2025-005，神树=HI-2025-006。open_artifact需artifact_id，select_pit需pit_code，focus_graph可选graph_target",
+                "Control spacetime trail. action enum: open_artifact, select_pit, go_scene_one, go_artifact_list, open_stage, open_guide, focus_graph, start_quiz. Artifact mapping: golden mask=HI-2025-002, bronze eye mask=HI-2025-003, golden staff=HI-2025-004, standing figure=HI-2025-005, bronze tree=HI-2025-006. open_artifact requires artifact_id. select_pit requires pit_code. focus_graph may include graph_target.",
                 RiskLevel.SAFE
         ));
-        register(new ToolDefinition("view_profile", "打开已登录用户的个人中心，无参数", RiskLevel.SAFE));
     }
 
     public boolean isEnabled(String toolName) {
         return enabledTools.containsKey(toolName);
+    }
+
+    public Map<String, ToolDefinition> getEnabledTools() {
+        return new LinkedHashMap<>(enabledTools);
     }
 
     public String buildPromptToolList() {
@@ -72,9 +75,9 @@ public class AgentToolRegistry {
             prompt.append(index++)
                     .append(". ")
                     .append(tool.name())
-                    .append("：")
+                    .append(": ")
                     .append(tool.description())
-                    .append("。风险级别=")
+                    .append(" Risk=")
                     .append(tool.riskLevel())
                     .append('\n');
         }

@@ -17,6 +17,13 @@ class AgentOrchestrator {
         context: routingContext
       })
       const route = normalizeAgentRoute(decision?.route)
+      const traceFields = {
+        route,
+        arguments: decision?.arguments || {},
+        attachmentContext: decision?.attachmentContext || '',
+        confidence: decision?.confidence,
+        reason: decision?.reason
+      }
 
       if (route === AgentRoute.TOOL_CALL) {
         const execution = await mcpClient.executeTool(
@@ -26,42 +33,38 @@ class AgentOrchestrator {
         )
         return {
           ...execution,
-          route,
-          handled: true,
-          confidence: decision.confidence,
-          reason: decision.reason
+          ...traceFields,
+          tool: decision.tool,
+          handled: true
         }
       }
 
       if (route === AgentRoute.UNSUPPORTED) {
         return {
-          route,
+          ...traceFields,
           handled: false,  // 改为false，让请求继续发送到AI处理附件
           success: true,
           message: decision.message || '',
-          requiredCapability: decision.requiredCapability,
-          confidence: decision.confidence,
-          reason: decision.reason
+          requiredCapability: decision.requiredCapability
         }
       }
 
       return {
-        route,
+        ...traceFields,
         handled: false,
         success: true,
-        message: decision?.message || '',
-        attachmentContext: decision?.attachmentContext || '',
-        confidence: decision?.confidence,
-        reason: decision?.reason
+        message: decision?.message || ''
       }
     } catch (error) {
-      console.warn('[Agent] 路由失败，安全降级为直接回答:', error)
+      console.warn('[Agent] route failed; falling back to chat pipeline.', error)
       return {
         route: AgentRoute.DIRECT_ANSWER,
         handled: false,
         success: false,
+        message: '',
+        arguments: {},
         attachmentContext: '',
-        reason: '路由服务不可用'
+        reason: '\u8def\u7531\u670d\u52a1\u4e0d\u53ef\u7528'
       }
     }
   }
