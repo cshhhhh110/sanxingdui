@@ -756,13 +756,13 @@ export default {
           continue;
         }
 
-        if (remainder.length >= 70) {
+        if (remainder.length >= 30) {
           const preferredCut = Math.max(
-            remainder.lastIndexOf('，', 70),
-            remainder.lastIndexOf(',', 70),
-            remainder.lastIndexOf('、', 70)
+            remainder.lastIndexOf('，', 30),
+            remainder.lastIndexOf(',', 30),
+            remainder.lastIndexOf('、', 30)
           );
-          const end = preferredCut >= 30 ? preferredCut + 1 : 70;
+          const end = preferredCut >= 15 ? preferredCut + 1 : 30;
           segments.push(remainder.slice(0, end).trim());
           remainder = remainder.slice(end);
           continue;
