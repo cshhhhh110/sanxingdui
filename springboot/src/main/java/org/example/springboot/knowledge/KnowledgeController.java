@@ -12,7 +12,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
-@RequestMapping("/agent/knowledge")
+@RequestMapping({"/agent/knowledge", "/api/agent/knowledge"})
 @RequiredArgsConstructor
 public class KnowledgeController {
 

@@ -137,6 +137,7 @@ public class WebConfig implements WebMvcConfigurer {
                         "/api/file/**",          // 文件上传接口
                         "/api/common/**",        // 普通文件资源
                         // Swagger和文档相关路径
+                        "/api/agent/**",
                         "/api/swagger-ui/**",
                         "/api/swagger-resources/**",
                         "/api/v3/api-docs/**",

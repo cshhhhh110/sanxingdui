@@ -1,14 +1,37 @@
 import { defineConfig } from 'vite'
 import vue from '@vitejs/plugin-vue'
 import { resolve } from 'path'
-import { existsSync, realpathSync } from 'fs'
+import { existsSync, readFileSync, realpathSync } from 'fs'
 const serverPort=8889
 const projectRoot = resolve(__dirname)
 const nodeModulesPath = resolve(__dirname, 'node_modules')
 const nodeModulesRealPath = existsSync(nodeModulesPath) ? realpathSync(nodeModulesPath) : nodeModulesPath
 // https://vitejs.dev/config/
 export default defineConfig({
-  plugins: [vue()],
+  plugins: [
+    vue(),
+    {
+      name: 'local-history-fallback',
+      configureServer(server) {
+        server.middlewares.use((req, res, next) => {
+          const url = req.url || '/'
+          if (
+            req.method !== 'GET' ||
+            url.startsWith('/api') ||
+            url.startsWith('/files') ||
+            url.startsWith('/@') ||
+            url.includes('.')
+          ) {
+            next()
+            return
+          }
+
+          res.setHeader('Content-Type', 'text/html; charset=utf-8')
+          res.end(readFileSync(resolve(__dirname, 'index.html'), 'utf-8'))
+        })
+      }
+    }
+  ],
   resolve: {
     alias: {
       '@': resolve(__dirname, 'src'),

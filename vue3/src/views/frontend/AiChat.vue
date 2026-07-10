@@ -128,6 +128,45 @@
                   </li>
                 </ul>
               </details>
+              <details v-if="messageItem.agentTrace" class="message-agent-trace">
+                <summary class="agent-trace-title">
+                  <span>
+                    <i class="fas fa-route"></i>
+                    执行信息
+                  </span>
+                  <small>{{ messageItem.agentTrace.route || 'UNKNOWN' }}</small>
+                </summary>
+                <dl>
+                  <div>
+                    <dt>路由</dt>
+                    <dd>{{ messageItem.agentTrace.route || '-' }}</dd>
+                  </div>
+                  <div v-if="messageItem.agentTrace.tool">
+                    <dt>工具</dt>
+                    <dd>{{ messageItem.agentTrace.tool }}</dd>
+                  </div>
+                  <div v-if="messageItem.agentTrace.confidence">
+                    <dt>置信度</dt>
+                    <dd>{{ Math.round(messageItem.agentTrace.confidence * 100) }}%</dd>
+                  </div>
+                  <div v-if="messageItem.agentTrace.success !== undefined">
+                    <dt>结果</dt>
+                    <dd>{{ messageItem.agentTrace.success ? '成功' : '失败' }}</dd>
+                  </div>
+                  <div v-if="formatAgentTraceArguments(messageItem.agentTrace)">
+                    <dt>参数</dt>
+                    <dd>{{ formatAgentTraceArguments(messageItem.agentTrace) }}</dd>
+                  </div>
+                  <div v-if="messageItem.agentTrace.referenceCount">
+                    <dt>资料</dt>
+                    <dd>{{ messageItem.agentTrace.referenceCount }} 条</dd>
+                  </div>
+                  <div v-if="messageItem.agentTrace.reason">
+                    <dt>原因</dt>
+                    <dd>{{ messageItem.agentTrace.reason }}</dd>
+                  </div>
+                </dl>
+              </details>
               <div v-if="messageItem.attachments?.length" class="message-attachments">
                 <div
                   v-for="attachment in messageItem.attachments"
@@ -284,6 +323,7 @@ import { createSession as createSessionApi, getChatStreamUrl, transcribeSpeechIn
 import { uploadTempFile } from '@/api/FileApi'
 import { matchFixedAnswer } from '@/config/chatReplyConfig'
 import { buildRagPrompt, searchKnowledge } from '@/utils/knowledgeSearch'
+import { AgentRoute, agentOrchestrator } from '@/agent'
 import { createBrowserSpeechRecognition } from '@/utils/browserSpeech'
 import { formatYearRange } from '@/data/competitionArtifacts'
 import { competitionActionLabels } from '@/data/competitionUi'
@@ -334,6 +374,28 @@ const HERITAGE_KNOWLEDGE_KEYWORDS = [
   '文化遗产'
 ]
 const RAG_BLOCKED_MEDIA_TYPES = new Set(['IMAGE', 'AUDIO', 'VIDEO'])
+const HERITAGE_KNOWLEDGE_KEYWORDS_NORMALIZED = [
+  '三星堆',
+  '金沙',
+  '文物',
+  '遗址',
+  '考古',
+  '青铜',
+  '金器',
+  '金面具',
+  '祭祀坑',
+  '神树',
+  '面具',
+  '大立人',
+  '金杖',
+  '古蜀',
+  '展陈',
+  '博物馆',
+  '文明',
+  '纹饰',
+  '器物',
+  '文化遗产'
+]
 const MIN_REFERENCE_SCORE = 0
 
 const quickCards = [
@@ -684,6 +746,51 @@ function updateAssistantReferencesById(messageId, docs = []) {
   scrollToBottom()
 }
 
+function updateAssistantAgentTraceById(messageId, trace = null) {
+  if (!trace) {
+    return
+  }
+  const targetMessage = messages.value.find((item) => item.id === messageId)
+  if (!targetMessage) {
+    return
+  }
+
+  targetMessage.agentTrace = {
+    ...(targetMessage.agentTrace || {}),
+    ...trace
+  }
+  scrollToBottom()
+}
+
+function buildAgentTrace(result = {}, extra = {}) {
+  if (!result?.route && !extra.route) {
+    return null
+  }
+
+  return {
+    route: result.route || extra.route || '',
+    tool: result.tool || '',
+    arguments: result.arguments || {},
+    confidence: Number(result.confidence) || 0,
+    reason: result.reason || '',
+    success: result.success,
+    handled: Boolean(result.handled),
+    referenceCount: extra.referenceCount || 0
+  }
+}
+
+function formatAgentTraceArguments(trace = {}) {
+  const args = trace.arguments || {}
+  if (!Object.keys(args).length) {
+    return ''
+  }
+  try {
+    return JSON.stringify(args)
+  } catch (error) {
+    return String(args)
+  }
+}
+
 function normalizeKnowledgeReferences(docs = []) {
   const seen = new Set()
   return docs
@@ -718,7 +825,78 @@ function shouldUseKnowledge(question, attachments = []) {
     return false
   }
 
-  return HERITAGE_KNOWLEDGE_KEYWORDS.some((keyword) => normalizedQuestion.includes(keyword.toLowerCase()))
+  return HERITAGE_KNOWLEDGE_KEYWORDS_NORMALIZED.some((keyword) => normalizedQuestion.includes(keyword.toLowerCase()))
+}
+
+function toAgentAttachment(attachment = {}) {
+  return {
+    fileId: String(attachment.fileId || attachment.id || ''),
+    fileName: attachment.fileName || attachment.originalName || '',
+    mediaType: attachment.mediaType || attachment.fileType || '',
+    size: attachment.fileSize || attachment.size || 0,
+    mimeType: attachment.mimeType || '',
+    filePath: attachment.filePath || ''
+  }
+}
+
+async function routeAiChatMessage(question, attachments = []) {
+  return agentOrchestrator.handle(question, {
+    attachments: attachments.map(toAgentAttachment),
+    routingContext: {
+      surface: 'ai_chat',
+      currentPath: route.fullPath,
+      artifactEntityId: getCurrentArtifactEntityId(),
+      artifactTitle: contextTitle.value,
+      hasAttachments: attachments.length > 0,
+      attachmentTypes: attachments.map((item) => item.mediaType || item.fileType || '')
+    },
+    toolContext: {
+      router,
+      currentArtifact: getCurrentArtifactEntityId(),
+      isAuthenticated: userStore.isLoggedIn,
+      userId: userStore.userInfo?.id || userStore.user?.id || null
+    }
+  })
+}
+
+function formatAgentExecutionMessage(result = {}) {
+  if (!result.success) {
+    return result.message || '操作执行失败，请稍后重试。'
+  }
+
+  const data = result.data || {}
+  switch (result.tool) {
+    case 'search_product':
+      return data.keyword ? `已打开文创商城，并搜索“${data.keyword}”。` : '已打开文创商城。'
+    case 'search_heritage':
+      return data.keyword ? `已进入文物页面，并搜索“${data.keyword}”。` : '已进入文物页面。'
+    case 'search_activity':
+      return data.keyword ? `已进入活动页面，并搜索“${data.keyword}”。` : '已进入活动页面。'
+    case 'navigate_to':
+      return '已为你打开对应页面。'
+    case 'view_cart':
+      return '已为你打开购物车。'
+    case 'view_orders':
+      return '已为你打开订单页面。'
+    case 'view_courses':
+      return '已为你打开课程页面。'
+    case 'view_profile':
+      return '已为你打开个人中心。'
+    case 'get_weather':
+      return data.summary || data.message || result.message || '天气信息已获取。'
+    case 'get_current_datetime':
+      return data.summary || data.message || result.message || '当前日期时间已获取。'
+    case 'control_trail':
+      return data.silent ? '已执行时空展线操作。' : (data.message || '已切换到时空展线。')
+    case 'open_artifact_detail':
+      return '已打开文物详情页。'
+    case 'play_voice_intro':
+      return '已开始播放文物语音讲解。'
+    case 'start_quiz':
+      return '已打开知识问答。'
+    default:
+      return result.message || '操作已执行。'
+  }
 }
 
 function getFileNameFromPath(path = '') {
@@ -1498,6 +1676,7 @@ async function sendMessage(presetQuestion = '') {
   let pendingReferences = []
   let userMessage = question
   let uploadedAttachments = []
+  let agentResult = null
 
   try {
     uploadedAttachments = await ensureAttachmentsUploaded(attachmentsToSend)
@@ -1508,10 +1687,56 @@ async function sendMessage(presetQuestion = '') {
     return
   }
 
-  if (shouldUseKnowledge(question, attachmentsToSend)) {
+  try {
+    agentResult = await routeAiChatMessage(question, uploadedAttachments)
+    updateAssistantAgentTraceById(assistantPlaceholderId, buildAgentTrace(agentResult))
+  } catch (error) {
+    console.warn('AI chat agent routing failed; continuing with chat fallback.', error)
+    updateAssistantAgentTraceById(assistantPlaceholderId, {
+      route: 'CHAT_FALLBACK',
+      success: false,
+      reason: 'Agent route failed; using chat fallback'
+    })
+  }
+
+  if (agentResult?.handled) {
+    isThinking.value = false
+    showThinkingBubble.value = false
+    updateAssistantMessageById(
+      assistantPlaceholderId,
+      formatAgentExecutionMessage(agentResult)
+    )
+    return
+  }
+
+  if (
+    !uploadedAttachments.length &&
+    agentResult?.route === AgentRoute.DIRECT_ANSWER &&
+    agentResult.message
+  ) {
+    await typeAssistantMessageById(assistantPlaceholderId, agentResult.message, {
+      thinkingMs: 350,
+      charDelay: 16
+    })
+    return
+  }
+
+  const shouldUseRagByAgent = agentResult?.route === AgentRoute.RAG
+  const shouldUseLegacyRagFallback = agentResult?.success === false && shouldUseKnowledge(question, attachmentsToSend)
+  const shouldAttachKnowledge = !hasRagBlockedAttachment(uploadedAttachments.length ? uploadedAttachments : attachmentsToSend) &&
+    (shouldUseRagByAgent || shouldUseLegacyRagFallback)
+
+  if (shouldAttachKnowledge) {
     try {
       docs = await searchKnowledge(question, 3)
       pendingReferences = normalizeKnowledgeReferences(docs)
+      updateAssistantAgentTraceById(
+        assistantPlaceholderId,
+        buildAgentTrace(agentResult, { referenceCount: pendingReferences.length })
+      )
+      if (docs.length) {
+        userMessage = buildPromptWithContext(question, docs)
+      }
     } catch (error) {
       console.warn('Knowledge reference lookup failed; continuing AI chat without visible references.', error)
     }
@@ -2371,6 +2596,70 @@ function getCurrentTime() {
   grid-template-columns: 24px minmax(0, 1fr);
   gap: 8px;
   align-items: start;
+}
+
+.message-agent-trace {
+  max-width: 620px;
+  padding: 9px 12px;
+  color: #51615b;
+  background: rgba(241, 246, 242, 0.62);
+  border: 1px dashed rgba(66, 102, 79, 0.24);
+  border-radius: 12px;
+}
+
+.agent-trace-title {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  color: #51615b;
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  cursor: pointer;
+  list-style: none;
+}
+
+.agent-trace-title::-webkit-details-marker {
+  display: none;
+}
+
+.agent-trace-title span {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+}
+
+.agent-trace-title small {
+  color: #7a8b83;
+  font-size: 11px;
+  letter-spacing: 0;
+}
+
+.message-agent-trace dl {
+  display: grid;
+  gap: 6px;
+  margin: 10px 0 0;
+}
+
+.message-agent-trace dl div {
+  display: grid;
+  grid-template-columns: 64px minmax(0, 1fr);
+  gap: 8px;
+}
+
+.message-agent-trace dt {
+  color: #7a8b83;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.message-agent-trace dd {
+  min-width: 0;
+  margin: 0;
+  overflow-wrap: anywhere;
+  color: #35483f;
+  font-size: 12px;
 }
 
 .reference-index {

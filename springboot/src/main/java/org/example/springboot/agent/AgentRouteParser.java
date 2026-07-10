@@ -46,7 +46,7 @@ public class AgentRouteParser {
             return AgentRouteResponseDTO.route(
                     AgentRoute.DIRECT_ANSWER,
                     0,
-                    "路由输出解析失败，安全降级为直接回答"
+                    "Router output parse failed; safely fell back to direct answer"
             );
         }
     }
@@ -56,7 +56,7 @@ public class AgentRouteParser {
         if (!toolRegistry.isEnabled(tool) || confidence < MIN_TOOL_CONFIDENCE) {
             return AgentRouteResponseDTO.unsupported(
                     confidence,
-                    "工具未开放或路由置信度不足",
+                    "Tool is disabled or route confidence is too low",
                     "tool:" + tool,
                     "这个操作目前还不能安全执行。"
             );
@@ -69,7 +69,7 @@ public class AgentRouteParser {
         if (normalized == null) {
             return AgentRouteResponseDTO.unsupported(
                     confidence,
-                    "工具参数不完整",
+                    "Tool arguments are incomplete or invalid",
                     "tool_arguments:" + tool,
                     "我还缺少执行这个操作所需的信息。"
             );

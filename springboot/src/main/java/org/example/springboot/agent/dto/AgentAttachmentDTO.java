@@ -8,16 +8,22 @@ import lombok.Data;
 @Data
 public class AgentAttachmentDTO {
 
-    @NotBlank(message = "文件标识不能为空")
-    @Size(max = 128, message = "文件标识不能超过128字")
+    @NotBlank(message = "fileId cannot be blank")
+    @Size(max = 128, message = "fileId is too long")
     private String fileId;
 
-    @Size(max = 255, message = "文件名不能超过255字")
+    @Size(max = 255, message = "fileName is too long")
     private String fileName;
 
-    @Size(max = 128, message = "文件类型不能超过128字")
+    @Size(max = 128, message = "mediaType is too long")
     private String mediaType;
 
-    @PositiveOrZero(message = "文件大小不能为负数")
+    @PositiveOrZero(message = "size cannot be negative")
     private long size;
+
+    @Size(max = 255, message = "mimeType is too long")
+    private String mimeType;
+
+    @Size(max = 500, message = "filePath is too long")
+    private String filePath;
 }

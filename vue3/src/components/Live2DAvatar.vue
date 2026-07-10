@@ -1522,11 +1522,13 @@ export default {
         };
 
         const result = await agentOrchestrator.handle(question, {
-          attachments: attachments.map(({ fileId, fileName, mediaType, fileSize }) => ({
+          attachments: attachments.map(({ fileId, fileName, mediaType, fileSize, filePath, mimeType }) => ({
             fileId: String(fileId),
             fileName,
             mediaType,
-            size: fileSize || 0
+            size: fileSize || 0,
+            filePath: filePath || '',
+            mimeType: mimeType || ''
           })),
           routingContext: {
             surface: 'floating_avatar',
