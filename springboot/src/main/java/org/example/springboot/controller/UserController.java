@@ -84,6 +84,21 @@ public class UserController {
 
 
     /**
+     * 根据ID获取用户信息（公开接口）
+     */
+    @Operation(summary = "根据ID获取用户信息")
+    @GetMapping("/{id}")
+    public Result<UserDetailResponseDTO> getUserById(
+            @Parameter(description = "用户ID") @PathVariable Long id) {
+        log.info("查询用户信息: userId={}", id);
+        UserDetailResponseDTO user = userService.getUserById(id);
+        if (user == null) {
+            return Result.error("用户不存在");
+        }
+        return Result.success(user);
+    }
+
+    /**
      * 获取当前登录用户信息
      */
     @Operation(summary = "获取当前登录用户信息")

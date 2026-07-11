@@ -290,6 +290,7 @@ import { competitionActionLabels } from '@/data/competitionUi'
 import { getSpacetimeArtifactDetail } from '@/api/SpacetimeApi'
 import aiAvatar from '@/assets/sanxingdui-ai-chat/xuanmiao-avatar.png'
 import { getRecentArtifactTrail, pushCompetitionTrail } from '@/utils/competitionTrail'
+import { agentOrchestrator } from '@/agent/AgentOrchestrator'
 
 const route = useRoute()
 const router = useRouter()
@@ -1517,6 +1518,54 @@ async function sendMessage(presetQuestion = '') {
     }
   }
 
+  // 尝试Agent工具调用
+  try {
+    console.log('[AI Chat] Calling Agent Router...', question)
+    const agentResult = await agentOrchestrator.handle(question, {
+      attachments: uploadedAttachments.map(({ fileId, fileName, mediaType, fileSize }) => ({
+        fileId: String(fileId),
+        fileName,
+        mediaType,
+        size: fileSize || 0
+      })),
+      routingContext: {
+        surface: 'ai_chat_page',
+        contextTitle: contextTitle.value,
+        artifactId: artifactContext.value?.artifactId,
+        entityId: artifactContext.value?.entityId
+      },
+      toolContext: {
+        router,
+        isAuthenticated: userStore.isLoggedIn,
+        userId: userStore.userInfo?.id || null
+      }
+    })
+
+    console.log('[AI Chat] Agent Result:', agentResult)
+
+    // 如果Agent处理了请求（工具调用成功）
+    if (agentResult.handled && agentResult.success) {
+      // 显示工具执行结果
+      const resultMessage = agentResult.message || '操作已完成'
+      console.log('[AI Chat] Agent handled successfully, showing result')
+      await typeAssistantMessageById(assistantPlaceholderId, resultMessage)
+      return
+    }
+
+    // 如果Agent处理了但失败
+    if (agentResult.handled && !agentResult.success) {
+      console.log('[AI Chat] Agent handled but failed')
+      updateAssistantMessageById(assistantPlaceholderId, agentResult.message || '操作执行失败')
+      return
+    }
+
+    // 如果Agent没有处理（handled=false），继续走AI对话流程
+    console.log('[AI Chat] Agent not handled, continuing to AI chat')
+  } catch (error) {
+    console.warn('[AI Chat] Agent routing failed, falling back to AI chat:', error)
+    // 降级：继续走AI对话流程
+  }
+
   if (!currentSessionId.value) {
     await createSession()
   }
@@ -1665,12 +1714,12 @@ function getCurrentTime() {
   position: relative;
   display: grid;
   grid-template-rows: auto auto minmax(0, 1fr);
-  gap: 14px;
+  gap: 8px;
   height: calc(100vh - 64px);
   min-height: 0;
   overflow-x: hidden;
   overflow-y: hidden;
-  padding: 18px 40px 20px;
+  padding: 12px 40px 16px;
   color: var(--ink);
   background:
     linear-gradient(180deg, rgba(255, 253, 247, 0.88), rgba(244, 240, 230, 0.88)),
@@ -1714,37 +1763,27 @@ function getCurrentTime() {
 .guide-hero {
   grid-row: 1;
   display: grid;
-  grid-template-columns: 1fr;
-  justify-items: center;
+  grid-template-columns: auto 1fr;
+  gap: 12px;
+  justify-items: start;
   align-items: center;
-  min-height: 150px;
-  padding: 24px 36px 34px;
+  min-height: 50px;
+  padding: 10px 24px;
   overflow: visible;
   background:
     radial-gradient(circle at 12% 56%, rgba(214, 189, 130, 0.2), transparent 28%),
     radial-gradient(circle at 88% 14%, rgba(66, 102, 79, 0.1), transparent 30%);
-  border-bottom: 1px solid rgba(214, 189, 130, 0.28);
+  border: 1px solid rgba(214, 189, 130, 0.38);
+  border-radius: 16px;
+  box-shadow: 0 2px 8px rgba(66, 102, 79, 0.08);
 }
 
-.guide-hero::after {
-  content: '';
-  position: absolute;
-  left: 220px;
-  right: 220px;
-  bottom: 22px;
-  height: 1px;
-  pointer-events: none;
-  background:
-    linear-gradient(90deg, transparent, rgba(214, 189, 130, 0.82), transparent);
-}
 
 .hero-avatar {
-  position: absolute;
-  left: 52px;
-  bottom: 18px;
+  position: relative;
   display: grid;
-  width: 104px;
-  height: 104px;
+  width: 50px;
+  height: 50px;
   place-items: center;
   z-index: 3;
   border: 1px solid rgba(214, 189, 130, 0.76);
@@ -1752,14 +1791,14 @@ function getCurrentTime() {
   background:
     radial-gradient(circle, rgba(255, 255, 255, 0.94) 0 46%, rgba(232, 216, 181, 0.78) 47% 58%, rgba(255, 253, 247, 0.88) 59%);
   box-shadow:
-    0 20px 48px rgba(66, 102, 79, 0.18),
-    0 0 0 12px rgba(255, 253, 248, 0.58);
+    0 8px 18px rgba(66, 102, 79, 0.18),
+    0 0 0 5px rgba(255, 253, 248, 0.58);
 }
 
 .hero-avatar::before {
   content: '';
   position: absolute;
-  inset: 10px;
+  inset: 6px;
   border: 1px dashed rgba(66, 102, 79, 0.32);
   border-radius: 50%;
 }
@@ -1767,7 +1806,7 @@ function getCurrentTime() {
 .hero-avatar::after {
   content: '';
   position: absolute;
-  inset: -9px;
+  inset: -6px;
   border-radius: 50%;
   border: 1px solid rgba(214, 189, 130, 0.28);
 }
@@ -1775,8 +1814,8 @@ function getCurrentTime() {
 .hero-avatar img {
   position: relative;
   z-index: 1;
-  width: 68px;
-  height: 68px;
+  width: 32px;
+  height: 32px;
   object-fit: cover;
   border-radius: 50%;
 }
@@ -1784,64 +1823,24 @@ function getCurrentTime() {
 .hero-copy {
   position: relative;
   min-width: 0;
-  width: min(860px, calc(100% - 360px));
-  text-align: center;
+  width: 100%;
+  text-align: left;
 }
 
 .hero-kicker {
   position: relative;
   display: inline-flex;
   align-items: center;
-  gap: 16px;
+  gap: 8px;
   margin: 0;
   color: var(--primary);
-  font-size: clamp(22px, 2.2vw, 34px);
+  font-size: clamp(14px, 1.5vw, 20px);
   font-weight: 800;
   letter-spacing: 0.18em;
   text-shadow: 0 8px 20px rgba(66, 102, 79, 0.12);
 }
 
-.hero-kicker::before {
-  content: '';
-  width: 86px;
-  height: 14px;
-  background:
-    linear-gradient(90deg, transparent, rgba(214, 189, 130, 0.82)),
-    radial-gradient(circle at right, rgba(214, 189, 130, 0.95) 0 3px, transparent 4px);
-  mask: linear-gradient(#000 0 0) center / 100% 1px no-repeat,
-    radial-gradient(ellipse at center, #000 0 52%, transparent 54%) right / 20px 14px no-repeat;
-}
 
-.hero-kicker::after {
-  content: '';
-  width: 86px;
-  height: 14px;
-  background:
-    linear-gradient(90deg, rgba(214, 189, 130, 0.82), transparent),
-    radial-gradient(circle at left, rgba(214, 189, 130, 0.95) 0 3px, transparent 4px);
-  mask: linear-gradient(#000 0 0) center / 100% 1px no-repeat,
-    radial-gradient(ellipse at center, #000 0 52%, transparent 54%) left / 20px 14px no-repeat;
-}
-
-.hero-copy::before,
-.hero-copy::after {
-  content: '';
-  position: absolute;
-  top: 50%;
-  width: 12px;
-  height: 12px;
-  border: 2px solid rgba(214, 189, 130, 0.8);
-  border-radius: 999px;
-  transform: translateY(-50%);
-}
-
-.hero-copy::before {
-  left: calc(50% - 170px);
-}
-
-.hero-copy::after {
-  right: calc(50% - 170px);
-}
 
 .context-kicker {
   margin: 0 0 6px;
@@ -1931,16 +1930,16 @@ function getCurrentTime() {
   display: grid;
   grid-template-columns: minmax(0, 1.1fr) minmax(280px, 0.9fr) auto;
   gap: 18px;
-  max-height: 118px;
+  max-height: 110px;
   margin: 0 auto;
-  padding: 14px 18px;
+  padding: 12px 16px;
   overflow-y: auto;
   background:
     linear-gradient(135deg, rgba(255, 253, 248, 0.92), rgba(245, 241, 232, 0.86)),
     radial-gradient(circle at top right, rgba(214, 189, 130, 0.18), transparent 26%);
   border: 1px solid rgba(214, 189, 130, 0.48);
-  border-radius: 26px;
-  box-shadow: 0 22px 50px rgba(66, 102, 79, 0.1);
+  border-radius: 20px;
+  box-shadow: 0 12px 30px rgba(66, 102, 79, 0.1);
 }
 
 .context-copy h2 {
@@ -2021,26 +2020,26 @@ function getCurrentTime() {
   height: 100%;
   min-height: 0;
   margin-top: 0;
-  padding: 24px 28px 24px 58px;
+  padding: 20px 24px 20px 52px;
   overflow: hidden;
   background: rgba(255, 253, 248, 0.9);
   border: 1px solid rgba(214, 189, 130, 0.58);
-  border-radius: 30px;
+  border-radius: 24px;
   box-shadow:
-    0 28px 70px rgba(66, 102, 79, 0.12),
+    0 16px 40px rgba(66, 102, 79, 0.12),
     inset 0 0 0 1px rgba(255, 255, 255, 0.62);
 }
 
 .quick-panel {
   position: absolute;
-  top: 38px;
-  left: 18px;
+  top: 20px;
+  left: 12px;
   z-index: 8;
   display: grid;
   grid-template-columns: 1fr;
   align-content: start;
-  gap: 12px;
-  width: 72px;
+  gap: 10px;
+  width: 60px;
   min-width: 0;
   height: auto;
   min-height: 0;
@@ -2061,52 +2060,53 @@ function getCurrentTime() {
   top: 0;
   left: 0;
   display: grid;
-  width: 52px;
-  height: 68px;
+  width: 48px;
+  height: 60px;
   place-items: center;
   color: #fff;
   pointer-events: none;
   background: linear-gradient(135deg, #42664f, #2d5140);
   border: 1px solid rgba(66, 102, 79, 0.7);
   border-radius: 0 16px 16px 0;
-  box-shadow: 0 12px 22px rgba(66, 102, 79, 0.18);
+  box-shadow: 0 8px 16px rgba(66, 102, 79, 0.18);
 }
 
 .quick-panel-tab i {
-  font-size: 17px;
+  font-size: 16px;
 }
 
 .quick-card {
   display: grid;
-  grid-template-columns: 38px minmax(0, 1fr);
-  gap: 11px;
+  grid-template-columns: 34px minmax(0, 1fr);
+  gap: 10px;
   align-items: center;
-  width: 238px;
-  min-height: 70px;
+  width: 220px;
+  min-height: 64px;
   margin-left: 0;
-  padding: 11px 12px;
+  padding: 10px 11px;
   color: var(--primary);
   text-align: left;
   cursor: pointer;
-  background: rgba(255, 253, 248, 0.9);
+  background: rgba(255, 253, 248, 0.95);
   border: 1px solid rgba(214, 189, 130, 0.46);
-  border-radius: 15px;
+  border-radius: 14px;
   opacity: 0;
   pointer-events: none;
-  transform: translateX(-260px);
+  transform: translateX(-240px);
   transition:
     opacity 0.2s ease,
     transform 0.28s cubic-bezier(0.2, 0.8, 0.2, 1),
     background 0.18s ease,
     border-color 0.18s ease,
     box-shadow 0.18s ease;
+  box-shadow: 0 4px 12px rgba(66, 102, 79, 0.12);
 }
 
 .quick-panel:hover .quick-card,
 .quick-panel:focus-within .quick-card {
   opacity: 1;
   pointer-events: auto;
-  transform: translateX(60px);
+  transform: translateX(56px);
 }
 
 .quick-panel:hover .quick-card:nth-of-type(1),
@@ -2134,16 +2134,16 @@ function getCurrentTime() {
   color: #fff;
   background: linear-gradient(135deg, #42664f, #2d5140);
   border-color: rgba(66, 102, 79, 0.7);
-  box-shadow: 0 14px 26px rgba(66, 102, 79, 0.18);
+  box-shadow: 0 8px 20px rgba(66, 102, 79, 0.24);
 }
 
 .quick-icon {
   display: grid;
-  width: 38px;
-  height: 38px;
+  width: 34px;
+  height: 34px;
   place-items: center;
   color: currentColor;
-  font-size: 19px;
+  font-size: 16px;
   background: rgba(66, 102, 79, 0.1);
   border-radius: 50%;
 }
@@ -2155,21 +2155,21 @@ function getCurrentTime() {
 
 .quick-text {
   display: grid;
-  gap: 4px;
+  gap: 3px;
   min-width: 0;
 }
 
 .quick-text strong {
   display: block;
-  font-size: 15px;
-  line-height: 1.25;
+  font-size: 14px;
+  line-height: 1.3;
   white-space: nowrap;
 }
 
 .quick-text small {
   display: block;
   color: rgba(31, 51, 44, 0.68);
-  font-size: 12.5px;
+  font-size: 12px;
   line-height: 1.35;
   white-space: normal;
   overflow-wrap: anywhere;
@@ -2187,7 +2187,7 @@ function getCurrentTime() {
   height: 100%;
   min-height: 0;
   overflow: hidden;
-  padding: 6px 0 0;
+  padding: 6px 6px 0;
 }
 
 .message-scroll {
@@ -2196,9 +2196,9 @@ function getCurrentTime() {
   height: 100%;
   max-height: none;
   flex-direction: column;
-  gap: 22px;
+  gap: 18px;
   overflow-y: auto;
-  padding: 12px;
+  padding: 10px;
   scroll-behavior: smooth;
 }
 
@@ -2213,7 +2213,7 @@ function getCurrentTime() {
 
 .message-row {
   display: flex;
-  gap: 14px;
+  gap: 12px;
   align-items: flex-start;
 }
 
@@ -2227,15 +2227,15 @@ function getCurrentTime() {
 }
 
 .message-row--thinking {
-  padding-left: 56px;
+  padding-left: 48px;
 }
 
 .message-avatar,
 .user-avatar {
   display: grid;
-  flex: 0 0 42px;
-  width: 42px;
-  height: 42px;
+  flex: 0 0 36px;
+  width: 36px;
+  height: 36px;
   place-items: center;
   overflow: hidden;
   border-radius: 50%;
@@ -2244,12 +2244,12 @@ function getCurrentTime() {
 .message-avatar {
   background: #f7efdf;
   border: 1px solid rgba(214, 189, 130, 0.78);
-  box-shadow: 0 8px 18px rgba(66, 102, 79, 0.12);
+  box-shadow: 0 4px 12px rgba(66, 102, 79, 0.12);
 }
 
 .message-avatar img {
-  width: 34px;
-  height: 34px;
+  width: 28px;
+  height: 28px;
   object-fit: cover;
   border-radius: 50%;
 }
@@ -2276,24 +2276,24 @@ function getCurrentTime() {
 }
 
 .message-bubble {
-  padding: 17px 20px;
+  padding: 14px 16px;
   color: var(--ink);
-  font-size: 16px;
-  line-height: 1.85;
+  font-size: 14px;
+  line-height: 1.75;
   background: rgba(248, 249, 244, 0.94);
   border: 1px solid rgba(66, 102, 79, 0.12);
-  border-radius: 18px;
-  box-shadow: 0 10px 24px rgba(66, 102, 79, 0.08);
+  border-radius: 16px;
+  box-shadow: 0 6px 16px rgba(66, 102, 79, 0.08);
 }
 
 .message-row--assistant .message-bubble {
-  border-top-left-radius: 6px;
+  border-top-left-radius: 4px;
   background: linear-gradient(180deg, rgba(249, 249, 244, 0.96), rgba(238, 246, 240, 0.82));
 }
 
 .message-row--user .message-bubble {
   color: #244337;
-  border-top-right-radius: 6px;
+  border-top-right-radius: 4px;
   background: #e9f4ec;
   border-color: rgba(66, 102, 79, 0.18);
 }
@@ -2545,42 +2545,49 @@ function getCurrentTime() {
 .suggestion-row {
   display: flex;
   flex-wrap: wrap;
-  gap: 14px;
-  padding: 10px 12px 12px;
+  gap: 10px;
+  padding: 8px 12px 10px;
 }
 
 .suggestion-pill {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 10px;
-  min-height: 42px;
-  padding: 0 18px;
+  gap: 8px;
+  min-height: 34px;
+  padding: 0 14px;
   color: var(--primary);
-  font-size: 15px;
+  font-size: 13px;
   font-weight: 700;
   cursor: pointer;
   background: rgba(255, 253, 248, 0.9);
   border: 1px solid rgba(214, 189, 130, 0.72);
   border-radius: 999px;
+  transition: all 0.2s ease;
 }
 
 .suggestion-pill:hover {
   color: var(--primary-dark);
   background: #edf4ef;
   border-color: rgba(66, 102, 79, 0.42);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(66, 102, 79, 0.12);
+}
+
+.suggestion-pill i {
+  font-size: 12px;
 }
 
 .composer {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 54px 54px 154px;
-  gap: 14px;
+  grid-template-columns: minmax(0, 1fr) 44px 44px 120px;
+  gap: 10px;
   align-items: stretch;
-  padding: 16px;
+  padding: 12px;
   background: rgba(255, 253, 248, 0.96);
   border: 1px solid rgba(214, 189, 130, 0.68);
-  border-radius: 20px;
-  box-shadow: 0 14px 34px rgba(66, 102, 79, 0.1);
+  border-radius: 16px;
+  box-shadow: 0 8px 20px rgba(66, 102, 79, 0.1);
 }
 
 .file-input {
@@ -2590,23 +2597,24 @@ function getCurrentTime() {
 .input-wrap {
   display: grid;
   align-items: center;
-  min-height: 62px;
+  min-height: 44px;
   overflow: hidden;
   background: rgba(255, 255, 255, 0.82);
   border: 1px solid rgba(66, 102, 79, 0.2);
-  border-radius: 15px;
+  border-radius: 12px;
 }
 
 .input-wrap textarea {
   width: 100%;
-  min-height: 62px;
-  max-height: 120px;
-  padding: 20px 20px 16px 24px;
+  min-height: 44px;
+  max-height: 100px;
+  padding: 12px 16px;
   resize: none;
   overflow-y: auto;
   color: var(--ink);
   font: inherit;
-  line-height: 1.55;
+  font-size: 14px;
+  line-height: 1.5;
   background: transparent;
   border: 0;
   outline: none;
@@ -2614,27 +2622,29 @@ function getCurrentTime() {
 
 .input-wrap textarea::placeholder {
   color: #a2aca7;
+  font-size: 13px;
 }
 
 .send-button {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 10px;
-  min-height: 62px;
+  gap: 8px;
+  min-height: 44px;
   color: #fff;
-  font-size: 18px;
+  font-size: 14px;
   font-weight: 800;
   cursor: pointer;
   background: linear-gradient(135deg, #42664f, #2d5140);
   border: 0;
-  border-radius: 15px;
-  box-shadow: 0 14px 24px rgba(66, 102, 79, 0.22);
-  transition: opacity 0.2s ease;
+  border-radius: 12px;
+  box-shadow: 0 8px 16px rgba(66, 102, 79, 0.22);
+  transition: all 0.2s ease;
 }
 
 .send-button:hover:not(:disabled) {
-  box-shadow: 0 18px 28px rgba(66, 102, 79, 0.28);
+  transform: translateY(-1px);
+  box-shadow: 0 12px 24px rgba(66, 102, 79, 0.28);
 }
 
 .send-button:disabled {
@@ -2642,18 +2652,24 @@ function getCurrentTime() {
   opacity: 0.55;
 }
 
+.send-button i {
+  font-size: 14px;
+}
+
 .attach-button,
 .voice-button {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-width: 54px;
+  min-width: 44px;
+  font-size: 16px;
   color: #42664f;
+  cursor: pointer;
   background: rgba(233, 242, 235, 0.95);
   border: 1px solid rgba(66, 102, 79, 0.2);
-  border-radius: 15px;
-  box-shadow: 0 12px 22px rgba(66, 102, 79, 0.09);
-  transition: transform 0.18s ease, background 0.18s ease, border-color 0.18s ease, box-shadow 0.18s ease;
+  border-radius: 12px;
+  box-shadow: 0 6px 14px rgba(66, 102, 79, 0.09);
+  transition: all 0.18s ease;
 }
 
 .attach-button:hover:not(:disabled),
@@ -2661,14 +2677,14 @@ function getCurrentTime() {
   transform: translateY(-1px);
   background: #e0efe5;
   border-color: rgba(66, 102, 79, 0.32);
-  box-shadow: 0 16px 26px rgba(66, 102, 79, 0.14);
+  box-shadow: 0 8px 18px rgba(66, 102, 79, 0.14);
 }
 
 .voice-button--active {
   color: #fff;
   background: linear-gradient(135deg, #42664f, #2d5140);
   border-color: transparent;
-  box-shadow: 0 16px 26px rgba(66, 102, 79, 0.24);
+  box-shadow: 0 8px 18px rgba(66, 102, 79, 0.24);
 }
 
 .attach-button:disabled,

@@ -36,9 +36,9 @@ class AgentOrchestrator {
       if (route === AgentRoute.UNSUPPORTED) {
         return {
           route,
-          handled: true,
-          success: false,
-          message: decision.message || '当前暂不支持这项能力。',
+          handled: false,  // 改为false，让请求继续发送到AI处理附件
+          success: true,
+          message: decision.message || '',
           requiredCapability: decision.requiredCapability,
           confidence: decision.confidence,
           reason: decision.reason

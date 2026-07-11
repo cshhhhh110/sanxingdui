@@ -988,6 +988,43 @@ const logoutTool = new MCPTool({
   }
 })
 
+// 获取用户位置工具
+const getUserLocationTool = new MCPTool({
+  name: 'get_user_location',
+  description: '获取用户当前位置（城市名称），用于天气查询等需要位置信息的场景',
+  category: MCP_TOOL_CATEGORIES.UTILITY,
+  requireAuth: false,
+  inputSchema: {
+    type: 'object',
+    properties: {}
+  },
+  handler: async () => {
+    // 优先使用IP定位（无需浏览器权限，无需API Key）
+    try {
+      const response = await fetch('https://ip.useragentinfo.com/json', {
+        timeout: 3000
+      })
+      const data = await response.json()
+
+      if (data && data.city) {
+        return {
+          city: data.city || data.province || '成都',
+          province: data.province,
+          message: `已获取您的位置：${data.city || data.province}`
+        }
+      }
+    } catch (error) {
+      console.warn('IP定位失败，使用默认城市', error)
+    }
+
+    // 降级：使用默认城市
+    return {
+      city: '成都',
+      message: '无法获取位置信息，默认使用成都（项目所在地）'
+    }
+  }
+})
+
 // 导出所有工具
 export const MCP_TOOLS = {
   navigate_to: navigateTool,
@@ -1012,6 +1049,7 @@ export const MCP_TOOLS = {
   // 其他
   search_activity: searchActivityTool,
   view_courses: viewCoursesTool,
+  get_user_location: getUserLocationTool,
   get_weather: getWeatherTool,
   get_current_datetime: getCurrentDateTimeTool,
   control_trail: controlTrailTool,

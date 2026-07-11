@@ -31,8 +31,9 @@ public class AgentRouterService {
             - 复合指令必须选择能完成最终目标的最具体工具：用户同时要求“打开/进入商城”和“搜索某个商品”时，必须选择search_product，由该工具完成跳转和筛选；不得只选择navigate_to。
             - 只有用户单纯要求打开商城、没有搜索词和商品目标时，才选择navigate_to并设置destination=shop。
             - 只有用户明确要求打开页面、播放介绍、开始答题或搜索内容时才选择工具；纯知识问题继续选择RAG或DIRECT_ANSWER。
-            - 已开放工具能够完成的实时请求必须选择TOOL_CALL；查询城市天气选择get_weather，并从用户问题提取city。
-            - 查询今天日期、星期或当前时间选择get_current_datetime。
+            - 已开放工具能够完成的实时请求必须选择TOOL_CALL。
+            - 天气查询流程：如果用户指定了城市，直接调用get_weather(city=城市名)；如果用户未指定城市（如"今天天气怎么样"），先调用get_user_location（无参数）获取位置，后续会自动调用get_weather。
+            - 查询今天日期、星期或当前时间选择get_current_datetime（无参数）。
             - 用户要求在时空展线中定位文物、祭祀坑、场景、3D现场、讲解或图谱节点时选择control_trail，不要用本地关键词猜测。
             - control_trail动作必须按语义选择：看具体文物=open_artifact，回地图/第一幕=go_scene_one，回文物列表=go_artifact_list，打开3D/展品现场=open_stage，继续讲解=open_guide，查看关系图谱=focus_graph。
             - 新闻、物流等没有对应工具的实时问题选择UNSUPPORTED，requiredCapability填写对应能力。

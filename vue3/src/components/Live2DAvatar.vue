@@ -86,7 +86,7 @@
             ref="dialogAttachmentInput"
             class="dialog-attachment-input"
             type="file"
-            accept=".txt,.md,.csv,.json"
+            accept="image/*,audio/*,video/*,.pdf,.doc,.docx,.txt,.md,.csv,.json"
             @change="handleAttachmentSelection"
         />
         <div class="dialog-footer">
@@ -94,7 +94,7 @@
               class="dialog-btn dialog-btn-attachment"
               type="button"
               :disabled="trailCommandPending || isUploadingAttachment || pendingAttachments.length >= 3"
-              :title="isUploadingAttachment ? '附件解析中' : '上传 txt、md、csv 或 json 文本文档'"
+              :title="isUploadingAttachment ? '附件解析中' : '上传图片、音频、视频、文档等文件'"
               @click="$refs.dialogAttachmentInput?.click()"
           >
             <i :class="isUploadingAttachment ? 'fas fa-spinner fa-spin' : 'fas fa-paperclip'"></i>
@@ -157,6 +157,13 @@ export default {
       ragAbortController: null,
       pendingAgentRoute: AgentRoute.DIRECT_ANSWER,
       pendingAttachmentContext: '',
+
+      // 智能化增强相关
+      currentRoute: null,
+      lastVisitedArtifact: null,
+      hasGreetedOnRoute: false,
+      greetingTimer: null,
+      greetedPages: new Set(), // 记录已问候过的页面
 
       // 杈撳叆瀵硅瘽妗?
       showInputDialog: false,
@@ -286,9 +293,198 @@ export default {
     window.visualViewport?.addEventListener('resize', this.applyAvatarPosition);
     window.visualViewport?.addEventListener('scroll', this.applyAvatarPosition);
     this.initMcpListeners();
+
+    // 智能化增强：监听路由变化
+    this.setupRouteWatcher();
   },
 
   methods: {
+    // ========== 智能化增强方法 ==========
+    setupRouteWatcher() {
+      // 监听路由变化
+      this.$watch(
+        () => this.$route.path + this.$route.query.entityId,
+        (newVal, oldVal) => {
+          if (newVal !== oldVal) {
+            this.onRouteChange();
+          }
+        },
+        { immediate: true }
+      );
+    },
+
+    onRouteChange() {
+      const route = this.$route;
+      this.currentRoute = route.path;
+      this.hasGreetedOnRoute = false;
+
+      // 清除之前的定时器
+      if (this.greetingTimer) {
+        clearTimeout(this.greetingTimer);
+        this.greetingTimer = null;
+      }
+
+      // 停止当前播放，避免出现无文字气泡
+      this.stopAudio();
+      this.clearAllTimers();
+      this.cancelSpeechQueue();
+
+      // 清空气泡内容，避免显示上一轮对话
+      this.displayedText = '';
+      this.fullTextToSpeak = '';
+      this.isSpeaking = false;
+      this.isStopped = false;
+
+      const bubbleEl = document.getElementById('ai-bubble');
+      if (bubbleEl) {
+        bubbleEl.style.display = 'none';
+        bubbleEl.classList.remove('speaking');
+      }
+
+      // 立即触发主动问候
+      this.greetingTimer = setTimeout(() => {
+        this.contextualGreeting();
+      }, 100);
+    },
+
+    contextualGreeting() {
+      const route = this.$route;
+      const path = route.path;
+      const entityId = route.query.entityId;
+
+      // 生成页面唯一标识
+      let pageKey = '';
+
+      // 特殊处理：文物详情页（包含 /heritage/HI- 这样的路径）
+      if (path.includes('/heritage/') && /\/heritage\/[A-Z]+-\d+-\d+/.test(path)) {
+        pageKey = 'heritage-detail';
+      }
+      // 文物列表页（只匹配 /heritage，不包含详情ID）
+      else if (path === '/heritage' || (path.includes('/heritage') && !path.includes('/heritage/'))) {
+        pageKey = 'heritage-list';
+      }
+      // 其他页面使用路径的第一段作为key
+      else {
+        const pathSegments = path.split('/').filter(s => s);
+        pageKey = pathSegments[0] || 'home';
+      }
+
+      // 如果这个页面已经问候过，则跳过
+      if (this.greetedPages.has(pageKey)) {
+        return;
+      }
+
+      // 主动问候配置
+      const pageGreetings = {
+        'heritage-detail': '这件文物很有意思！有什么想深入了解的可以直接问我~',
+        'heritage-list': '正在浏览文物列表呢，想深入了解哪件文物可以告诉我~',
+        'tanmi': '我看到你在浏览时空探索，要不要听我讲讲三星堆的发掘故事？',
+        '3dlist': '这几件文物都是国宝级的！点击任意一件，我可以带你深入了解~',
+        'ai-chat': '有什么想了解的尽管问我，我还能看图识物哦！',
+        'shop': '看到喜欢的文创可以告诉我，我能帮你快速下单哦！',
+        'trail': '时空展线已经准备好了，想看哪件文物直接说给我听！'
+      };
+
+      const greetingText = pageGreetings[pageKey];
+
+      // 如果有entityId，说明用户在查看具体文物，记录上下文
+      if (entityId) {
+        this.lastVisitedArtifact = {
+          entityId: entityId,
+          timestamp: Date.now()
+        };
+      }
+
+      // 如果有问候语
+      if (greetingText) {
+        // 标记这个页面已问候
+        this.greetedPages.add(pageKey);
+        this.hasGreetedOnRoute = true;
+
+        // 自动打开面板
+        if (!this.isPanelOpen) {
+          this.isPanelOpen = true;
+          this.syncWidgetVisibility();
+          this.userInteracted = true;
+          this.hasPlayedWelcome = true; // 跳过欢迎语，直接说上下文问候
+          void this.ensureChatSession();
+        }
+
+        // 确保DOM完全渲染后再播放
+        this.$nextTick(() => {
+          setTimeout(() => {
+            if (!this.isSpeaking && !this.isDestroyed) {
+              // 直接开始打字和语音播放，不预先设置文字
+              this.startTypewriterAndSpeech(greetingText, {
+                playDelayMs: 0,
+                charDelay: 50,
+                thinkingIntervalMs: 0
+              });
+            }
+          }, 50);
+        });
+      }
+    },
+
+    getArtifactContextPrompt() {
+      // 为AI对话提供上下文
+      if (!this.lastVisitedArtifact) {
+        return '';
+      }
+
+      const timeSinceVisit = Date.now() - this.lastVisitedArtifact.timestamp;
+      // 如果是最近5分钟内访问的
+      if (timeSinceVisit < 5 * 60 * 1000) {
+        return `\n\n[上下文]用户刚浏览了文物ID: ${this.lastVisitedArtifact.entityId}，回答时可以关联讲解。`;
+      }
+      return '';
+    },
+
+    triggerLive2DExpression(artifactName) {
+      // 表情动作联动配置
+      const emotionMap = {
+        '青铜神树': 'surprised',
+        '黄金面具': 'happy',
+        '金面具': 'happy',
+        '纵目面具': 'curious',
+        '太阳神鸟': 'happy',
+        '大立人': 'surprised'
+      };
+
+      // 检查是否有匹配的表情
+      for (const [keyword, emotion] of Object.entries(emotionMap)) {
+        if (artifactName && artifactName.includes(keyword)) {
+          // 触发Live2D动作（这里可以根据实际Live2D库的API调整）
+          this.triggerLive2DMotion(emotion);
+          break;
+        }
+      }
+    },
+
+    triggerLive2DMotion(emotion) {
+      // 触发Live2D模型的动作
+      // 注意：这需要根据实际使用的Live2D模型和库来调整
+      if (window.L2Dwidget && this.live2dCanvas) {
+        try {
+          // 不同情绪对应不同的动作索引
+          const motionMap = {
+            'surprised': 2,
+            'happy': 1,
+            'curious': 3
+          };
+
+          const motionIndex = motionMap[emotion] || 0;
+
+          // 尝试触发动作（具体API可能需要调整）
+          if (window.LIVE2D_HIJIKI) {
+            window.LIVE2D_HIJIKI.startRandomMotion('tap_body');
+          }
+        } catch (error) {
+          console.warn('Live2D动作触发失败:', error);
+        }
+      }
+    },
+
     async searchProductsByCategory(categoryName) {
       try {
         const categories = await getEnabledCategories();
@@ -675,6 +871,11 @@ export default {
       clearInterval(this.thinkingInterval);
       this.thinkingInterval = null;
 
+      // 如果 intervalMs 为 0，则不显示思考状态
+      if (intervalMs === 0) {
+        return;
+      }
+
       if (immediate) {
         this.displayedText = this.getThinkingPhrase();
         this.checkScrollBar();
@@ -756,13 +957,13 @@ export default {
           continue;
         }
 
-        if (remainder.length >= 70) {
+        if (remainder.length >= 30) {
           const preferredCut = Math.max(
-            remainder.lastIndexOf('，', 70),
-            remainder.lastIndexOf(',', 70),
-            remainder.lastIndexOf('、', 70)
+            remainder.lastIndexOf('，', 30),
+            remainder.lastIndexOf(',', 30),
+            remainder.lastIndexOf('、', 30)
           );
-          const end = preferredCut >= 30 ? preferredCut + 1 : 70;
+          const end = preferredCut >= 15 ? preferredCut + 1 : 30;
           segments.push(remainder.slice(0, end).trim());
           remainder = remainder.slice(end);
           continue;
@@ -784,24 +985,32 @@ export default {
       const generation = this.speechQueueGeneration;
       const controller = new AbortController();
       this.speechQueueControllers.push(controller);
+
+      // 添加5秒超时保护
+      const ttsTimeout = new Promise((resolve) => {
+        setTimeout(() => resolve(''), 5000); // 5秒后返回空字符串
+      });
+
+      const ttsPromise = synthesizeSpeech(segment, this.selectedVoice, 1.0, {
+        signal: controller.signal
+      }).then((audioUrl) => {
+        if (generation !== this.speechQueueGeneration || this.isDestroyed) {
+          revokeSpeechUrl(audioUrl);
+          return '';
+        }
+        return audioUrl;
+      }).catch((error) => {
+        if (error?.name !== 'CanceledError' && error?.name !== 'AbortError' && error?.code !== 'ERR_CANCELED') {
+          console.warn('玄喵分句语音生成失败:', error);
+        }
+        return '';
+      });
+
       const item = {
         text: segment,
         generation,
         controller,
-        audioPromise: synthesizeSpeech(segment, this.selectedVoice, 1.0, {
-          signal: controller.signal
-        }).then((audioUrl) => {
-          if (generation !== this.speechQueueGeneration || this.isDestroyed) {
-            revokeSpeechUrl(audioUrl);
-            return '';
-          }
-          return audioUrl;
-        }).catch((error) => {
-          if (error?.name !== 'CanceledError' && error?.name !== 'AbortError' && error?.code !== 'ERR_CANCELED') {
-            console.warn('玄喵分句语音生成失败:', error);
-          }
-          return '';
-        })
+        audioPromise: Promise.race([ttsPromise, ttsTimeout]) // 使用race，5秒内未完成就返回空
       };
       this.speechQueue.push(item);
       this.processSpeechQueue(generation);
@@ -816,14 +1025,17 @@ export default {
           const item = this.speechQueue.shift();
           const audioUrl = await item.audioPromise;
           this.speechQueueControllers = this.speechQueueControllers.filter((entry) => entry !== item.controller);
-          if (!audioUrl || generation !== this.speechQueueGeneration || this.isDestroyed) {
+
+          // 检查generation和destroyed状态
+          if (generation !== this.speechQueueGeneration || this.isDestroyed) {
             revokeSpeechUrl(audioUrl);
             continue;
           }
 
+          // TTS失败时（audioUrl为空），仍然显示文字，只是不播放语音
           await new Promise((resolve) => {
             this.startTypewriterAndSpeech(item.text, {
-              audioUrl,
+              audioUrl: audioUrl || '',  // 空字符串会触发纯文字显示
               playDelayMs: this.speechQueueTranscript ? 0 : 60,
               queuePlayback: true,
               displayPrefix: this.speechQueueTranscript,
@@ -907,22 +1119,50 @@ export default {
     },
 
     hasUnsupportedFloatingAttachment(attachments = []) {
-      return attachments.some((attachment) => attachment.mediaType && attachment.mediaType !== 'DOCUMENT');
+      // 现在支持所有类型的附件，不再限制
+      return false;
     },
 
     isSupportedFloatingAttachment(file) {
       const fileName = String(file?.name || '').toLowerCase();
-      return ['.txt', '.md', '.csv', '.json'].some((extension) => fileName.endsWith(extension));
+      const mimeType = String(file?.type || '').toLowerCase();
+
+      // 支持的文件扩展名
+      const supportedExtensions = [
+        '.txt', '.md', '.csv', '.json',  // 文本文件
+        '.pdf', '.doc', '.docx',          // 文档
+        '.jpg', '.jpeg', '.png', '.gif', '.bmp', '.webp',  // 图片
+        '.mp3', '.wav', '.m4a', '.ogg', '.flac',  // 音频
+        '.mp4', '.avi', '.mov', '.wmv', '.webm'   // 视频
+      ];
+
+      // 检查扩展名
+      const hasValidExtension = supportedExtensions.some((ext) => fileName.endsWith(ext));
+
+      // 检查MIME类型
+      const hasValidMimeType = mimeType.startsWith('image/') ||
+                               mimeType.startsWith('audio/') ||
+                               mimeType.startsWith('video/') ||
+                               mimeType.includes('pdf') ||
+                               mimeType.includes('document') ||
+                               mimeType.includes('text/');
+
+      return hasValidExtension || hasValidMimeType;
     },
 
     async askWithRag(question, useRag = true, attachments = []) {
       try {
+        // 智能化增强：根据问题内容触发表情
+        this.triggerLive2DExpression(question);
+
         let docs = [];
         let userMessage = question;
         const canUseRag = useRag && !this.hasUnsupportedFloatingAttachment(attachments);
         if (canUseRag) {
           docs = await searchKnowledge(question, 3);
-          userMessage = buildRagPrompt(question, docs, this.getRagContextPayload());
+          // 智能化增强：添加上下文记忆
+          const contextPrompt = this.getArtifactContextPrompt();
+          userMessage = buildRagPrompt(question, docs, this.getRagContextPayload()) + contextPrompt;
         }
         const getFailureReply = () => canUseRag
           ? buildFallbackReply(question, docs, this.getRagContextPayload())
@@ -936,6 +1176,17 @@ export default {
             thinkingIntervalMs: 1400
           });
           return;
+        }
+
+        // 检查是否有视频或音频附件，提前给出处理提示
+        const hasVideoOrAudio = attachments.some(att =>
+          att.mediaType === 'VIDEO' || att.mediaType === 'AUDIO'
+        );
+        if (hasVideoOrAudio) {
+          await this.startTypewriterAndSpeech('正在解析视频/音频内容，可能需要1-2分钟，请稍候...', {
+            playDelayMs: 300,
+            charDelay: 60
+          });
         }
 
         this.isAnswering = true;
@@ -1048,8 +1299,18 @@ export default {
         this.hasPendingMsg = false;
         this.userInteracted = true;
         this.startAutoHide();
+
+        // 先播放欢迎语
         this.playWelcomeOnce();
         void this.ensureChatSession();
+
+        // 智能化增强：如果有待播放的上下文问候，延迟触发
+        if (!this.hasGreetedOnRoute) {
+          setTimeout(() => {
+            // 欢迎语播放完后再播放上下文问候
+            this.contextualGreeting();
+          }, this.hasPlayedWelcome ? 500 : 8000); // 如果已播放过欢迎语则快速触发，否则等欢迎语播完
+        }
       } else {
         this.cancelAutoHide();
       }
@@ -1603,7 +1864,7 @@ export default {
         return;
       }
       if (!this.isSupportedFloatingAttachment(file)) {
-        message.warning('复杂文件请到 AI文博助手上传处理');
+        message.warning('不支持的文件格式');
         return;
       }
 
@@ -1614,9 +1875,20 @@ export default {
           errorMsg: '附件上传失败'
         });
         const mimeType = file.type || 'application/octet-stream';
+
+        // 根据文件类型判断mediaType
+        let mediaType = 'DOCUMENT';
+        if (mimeType.startsWith('image/')) {
+          mediaType = 'IMAGE';
+        } else if (mimeType.startsWith('audio/')) {
+          mediaType = 'AUDIO';
+        } else if (mimeType.startsWith('video/')) {
+          mediaType = 'VIDEO';
+        }
+
         this.pendingAttachments.push({
           fileId: uploaded.id,
-          mediaType: 'DOCUMENT',
+          mediaType: mediaType,
           fileName: uploaded.originalName || file.name,
           filePath: uploaded.filePath,
           mimeType,
@@ -2343,6 +2615,13 @@ export default {
     this.clearDemoCommandTimers();
     this.clearAllTimers();
     this.stopAudio();
+
+    // 智能化增强：清理问候定时器
+    if (this.greetingTimer) {
+      clearTimeout(this.greetingTimer);
+      this.greetingTimer = null;
+    }
+
     if (this.audioCtx && this.audioCtx.state !== 'closed') {
       this.audioCtx.close();
     }
