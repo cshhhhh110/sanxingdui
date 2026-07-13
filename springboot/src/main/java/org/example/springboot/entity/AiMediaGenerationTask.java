@@ -29,7 +29,12 @@ public class AiMediaGenerationTask {
     private String model;
     private String providerTaskId;
     private String status;
+    private String stage;
     private Integer progress;
+    private String modelProfile;
+    private String contentLabel;
+    private String experienceContext;
+    private String clientRequestId;
     private String requestParams;
     private String providerResponse;
     private Long resultFileId;
@@ -42,6 +47,7 @@ public class AiMediaGenerationTask {
     private Integer shareEnabled;
     private LocalDateTime startedTime;
     private LocalDateTime finishedTime;
+    private LocalDateTime stageUpdatedTime;
     @TableField(fill = FieldFill.INSERT)
     private LocalDateTime createTime;
     @TableField(fill = FieldFill.INSERT_UPDATE)

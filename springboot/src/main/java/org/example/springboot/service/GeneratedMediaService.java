@@ -41,6 +41,10 @@ public class GeneratedMediaService {
     private String ffprobePath;
 
     public SavedMedia saveImage(String remoteUrl, Long userId, String taskId) {
+        return saveImage(remoteUrl, userId, taskId, () -> { });
+    }
+
+    public SavedMedia saveImage(String remoteUrl, Long userId, String taskId, Runnable onDownloaded) {
         try {
             URI uri = URI.create(remoteUrl);
             if (!("http".equalsIgnoreCase(uri.getScheme()) || "https".equalsIgnoreCase(uri.getScheme()))) {
@@ -62,6 +66,7 @@ public class GeneratedMediaService {
             if (bytes.length == 0 || bytes.length > maxImageBytes || ImageIO.read(new ByteArrayInputStream(bytes)) == null) {
                 throw new BusinessException("生成结果不是有效图片或文件过大");
             }
+            onDownloaded.run();
             String extension = extension(response.headers().firstValue("Content-Type").orElse("image/png"));
             String month = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMM"));
             Path directory = Path.of(storageDir, String.valueOf(userId), month, "image").toAbsolutePath().normalize();

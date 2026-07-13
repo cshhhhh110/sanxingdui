@@ -4,6 +4,7 @@ import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
+import jakarta.validation.Valid;
 import lombok.Data;
 
 @Data
@@ -22,4 +23,9 @@ public class CreateImageGenerationDTO {
     private String negativePrompt;
     private String sessionId;
     private Long messageId;
+    private String modelProfile;
+    @Size(max = 64)
+    private String clientRequestId;
+    @Valid
+    private GenerationExperienceContextDTO experienceContext;
 }

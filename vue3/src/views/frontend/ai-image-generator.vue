@@ -60,6 +60,13 @@
               <option value="EDUCATION_CARD">科普卡片</option>
             </select>
           </label>
+          <label v-if="mediaType === 'IMAGE'">
+            <span>生成模式</span>
+            <select v-model="form.modelProfile">
+              <option value="FAST">快速模式</option>
+              <option value="QUALITY">品质模式</option>
+            </select>
+          </label>
           <label>
             <span>画面比例</span>
             <select v-model="form.aspectRatio">
@@ -123,9 +130,12 @@
 
         <div v-else-if="activeRunning" class="progress-state">
           <div class="progress-visual"><LoadingOutlined spin /></div>
-          <strong>{{ currentTask.mediaType === 'VIDEO' ? '正在生成视频' : '正在生成图片' }}</strong>
-          <div class="progress-track"><i :style="{ width: `${currentTask.progress || 5}%` }"></i></div>
-          <span>{{ currentTask.progress || 0 }}%</span>
+          <strong>{{ currentTask.stageMessage || (currentTask.mediaType === 'VIDEO' ? '正在生成视频' : '正在生成图片') }}</strong>
+          <template v-if="currentTask.mediaType === 'VIDEO' && currentTask.progress != null">
+            <div class="progress-track"><i :style="{ width: `${currentTask.progress}%` }"></i></div>
+            <span>{{ currentTask.progress }}%</span>
+          </template>
+          <span v-else>已等待 {{ currentTask.elapsedSeconds || 0 }} 秒</span>
         </div>
 
         <div v-else-if="currentTask.status === 'SUCCEEDED'" class="media-result">
@@ -211,7 +221,7 @@ let pollTimer = null
 const quickTags = ['三星堆青铜面具', '青铜神树', '古蜀祭祀场景', '博物馆展览', '高细节']
 const form = reactive({
   prompt: '', mode: 'TEXT_TO_IMAGE', style: 'MUSEUM_POSTER', aspectRatio: '1:1',
-  durationSeconds: 5, cameraMotion: 'NONE', referenceFileId: null, negativePrompt: ''
+  modelProfile: 'FAST', durationSeconds: 5, cameraMotion: 'NONE', referenceFileId: null, negativePrompt: ''
 })
 
 const activeRunning = computed(() => ['PENDING', 'PROCESSING'].includes(currentTask.value?.status))
@@ -261,6 +271,8 @@ async function createTask() {
   submitting.value = true
   try {
     const payload = { ...form, prompt: form.prompt.trim(), count: 1 }
+    if (mediaType.value === 'IMAGE') payload.clientRequestId = createClientRequestId()
+    else delete payload.modelProfile
     currentTask.value = mediaType.value === 'IMAGE'
       ? await createImageGeneration(payload)
       : await createVideoGeneration(payload)
@@ -340,6 +352,11 @@ async function shareTask() {
 
 function statusText(status) {
   return ({ PENDING: '等待中', PROCESSING: '生成中', SUCCEEDED: '已完成', FAILED: '失败', CANCELED: '已取消' })[status] || status
+}
+
+function createClientRequestId() {
+  if (window.crypto?.randomUUID) return window.crypto.randomUUID()
+  return `image-${Date.now()}-${Math.random().toString(16).slice(2)}`
 }
 
 function formatTime(value) {

@@ -5,11 +5,13 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.sun.net.httpserver.HttpServer;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
+import org.example.springboot.config.ImageGenerationProfileProperties;
 import org.springframework.test.util.ReflectionTestUtils;
 
 import java.net.InetSocketAddress;
 import java.nio.charset.StandardCharsets;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.Map;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -40,21 +42,44 @@ class SiliconFlowImageGenerationProviderTest {
         server.start();
 
         ObjectMapper mapper = new ObjectMapper();
-        SiliconFlowImageGenerationProvider provider = new SiliconFlowImageGenerationProvider(mapper);
+        ImageGenerationProfileProperties properties = new ImageGenerationProfileProperties();
+        ImageGenerationProfileProperties.Profile fast = new ImageGenerationProfileProperties.Profile();
+        fast.setModel("Tongyi-MAI/Z-Image-Turbo");
+        fast.setSizes(Map.of("16:9", "1664x928"));
+        properties.setProfiles(Map.of("fast", fast));
+        SiliconFlowImageGenerationProvider provider = new SiliconFlowImageGenerationProvider(mapper, properties);
         ReflectionTestUtils.setField(provider, "baseUrl", "http://127.0.0.1:" + server.getAddress().getPort());
         ReflectionTestUtils.setField(provider, "apiKey", "test-key");
-        ReflectionTestUtils.setField(provider, "model", "Qwen/Qwen-Image");
         ReflectionTestUtils.setField(provider, "timeoutSeconds", 10L);
 
         ImageGenerationProvider.ImageGenerationResult result = provider.generate(
-                new ImageGenerationProvider.ImageGenerationRequest("青铜面具", "乱码", "16:9"));
+                new ImageGenerationProvider.ImageGenerationRequest("青铜面具", "乱码", "16:9", "FAST"));
 
         JsonNode body = mapper.readTree(requestBody.get());
         assertThat(authorization.get()).isEqualTo("Bearer test-key");
-        assertThat(body.path("model").asText()).isEqualTo("Qwen/Qwen-Image");
+        assertThat(body.path("model").asText()).isEqualTo("Tongyi-MAI/Z-Image-Turbo");
         assertThat(body.path("image_size").asText()).isEqualTo("1664x928");
         assertThat(body.path("negative_prompt").asText()).isEqualTo("乱码");
         assertThat(result.remoteUrl()).isEqualTo("https://example.com/result.png");
         assertThat(result.sanitizedResponse()).contains("trace-1");
+    }
+
+    @Test
+    void resolvesQualityProfileFromConfiguration() {
+        ImageGenerationProfileProperties properties = new ImageGenerationProfileProperties();
+        properties.setDefaultProfile("FAST");
+        ImageGenerationProfileProperties.Profile fast = new ImageGenerationProfileProperties.Profile();
+        fast.setModel("fast-model");
+        fast.setSizes(Map.of("1:1", "1024x1024"));
+        ImageGenerationProfileProperties.Profile quality = new ImageGenerationProfileProperties.Profile();
+        quality.setModel("quality-model");
+        quality.setSizes(Map.of("1:1", "1328x1328"));
+        properties.setProfiles(Map.of("fast", fast, "quality", quality));
+
+        ImageGenerationProfileProperties.ResolvedProfile resolved = properties.resolve("QUALITY", "1:1");
+
+        assertThat(resolved.name()).isEqualTo("QUALITY");
+        assertThat(resolved.model()).isEqualTo("quality-model");
+        assertThat(resolved.imageSize()).isEqualTo("1328x1328");
     }
 }

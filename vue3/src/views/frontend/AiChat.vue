@@ -219,41 +219,13 @@
                   </li>
                 </ul>
               </details>
-              <div v-if="messageItem.messageType === 'MEDIA_GENERATION'" class="generation-card">
-                <div v-if="['PENDING', 'PROCESSING'].includes(messageItem.generationTask?.status)" class="generation-progress">
-                  <i class="fas fa-spinner fa-spin"></i>
-                  <div>
-                    <strong>{{ getGenerationStageLabel(messageItem) }}</strong>
-                    <span>{{ getGenerationProgress(messageItem) }}%</span>
-                  </div>
-                  <div class="generation-progress-track">
-                    <i :style="{ width: `${getGenerationProgress(messageItem)}%` }"></i>
-                  </div>
-                </div>
-                <div v-else-if="messageItem.generationTask?.status === 'FAILED'" class="generation-error">
-                  <i class="fas fa-circle-exclamation"></i>
-                  <span>{{ messageItem.generationTask.errorMessage || `${getGenerationMediaLabel(messageItem)}生成失败` }}</span>
-                </div>
-                <img
-                  v-else-if="messageItem.generationTask?.status === 'SUCCEEDED' && messageItem.generationTask?.resultUrl && !messageItem.attachments?.length && getGenerationMediaType(messageItem) === 'IMAGE'"
-                  :src="normalizeAttachmentUrl(messageItem.generationTask.resultUrl)"
-                  alt="AI 生成图片"
-                  class="generation-image"
-                  role="button"
-                  tabindex="0"
-                  title="点击放大图片"
-                  @click="openImagePreview(messageItem.generationTask.resultUrl, 'AI 生成图片')"
-                  @keydown.enter.prevent="openImagePreview(messageItem.generationTask.resultUrl, 'AI 生成图片')"
-                  @keydown.space.prevent="openImagePreview(messageItem.generationTask.resultUrl, 'AI 生成图片')"
-                />
-                <video
-                  v-else-if="messageItem.generationTask?.status === 'SUCCEEDED' && messageItem.generationTask?.resultUrl && !messageItem.attachments?.length"
-                  :src="normalizeAttachmentUrl(messageItem.generationTask.resultUrl)"
-                  class="generation-video"
-                  controls
-                  preload="metadata"
-                ></video>
-              </div>
+              <GenerationWorkCard
+                v-if="messageItem.messageType === 'MEDIA_GENERATION'"
+                :task="messageItem.generationTask"
+                @preview="openImagePreview"
+                @retry="retryGenerationWork(messageItem, $event)"
+                @regenerate="regenerateWork"
+              />
               <div v-if="messageItem.attachments?.length" class="message-attachments">
                 <div
                   v-for="attachment in messageItem.attachments"
@@ -332,6 +304,19 @@
           </button>
         </div>
 
+        <div class="generation-toolbar" aria-label="AI生图设置">
+          <div class="generation-profile" role="group" aria-label="生图模式">
+            <span><i class="fas fa-wand-magic-sparkles"></i> 生图模式</span>
+            <button type="button" :class="{ active: generationProfile === 'FAST' }" @click="generationProfile = 'FAST'">快速</button>
+            <button type="button" :class="{ active: generationProfile === 'QUALITY' }" @click="generationProfile = 'QUALITY'">品质</button>
+          </div>
+          <button class="my-works-button" type="button" @click="openGenerationWorks">
+            <i class="fas fa-images"></i>
+            我的作品
+            <small v-if="runningGenerationCount">{{ runningGenerationCount }} 生成中</small>
+          </button>
+        </div>
+
         <form class="composer" @submit.prevent="sendMessage()">
           <input
             ref="fileInputRef"
@@ -375,7 +360,7 @@
           <button
             class="send-button showcase-button-hover"
             type="submit"
-            :disabled="(!draft.trim() && pendingAttachments.length === 0) || isThinking || isUploadingAttachments || isListening || isTranscribingVoice || generationBusy"
+            :disabled="(!draft.trim() && pendingAttachments.length === 0) || isThinking || isUploadingAttachments || isListening || isTranscribingVoice || generationBusy || generationSubmitting"
           >
             <i class="fas fa-paper-plane"></i>
             {{ isUploadingAttachments ? '上传中' : competitionActionLabels.send }}
@@ -418,6 +403,14 @@
       </button>
       <img :src="imagePreview.url" :alt="imagePreview.alt" class="image-preview-content" />
     </div>
+    <MyGenerationWorksDrawer
+      :open="generationWorksOpen"
+      :tasks="generationWorks"
+      :loading="generationWorksLoading"
+      @close="generationWorksOpen = false"
+      @refresh="loadGenerationWorks"
+      @select="selectGenerationWork"
+    />
   </Teleport>
 </template>
 
@@ -428,7 +421,13 @@ import { fetchEventSource } from '@microsoft/fetch-event-source'
 import { useRoute, useRouter } from 'vue-router'
 import { useUserStore } from '@/store/user'
 import { createSession as createSessionApi, getChatStreamUrl, transcribeSpeechInput } from '@/api/AiChatApi'
-import { createImageGeneration, createVideoGeneration, getGenerationTask } from '@/api/MediaGenerationApi'
+import {
+  createImageGeneration,
+  createVideoGeneration,
+  getGenerationHistory,
+  getGenerationTask,
+  retryGenerationTask
+} from '@/api/MediaGenerationApi'
 import { uploadTempFile } from '@/api/FileApi'
 import { matchFixedAnswer } from '@/config/chatReplyConfig'
 import { buildRagPrompt, searchKnowledge } from '@/utils/knowledgeSearch'
@@ -471,6 +470,8 @@ import { formatYearRange } from '@/data/competitionArtifacts'
 import { competitionActionLabels } from '@/data/competitionUi'
 import { getSpacetimeArtifactDetail } from '@/api/SpacetimeApi'
 import aiAvatar from '@/assets/sanxingdui-ai-chat/xuanmiao-avatar.png'
+import GenerationWorkCard from '@/components/ai/GenerationWorkCard.vue'
+import MyGenerationWorksDrawer from '@/components/ai/MyGenerationWorksDrawer.vue'
 import { getRecentArtifactTrail, pushCompetitionTrail } from '@/utils/competitionTrail'
 import { detectMediaIntent } from '@/utils/mediaIntent'
 import {
@@ -504,6 +505,11 @@ const artifactContext = ref(null)
 const lastAutoAskedEntityId = ref('')
 const pendingAttachments = ref([])
 const imagePreview = ref({ visible: false, url: '', alt: '' })
+const generationProfile = ref('FAST')
+const generationSubmitting = ref(false)
+const generationWorksOpen = ref(false)
+const generationWorksLoading = ref(false)
+const generationWorks = ref([])
 const generationPollers = new Map()
 
 const HERITAGE_KNOWLEDGE_KEYWORDS = [
@@ -676,6 +682,9 @@ const composerPlaceholder = computed(() => {
 const generationBusy = computed(() => messages.value.some((item) =>
   item.messageType === 'MEDIA_GENERATION' && ['PENDING', 'PROCESSING'].includes(item.generationTask?.status)
 ))
+const runningGenerationCount = computed(() => generationWorks.value.filter((task) =>
+  ['PENDING', 'PROCESSING'].includes(task.status)
+).length)
 
 const currentSuggestQuestions = computed(() => {
   const suggestionGroups = buildContextSuggestionGroups()
@@ -787,6 +796,7 @@ async function initializeConversation() {
   })
   await loadArtifactContext()
   resetMessages()
+  await loadGenerationWorks({ restore: true })
   void maybeAutoStartGuide()
 }
 
@@ -2360,23 +2370,142 @@ function getGenerationMediaLabel(messageItem) {
   return getGenerationMediaType(messageItem) === 'VIDEO' ? '视频' : '图片'
 }
 
-function getGenerationProgress(messageItem) {
-  const task = messageItem.generationTask || {}
-  const progress = Number(task.progress) || 0
-  if (task.status === 'PENDING') return Math.max(progress, 5)
-  if (task.status === 'PROCESSING') return Math.max(progress, 10)
-  return Math.max(0, Math.min(100, progress))
+function createGenerationRequestId() {
+  if (window.crypto?.randomUUID) return window.crypto.randomUUID()
+  return `image-${Date.now()}-${Math.random().toString(16).slice(2)}`
 }
 
-function getGenerationStageLabel(messageItem) {
-  const task = messageItem.generationTask || {}
-  const mediaLabel = getGenerationMediaLabel(messageItem)
-  if (task.status === 'PENDING') return `${mediaLabel}任务排队中`
-  if (getGenerationProgress(messageItem) >= 75) return `正在保存${mediaLabel}`
-  return `正在生成${mediaLabel}`
+function detectGenerationPurpose(question) {
+  const text = String(question || '')
+  if (/复原|还原|当年|原貌|祭祀场景|历史场景/.test(text)) return 'CULTURAL_RECONSTRUCTION'
+  if (/示意|讲解|结构|关系|过程|科普/.test(text)) return 'CULTURAL_ILLUSTRATION'
+  return 'CREATIVE_DESIGN'
+}
+
+function buildGenerationExperienceContext(question) {
+  const context = getXuanmiaoContext()
+  return {
+    schemaVersion: 1,
+    surface: 'AI_CHAT',
+    scene: 'HERITAGE_CHAT',
+    sessionId: currentSessionId.value || '',
+    messageId: '',
+    artifactId: String(getCurrentArtifactEntityId() || context.currentArtifact || ''),
+    purpose: detectGenerationPurpose(question)
+  }
+}
+
+function generationPollDelay(task) {
+  if (document.hidden) return 5000
+  return ['QUEUED', 'PREPARING'].includes(task?.stage) ? 500 : 2000
+}
+
+function upsertGenerationWork(task) {
+  if (!task?.taskId || task.mediaType === 'VIDEO') return
+  const index = generationWorks.value.findIndex((item) => item.taskId === task.taskId)
+  if (index >= 0) generationWorks.value.splice(index, 1, task)
+  else generationWorks.value.unshift(task)
+}
+
+async function loadGenerationWorks(options = {}) {
+  generationWorksLoading.value = true
+  try {
+    const history = await getGenerationHistory({ pageNum: 1, pageSize: 30, mediaType: 'IMAGE' })
+    generationWorks.value = history?.records || []
+    if (options.restore) {
+      generationWorks.value
+        .filter((task) => ['PENDING', 'PROCESSING'].includes(task.status))
+        .forEach((task) => {
+          const existing = messages.value.find((item) => item.generationTaskId === task.taskId)
+          if (existing) {
+            existing.generationTask = task
+            pollGenerationMessage(existing)
+            return
+          }
+          const restoredMessage = {
+            id: `generation-${task.taskId}`,
+            role: 'assistant',
+            content: ['已恢复上次未完成的图片创作'],
+            messageType: 'MEDIA_GENERATION',
+            generationMediaType: 'IMAGE',
+            generationTaskId: task.taskId,
+            generationTask: task,
+            attachments: [],
+            time: getCurrentTime()
+          }
+          messages.value.push(restoredMessage)
+          pollGenerationMessage(restoredMessage)
+        })
+    }
+  } catch (error) {
+    if (generationWorksOpen.value) message.warning(error?.message || '作品列表暂时无法加载')
+  } finally {
+    generationWorksLoading.value = false
+  }
+}
+
+async function openGenerationWorks() {
+  generationWorksOpen.value = true
+  await loadGenerationWorks()
+}
+
+function selectGenerationWork(task) {
+  generationWorksOpen.value = false
+  let messageItem = messages.value.find((item) => item.generationTaskId === task.taskId)
+  if (!messageItem) {
+    messageItem = {
+      id: `generation-${task.taskId}`,
+      role: 'assistant',
+      content: [task.status === 'SUCCEEDED' ? '这是你之前生成的作品' : '图片创作任务'],
+      messageType: 'MEDIA_GENERATION',
+      generationMediaType: task.mediaType,
+      generationTaskId: task.taskId,
+      generationTask: task,
+      attachments: [],
+      time: getCurrentTime()
+    }
+    messages.value.push(messageItem)
+  } else {
+    messageItem.generationTask = task
+  }
+  if (['PENDING', 'PROCESSING'].includes(task.status)) pollGenerationMessage(messageItem)
+  scrollToBottom()
+}
+
+async function retryGenerationWork(messageItem, task) {
+  if (generationSubmitting.value || generationBusy.value) {
+    message.warning('已有图片正在生成，请完成后再试')
+    return
+  }
+  generationSubmitting.value = true
+  try {
+    const retried = task?.taskId
+      ? await retryGenerationTask(task.taskId)
+      : await createImageGeneration(messageItem.retryPayload)
+    messageItem.generationTaskId = retried.taskId
+    messageItem.generationTask = retried
+    messageItem.content = ['正在重新生成图片…']
+    upsertGenerationWork(retried)
+    pollGenerationMessage(messageItem)
+  } catch (error) {
+    message.error(error?.message || '重新生成失败')
+  } finally {
+    generationSubmitting.value = false
+  }
+}
+
+async function regenerateWork(task) {
+  if (generationSubmitting.value || generationBusy.value) {
+    message.warning('已有图片正在生成，请完成后再试')
+    return
+  }
+  generationWorksOpen.value = false
+  generationProfile.value = task?.modelProfile === 'QUALITY' ? 'QUALITY' : 'FAST'
+  await sendMediaGeneration(task?.promptRaw || '', 'IMAGE')
 }
 
 async function sendMediaGeneration(question, mediaType) {
+  if (generationSubmitting.value) return
   const mediaLabel = mediaType === 'VIDEO' ? '视频' : '图片'
   if (!question) {
     message.warning(`请输入${mediaLabel}创作描述`)
@@ -2394,9 +2523,11 @@ async function sendMediaGeneration(question, mediaType) {
     message.warning('生成视频时最多附加一张参考图片')
     return
   }
+  generationSubmitting.value = true
   if (!currentSessionId.value) await createSession()
   if (!currentSessionId.value) {
     message.error('创建聊天会话失败')
+    generationSubmitting.value = false
     return
   }
 
@@ -2414,7 +2545,14 @@ async function sendMediaGeneration(question, mediaType) {
     content: [`正在生成${mediaLabel}…`],
     messageType: 'MEDIA_GENERATION',
     generationMediaType: mediaType,
-    generationTask: { status: 'PENDING', progress: 0, mediaType },
+    generationTask: {
+      status: 'PENDING',
+      stage: 'QUEUED',
+      stageMessage: '任务已进入队列',
+      elapsedSeconds: 0,
+      mediaType,
+      modelProfile: generationProfile.value
+    },
     attachments: [],
     time: getCurrentTime()
   }
@@ -2435,6 +2573,18 @@ async function sendMediaGeneration(question, mediaType) {
       negativePrompt: '文字乱码，水印，低清晰度，主体变形',
       sessionId: currentSessionId.value
     }
+    const clientRequestId = createGenerationRequestId()
+    const imagePayload = {
+      ...commonPayload,
+      mode: 'TEXT_TO_IMAGE',
+      style: 'MUSEUM_POSTER',
+      aspectRatio: '1:1',
+      count: 1,
+      modelProfile: generationProfile.value,
+      clientRequestId,
+      experienceContext: buildGenerationExperienceContext(question)
+    }
+    if (mediaType === 'IMAGE') localMessage.retryPayload = imagePayload
     const task = mediaType === 'VIDEO'
       ? await createVideoGeneration({
           ...commonPayload,
@@ -2444,20 +2594,22 @@ async function sendMediaGeneration(question, mediaType) {
           cameraMotion: 'SLOW_PUSH',
           referenceFileId
         })
-      : await createImageGeneration({
-          ...commonPayload,
-          mode: 'TEXT_TO_IMAGE',
-          style: 'MUSEUM_POSTER',
-          aspectRatio: '1:1',
-          count: 1
-        })
+      : await createImageGeneration(imagePayload)
     localMessage.generationTaskId = task.taskId
     localMessage.generationTask = task
+    upsertGenerationWork(task)
     pollGenerationMessage(localMessage)
   } catch (error) {
     localMessage.content = [`${mediaLabel}生成任务创建失败`]
-    localMessage.generationTask = { status: 'FAILED', errorMessage: error.message || '任务创建失败' }
+    localMessage.generationTask = {
+      ...localMessage.generationTask,
+      status: 'FAILED',
+      stage: 'FAILED',
+      errorMessage: error.message || '任务创建失败'
+    }
     pendingAttachments.value = referenceAttachments
+  } finally {
+    generationSubmitting.value = false
   }
 }
 
@@ -2468,17 +2620,14 @@ async function pollGenerationMessage(messageItem) {
     try {
       const task = await getGenerationTask(taskId)
       messageItem.generationTask = task
+      upsertGenerationWork(task)
       if (task.status === 'SUCCEEDED') {
         const mediaType = getGenerationMediaType(messageItem)
         const mediaLabel = mediaType === 'VIDEO' ? '视频' : '图片'
         messageItem.content = [`${mediaLabel}已生成`]
-        messageItem.attachments = [{
-          fileId: task.resultFileId,
-          mediaType,
-          fileName: mediaType === 'VIDEO' ? 'AI生成视频.mp4' : 'AI生成图片.png',
-          filePath: task.resultUrl
-        }]
+        messageItem.attachments = []
         generationPollers.delete(taskId)
+        void loadGenerationWorks()
         scrollToBottom()
         return
       }
@@ -2486,16 +2635,17 @@ async function pollGenerationMessage(messageItem) {
         const mediaLabel = getGenerationMediaLabel(messageItem)
         messageItem.content = [task.status === 'FAILED' ? `${mediaLabel}生成失败` : `${mediaLabel}生成已取消`]
         generationPollers.delete(taskId)
+        void loadGenerationWorks()
         return
       }
-      const timer = window.setTimeout(poll, 2000)
+      const timer = window.setTimeout(poll, generationPollDelay(task))
       generationPollers.set(taskId, timer)
     } catch {
       const timer = window.setTimeout(poll, 4000)
       generationPollers.set(taskId, timer)
     }
   }
-  generationPollers.set(taskId, window.setTimeout(poll, 300))
+  generationPollers.set(taskId, window.setTimeout(poll, 500))
 }
 
 async function sendMessage(presetQuestion = '') {
@@ -2504,6 +2654,7 @@ async function sendMessage(presetQuestion = '') {
     (!question && pendingAttachments.value.length === 0) ||
     isThinking.value ||
     isUploadingAttachments.value ||
+    generationSubmitting.value ||
     isListening.value ||
     isTranscribingVoice.value
   ) {
@@ -2938,47 +3089,88 @@ function getCurrentTime() {
   font-family: inherit;
 }
 
-.generation-card {
-  width: min(520px, 100%);
-  margin-top: 8px;
-  border: 1px solid rgba(73, 94, 76, 0.18);
-  border-radius: 7px;
-  overflow: hidden;
-  background: #f7f9f6;
-}
-
-.generation-progress,
-.generation-error {
-  display: grid;
-  grid-template-columns: 28px 1fr;
-  gap: 10px;
-  align-items: center;
-  padding: 16px;
-}
-
-.generation-progress > i { color: #356348; font-size: 18px; }
-.generation-progress div:nth-child(2) { display: flex; justify-content: space-between; gap: 18px; }
-.generation-progress span { color: #727a70; font-size: 12px; }
-.generation-progress-track { grid-column: 1 / -1; height: 6px; overflow: hidden; border-radius: 3px; background: #dfe5de; }
-.generation-progress-track i { display: block; height: 100%; background: #356348; transition: width .3s ease; }
-.generation-error { color: #9e3f38; }
-.generation-image,
-.generation-video { display: block; width: 100%; max-height: 520px; object-fit: contain; background: #171a17; }
-
-.generation-image,
 .attachment-image {
   cursor: zoom-in;
 }
 
-.generation-image:focus-visible,
 .attachment-image:focus-visible {
   outline: 3px solid #d6bd82;
   outline-offset: 2px;
 }
 
+.generation-toolbar {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: center;
+  padding: 8px 12px;
+  border-top: 1px solid rgba(66, 102, 79, 0.09);
+  background: linear-gradient(90deg, rgba(248, 246, 237, .72), rgba(239, 244, 239, .72));
+}
+
+.generation-profile {
+  display: inline-flex;
+  gap: 4px;
+  align-items: center;
+  padding: 3px;
+  border: 1px solid rgba(66, 102, 79, .13);
+  border-radius: 999px;
+  background: rgba(255,255,255,.72);
+}
+
+.generation-profile > span {
+  padding: 0 8px;
+  color: #7a6750;
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.generation-profile button,
+.my-works-button {
+  min-height: 30px;
+  border: 0;
+  cursor: pointer;
+}
+
+.generation-profile button {
+  padding: 0 11px;
+  color: #718077;
+  border-radius: 999px;
+  background: transparent;
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.generation-profile button.active {
+  color: #fff;
+  background: #42664f;
+  box-shadow: 0 3px 9px rgba(66, 102, 79, .2);
+}
+
+.my-works-button {
+  display: inline-flex;
+  gap: 7px;
+  align-items: center;
+  padding: 0 11px;
+  color: #365744;
+  border: 1px solid rgba(66, 102, 79, .16);
+  border-radius: 999px;
+  background: rgba(255,255,255,.78);
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.my-works-button small {
+  padding: 2px 6px;
+  color: #8a6429;
+  border-radius: 999px;
+  background: #f3e8c9;
+  font-size: 9px;
+}
+
 .image-preview-overlay {
   position: fixed;
-  z-index: 10000;
+  z-index: 1000003;
   inset: 0;
   display: grid;
   place-items: center;
@@ -4563,6 +4755,17 @@ function getCurrentTime() {
 }
 
 @media (max-width: 768px) {
+  .generation-toolbar {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .generation-profile,
+  .my-works-button {
+    width: 100%;
+    justify-content: center;
+  }
+
   .ai-guide-page {
     gap: 10px;
     padding: 10px 14px 12px;

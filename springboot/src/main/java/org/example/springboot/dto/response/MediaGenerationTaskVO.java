@@ -1,6 +1,7 @@
 package org.example.springboot.dto.response;
 
 import lombok.Data;
+import org.example.springboot.dto.command.GenerationExperienceContextDTO;
 
 import java.time.LocalDateTime;
 
@@ -10,7 +11,13 @@ public class MediaGenerationTaskVO {
     private String mediaType;
     private String mode;
     private String status;
+    private String stage;
+    private String stageMessage;
     private Integer progress;
+    private Long elapsedSeconds;
+    private String modelProfile;
+    private String contentLabel;
+    private GenerationExperienceContextDTO experienceContext;
     private String promptRaw;
     private String promptFinal;
     private Long referenceFileId;
@@ -23,4 +30,6 @@ public class MediaGenerationTaskVO {
     private String shareToken;
     private LocalDateTime createTime;
     private LocalDateTime finishedTime;
+    private LocalDateTime stageUpdatedTime;
+    private MediaGenerationExperienceEvent experienceEvent;
 }

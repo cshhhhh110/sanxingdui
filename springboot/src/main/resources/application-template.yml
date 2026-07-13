@@ -182,7 +182,24 @@ media-generation:
     provider: siliconflow
     base-url: ${IMAGE_GENERATION_BASE_URL:${spring.ai.openai.base-url}}
     api-key: ${IMAGE_GENERATION_API_KEY:${spring.ai.openai.api-key}}
-    model: ${IMAGE_GENERATION_MODEL:Qwen/Qwen-Image}
+    default-profile: ${IMAGE_GENERATION_DEFAULT_PROFILE:FAST}
+    profiles:
+      fast:
+        model: ${IMAGE_GENERATION_FAST_MODEL:Tongyi-MAI/Z-Image-Turbo}
+        sizes:
+          "[1:1]": 1328x1328
+          "[16:9]": 1664x928
+          "[9:16]": 928x1664
+          "[4:3]": 1472x1140
+          "[3:4]": 1140x1472
+      quality:
+        model: ${IMAGE_GENERATION_QUALITY_MODEL:Qwen/Qwen-Image}
+        sizes:
+          "[1:1]": 1328x1328
+          "[16:9]": 1664x928
+          "[9:16]": 928x1664
+          "[4:3]": 1472x1140
+          "[3:4]": 1140x1472
     timeout-seconds: 180
     max-result-bytes: 20971520
   video:

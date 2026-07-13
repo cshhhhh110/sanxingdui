@@ -6,13 +6,19 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.annotation.Resource;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.example.springboot.config.ImageGenerationProfileProperties;
 import org.example.springboot.dto.command.CreateImageGenerationDTO;
 import org.example.springboot.dto.command.CreateVideoGenerationDTO;
+import org.example.springboot.dto.command.GenerationExperienceContextDTO;
+import org.example.springboot.dto.response.MediaGenerationExperienceEvent;
 import org.example.springboot.dto.response.MediaGenerationHistoryVO;
 import org.example.springboot.dto.response.MediaGenerationTaskVO;
 import org.example.springboot.dto.response.MediaGenerationStatsVO;
 import org.example.springboot.entity.AiMediaGenerationTask;
 import org.example.springboot.entity.SysFileInfo;
+import org.example.springboot.enums.MediaContentLabel;
+import org.example.springboot.enums.MediaGenerationProfile;
+import org.example.springboot.enums.MediaGenerationStage;
 import org.example.springboot.exception.BusinessException;
 import org.example.springboot.mapper.AiMediaGenerationTaskMapper;
 import org.example.springboot.mapper.SysFileInfoMapper;
@@ -20,6 +26,7 @@ import org.example.springboot.service.provider.ImageGenerationProvider;
 import org.example.springboot.service.provider.VideoGenerationProvider;
 import org.example.springboot.util.FileUtil;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.dao.DuplicateKeyException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -30,6 +37,7 @@ import java.util.Base64;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
+import java.util.Locale;
 import java.util.concurrent.Executor;
 import java.time.Duration;
 import java.util.HashMap;
@@ -53,6 +61,7 @@ public class MediaGenerationService {
     private final VideoGenerationProvider videoProvider;
     private final AiChatSessionService chatSessionService;
     private final ObjectMapper objectMapper;
+    private final ImageGenerationProfileProperties imageProfileProperties;
     @Resource(name = "mediaGenerationExecutor")
     private Executor executor;
 
@@ -73,24 +82,44 @@ public class MediaGenerationService {
             throw new BusinessException("当前图片供应商暂不支持图生图，请使用文生图");
         }
 
+        String clientRequestId = blankToNull(command.getClientRequestId());
+        if (clientRequestId != null && clientRequestId.length() > 64) {
+            throw new BusinessException("clientRequestId 长度不能超过64个字符");
+        }
+        AiMediaGenerationTask existing = findByClientRequestId(userId, clientRequestId);
+        if (existing != null) return toVO(existing);
+        String modelProfile = MediaGenerationProfile.from(
+                command.getModelProfile(), imageProfileProperties.getDefaultProfile()).name();
+        GenerationExperienceContextDTO experienceContext = normalizeExperienceContext(command);
+        String contentLabel = resolveContentLabel(command.getStyle(), experienceContext).name();
+        validateSessionOwnership(command.getSessionId(), userId);
+
         String finalPrompt = promptService.enhance(command.getPrompt(), command.getStyle(), "IMAGE");
         AiMediaGenerationTask task = baseTask(userId, "IMAGE", mode, command.getPrompt(), finalPrompt,
                 command.getNegativePrompt(), command.getReferenceFileId(), command.getArtifactId(),
                 command.getSessionId(), command.getMessageId());
         task.setProvider(imageProvider.getProviderName());
+        task.setModelProfile(modelProfile);
+        task.setContentLabel(contentLabel);
+        task.setExperienceContext(experienceContext == null ? null : writeJson(experienceContext));
+        task.setClientRequestId(clientRequestId);
         task.setRequestParams(writeJson(Map.of(
                 "style", value(command.getStyle()),
                 "aspectRatio", value(command.getAspectRatio()),
                 "count", count
         )));
+        try {
+            taskMapper.insert(task);
+        } catch (DuplicateKeyException duplicate) {
+            AiMediaGenerationTask duplicateTask = findByClientRequestId(userId, clientRequestId);
+            if (duplicateTask != null) return toVO(duplicateTask);
+            throw duplicate;
+        }
         if (task.getSessionId() != null && !task.getSessionId().isBlank()) {
-            if (!chatSessionService.isSessionOwnedByUser(task.getSessionId(), userId)) {
-                throw new BusinessException("无权访问此聊天会话");
-            }
             task.setMessageId(chatSessionService.createGenerationMessages(
                     task.getSessionId(), task.getPromptRaw(), task.getTaskId()).getId());
+            taskMapper.updateById(task);
         }
-        taskMapper.insert(task);
         executor.execute(() -> processImage(task.getTaskId()));
         return toVO(task);
     }
@@ -202,6 +231,7 @@ public class MediaGenerationService {
             throw new BusinessException("当前任务状态不可取消");
         }
         task.setStatus("CANCELED");
+        setStage(task, MediaGenerationStage.CANCELED);
         task.setFinishedTime(LocalDateTime.now());
         taskMapper.updateById(task);
         return toVO(task);
@@ -216,6 +246,9 @@ public class MediaGenerationService {
                 old.getPromptFinal(), old.getNegativePrompt(), old.getReferenceFileId(), old.getArtifactId(),
                 old.getSessionId(), old.getMessageId());
         task.setProvider(old.getProvider());
+        task.setModelProfile(old.getModelProfile());
+        task.setContentLabel(old.getContentLabel());
+        task.setExperienceContext(old.getExperienceContext());
         task.setRequestParams(old.getRequestParams());
         task.setRetryCount(old.getRetryCount() == null ? 1 : old.getRetryCount() + 1);
         taskMapper.insert(task);
@@ -229,24 +262,31 @@ public class MediaGenerationService {
         if (task == null || "CANCELED".equals(task.getStatus())) return;
         try {
             task.setStatus("PROCESSING");
-            task.setProgress(10);
             task.setStartedTime(LocalDateTime.now());
+            task.setProgress(null);
+            setStage(task, MediaGenerationStage.PREPARING);
             taskMapper.updateById(task);
+            advanceStage(taskId, MediaGenerationStage.GENERATING);
             ImageGenerationProvider.ImageGenerationResult result = imageProvider.generate(
                     new ImageGenerationProvider.ImageGenerationRequest(
-                            task.getPromptFinal(), task.getNegativePrompt(), aspectRatio(task.getRequestParams())));
-            task.setProgress(75);
-            task.setModel(result.model());
-            task.setProviderResponse(result.sanitizedResponse());
-            taskMapper.updateById(task);
+                            task.getPromptFinal(), task.getNegativePrompt(), aspectRatio(task.getRequestParams()),
+                            task.getModelProfile()));
+            AiMediaGenerationTask generated = findTask(taskId);
+            if (generated == null || "CANCELED".equals(generated.getStatus())) return;
+            generated.setModel(result.model());
+            generated.setProviderResponse(result.sanitizedResponse());
+            setStage(generated, MediaGenerationStage.DOWNLOADING);
+            taskMapper.updateById(generated);
             GeneratedMediaService.SavedMedia saved = generatedMediaService.saveImage(
-                    result.remoteUrl(), task.getUserId(), task.getTaskId());
+                    result.remoteUrl(), task.getUserId(), task.getTaskId(),
+                    () -> advanceStage(taskId, MediaGenerationStage.SAVING));
             AiMediaGenerationTask latest = findTask(taskId);
             if (latest == null || "CANCELED".equals(latest.getStatus())) return;
             latest.setResultFileId(saved.fileId());
             latest.setResultUrl(saved.url());
             latest.setStatus("SUCCEEDED");
-            latest.setProgress(100);
+            latest.setProgress(null);
+            setStage(latest, MediaGenerationStage.SUCCEEDED);
             latest.setFinishedTime(LocalDateTime.now());
             taskMapper.updateById(latest);
             chatSessionService.completeGenerationMessage(
@@ -263,6 +303,7 @@ public class MediaGenerationService {
             task.setStatus("PROCESSING");
             task.setProgress(5);
             task.setStartedTime(LocalDateTime.now());
+            setStage(task, MediaGenerationStage.GENERATING);
             taskMapper.updateById(task);
             VideoGenerationProvider.VideoSubmitResult result = videoProvider.submit(
                     new VideoGenerationProvider.VideoGenerationRequest(
@@ -306,6 +347,7 @@ public class MediaGenerationService {
                 markFailed(task.getTaskId(), "VIDEO_RESULT_EMPTY", "视频模型未返回结果地址");
                 return;
             }
+            setStage(task, MediaGenerationStage.DOWNLOADING);
             task.setProgress(92);
             taskMapper.updateById(task);
             GeneratedMediaService.SavedMedia saved = generatedMediaService.saveVideo(
@@ -317,6 +359,7 @@ public class MediaGenerationService {
             latest.setProviderResponse(result.sanitizedResponse());
             latest.setStatus("SUCCEEDED");
             latest.setProgress(100);
+            setStage(latest, MediaGenerationStage.SUCCEEDED);
             latest.setFinishedTime(LocalDateTime.now());
             taskMapper.updateById(latest);
         } catch (Exception e) {
@@ -328,6 +371,7 @@ public class MediaGenerationService {
         AiMediaGenerationTask task = findTask(taskId);
         if (task == null || "CANCELED".equals(task.getStatus())) return;
         task.setStatus("FAILED");
+        setStage(task, MediaGenerationStage.FAILED);
         task.setErrorCode(code);
         task.setErrorMessage(message);
         task.setFinishedTime(LocalDateTime.now());
@@ -352,7 +396,8 @@ public class MediaGenerationService {
         task.setArtifactId(artifactId);
         task.setReferenceFileId(referenceFileId);
         task.setStatus("PENDING");
-        task.setProgress(0);
+        task.setProgress(null);
+        setStage(task, MediaGenerationStage.QUEUED);
         task.setRetryCount(0);
         return task;
     }
@@ -393,7 +438,14 @@ public class MediaGenerationService {
         vo.setMediaType(task.getMediaType());
         vo.setMode(task.getMode());
         vo.setStatus(task.getStatus());
-        vo.setProgress(task.getProgress());
+        MediaGenerationStage stage = resolveStage(task);
+        vo.setStage(stage.name());
+        vo.setStageMessage(stage.getMessage());
+        vo.setProgress("IMAGE".equals(task.getMediaType()) ? null : task.getProgress());
+        vo.setElapsedSeconds(elapsedSeconds(task));
+        vo.setModelProfile(task.getModelProfile());
+        vo.setContentLabel(task.getContentLabel());
+        vo.setExperienceContext(readExperienceContext(task.getExperienceContext()));
         vo.setPromptRaw(task.getPromptRaw());
         vo.setPromptFinal(task.getPromptFinal());
         vo.setReferenceFileId(task.getReferenceFileId());
@@ -406,7 +458,108 @@ public class MediaGenerationService {
         vo.setShareToken(task.getShareToken());
         vo.setCreateTime(task.getCreateTime());
         vo.setFinishedTime(task.getFinishedTime());
+        vo.setStageUpdatedTime(task.getStageUpdatedTime());
+        if ("SUCCEEDED".equals(task.getStatus()) && task.getResultUrl() != null) {
+            vo.setExperienceEvent(new MediaGenerationExperienceEvent(
+                    "MEDIA_GENERATION_COMPLETED",
+                    task.getMediaType(),
+                    task.getTaskId(),
+                    "USER",
+                    vo.getExperienceContext(),
+                    new MediaGenerationExperienceEvent.Result(task.getResultUrl(), task.getContentLabel()),
+                    task.getFinishedTime()));
+        }
         return vo;
+    }
+
+    private void validateSessionOwnership(String sessionId, Long userId) {
+        if (sessionId != null && !sessionId.isBlank()
+                && !chatSessionService.isSessionOwnedByUser(sessionId, userId)) {
+            throw new BusinessException("无权访问此聊天会话");
+        }
+    }
+
+    private AiMediaGenerationTask findByClientRequestId(Long userId, String clientRequestId) {
+        if (clientRequestId == null) return null;
+        return taskMapper.selectOne(new LambdaQueryWrapper<AiMediaGenerationTask>()
+                .eq(AiMediaGenerationTask::getUserId, userId)
+                .eq(AiMediaGenerationTask::getClientRequestId, clientRequestId));
+    }
+
+    private GenerationExperienceContextDTO normalizeExperienceContext(CreateImageGenerationDTO command) {
+        GenerationExperienceContextDTO context = command.getExperienceContext();
+        if (context == null) return null;
+        context.setSchemaVersion(1);
+        if (blankToNull(context.getSessionId()) == null) context.setSessionId(command.getSessionId());
+        if (context.getPurpose() == null || context.getPurpose().isBlank()) {
+            context.setPurpose("CREATIVE_DESIGN");
+        } else {
+            context.setPurpose(context.getPurpose().trim().toUpperCase(Locale.ROOT));
+        }
+        Set<String> purposes = Set.of(
+                "CULTURAL_RECONSTRUCTION", "CULTURAL_ILLUSTRATION", "CREATIVE_DESIGN", "GUIDE_SUPPORT");
+        if (!purposes.contains(context.getPurpose())) throw new BusinessException("不支持的创作用途");
+        return context;
+    }
+
+    private MediaContentLabel resolveContentLabel(String style, GenerationExperienceContextDTO context) {
+        String purpose = context == null ? "" : value(context.getPurpose());
+        if ("CULTURAL_RECONSTRUCTION".equals(purpose) || "ARTIFACT_RESTORE".equalsIgnoreCase(value(style))) {
+            return MediaContentLabel.AI_RECONSTRUCTION;
+        }
+        if ("CULTURAL_ILLUSTRATION".equals(purpose) || "GUIDE_SUPPORT".equals(purpose)) {
+            return MediaContentLabel.AI_ILLUSTRATION;
+        }
+        return MediaContentLabel.AI_CREATION;
+    }
+
+    private GenerationExperienceContextDTO readExperienceContext(String json) {
+        if (json == null || json.isBlank()) return null;
+        try {
+            return objectMapper.readValue(json, GenerationExperienceContextDTO.class);
+        } catch (Exception ignored) {
+            return null;
+        }
+    }
+
+    private void advanceStage(String taskId, MediaGenerationStage stage) {
+        AiMediaGenerationTask latest = findTask(taskId);
+        if (latest == null || "CANCELED".equals(latest.getStatus())) return;
+        setStage(latest, stage);
+        taskMapper.updateById(latest);
+    }
+
+    private void setStage(AiMediaGenerationTask task, MediaGenerationStage stage) {
+        task.setStage(stage.name());
+        task.setStageUpdatedTime(LocalDateTime.now());
+    }
+
+    private MediaGenerationStage resolveStage(AiMediaGenerationTask task) {
+        if (task.getStage() != null) {
+            try {
+                return MediaGenerationStage.valueOf(task.getStage());
+            } catch (IllegalArgumentException ignored) {
+                // Fall back to the legacy task status below.
+            }
+        }
+        return switch (value(task.getStatus())) {
+            case "SUCCEEDED" -> MediaGenerationStage.SUCCEEDED;
+            case "FAILED" -> MediaGenerationStage.FAILED;
+            case "CANCELED" -> MediaGenerationStage.CANCELED;
+            case "PROCESSING" -> MediaGenerationStage.GENERATING;
+            default -> MediaGenerationStage.QUEUED;
+        };
+    }
+
+    private long elapsedSeconds(AiMediaGenerationTask task) {
+        LocalDateTime start = task.getStartedTime() != null ? task.getStartedTime() : task.getCreateTime();
+        if (start == null) return 0;
+        LocalDateTime end = task.getFinishedTime() != null ? task.getFinishedTime() : LocalDateTime.now();
+        return Math.max(0, Duration.between(start, end).toSeconds());
+    }
+
+    private String blankToNull(String value) {
+        return value == null || value.isBlank() ? null : value.trim();
     }
 
     private void requireEnabled() {
