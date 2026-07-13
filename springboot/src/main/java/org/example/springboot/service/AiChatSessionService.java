@@ -88,6 +88,63 @@ public class AiChatSessionService {
     }
 
     @Transactional
+    public AiChatMessage createGenerationMessages(String sessionId, String prompt, String taskId) {
+        AiChatMessage userMessage = AiChatMessage.builder()
+                .sessionId(sessionId)
+                .role("user")
+                .content(prompt)
+                .messageType("MEDIA_GENERATION_REQUEST")
+                .rawContent(prompt)
+                .processedContent(prompt)
+                .build();
+        messageMapper.insert(userMessage);
+
+        AiChatMessage assistantMessage = AiChatMessage.builder()
+                .sessionId(sessionId)
+                .role("assistant")
+                .content("正在生成图片…")
+                .messageType("MEDIA_GENERATION")
+                .rawContent(prompt)
+                .processedContent(taskId)
+                .build();
+        messageMapper.insert(assistantMessage);
+        return assistantMessage;
+    }
+
+    @Transactional
+    public void completeGenerationMessage(Long messageId, Long fileId, String filePath, Long fileSize, String taskId) {
+        if (messageId == null) return;
+        AiChatMessage message = messageMapper.selectById(messageId);
+        if (message == null) return;
+        message.setContent("图片已生成");
+        message.setProcessedContent(taskId);
+        messageMapper.updateById(message);
+
+        AiChatMessageAttachment attachment = AiChatMessageAttachment.builder()
+                .messageId(messageId)
+                .fileId(fileId)
+                .mediaType("IMAGE")
+                .fileName("AI生成图片.png")
+                .filePath(filePath)
+                .mimeType("image/png")
+                .fileSize(fileSize)
+                .analysisStatus("DONE")
+                .extractedMeta("{\"generationTaskId\":\"" + taskId + "\"}")
+                .build();
+        attachmentMapper.insert(attachment);
+    }
+
+    @Transactional
+    public void failGenerationMessage(Long messageId, String taskId, String errorMessage) {
+        if (messageId == null) return;
+        AiChatMessage message = messageMapper.selectById(messageId);
+        if (message == null) return;
+        message.setContent("图片生成失败：" + errorMessage);
+        message.setProcessedContent(taskId);
+        messageMapper.updateById(message);
+    }
+
+    @Transactional
     public AiChatMessage saveUserMessage(
             String sessionId,
             String displayContent,

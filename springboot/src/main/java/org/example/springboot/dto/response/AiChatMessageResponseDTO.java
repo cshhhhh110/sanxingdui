@@ -31,6 +31,9 @@ public class AiChatMessageResponseDTO {
     @Schema(description = "Message type: TEXT/MULTIMODAL/SYSTEM")
     private String messageType;
 
+    @Schema(description = "Media generation task id")
+    private String generationTaskId;
+
     @Schema(description = "Attachments")
     private List<AiChatMessageAttachmentResponseDTO> attachments;
 
