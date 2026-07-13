@@ -239,6 +239,7 @@ public class AiChatController {
                 .role(msg.getRole())
                 .content(msg.getContent())
                 .messageType(msg.getMessageType())
+                .generationTaskId("MEDIA_GENERATION".equals(msg.getMessageType()) ? msg.getProcessedContent() : null)
                 .attachments(attachments)
                 .createTime(msg.getCreateTime())
                 .build();

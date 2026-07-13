@@ -1,5 +1,5 @@
 ALTER TABLE ai_chat_message
-  ADD COLUMN message_type varchar(20) NOT NULL DEFAULT 'TEXT' COMMENT '消息类型：TEXT/MULTIMODAL/SYSTEM',
+  ADD COLUMN message_type varchar(32) NOT NULL DEFAULT 'TEXT' COMMENT '消息类型：TEXT/MULTIMODAL/SYSTEM/MEDIA_GENERATION_REQUEST/MEDIA_GENERATION',
   ADD COLUMN raw_content text NULL COMMENT '用户原始输入',
   ADD COLUMN processed_content longtext NULL COMMENT '模型可读的处理后内容';
 

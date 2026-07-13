@@ -240,7 +240,7 @@ const frontendRoutes = [
         path: 'ai-image-generator',
         name: 'ai-image-generator',
         component: () => import('@/views/frontend/ai-image-generator.vue'),
-        meta: { title: '三星堆祭祀坑遗址', requiresAuth: true }
+        meta: { title: '古蜀 AI 创作', requiresAuth: true }
       }
 ]
   },

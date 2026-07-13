@@ -1,0 +1,48 @@
+CREATE TABLE IF NOT EXISTS ai_media_generation_task (
+  id bigint NOT NULL AUTO_INCREMENT COMMENT '主键',
+  task_id varchar(64) NOT NULL COMMENT '对外任务ID',
+  user_id bigint NOT NULL COMMENT '创建用户ID',
+  session_id varchar(64) NULL COMMENT '来源聊天会话ID',
+  message_id bigint NULL COMMENT '关联聊天消息ID',
+  media_type varchar(20) NOT NULL COMMENT 'IMAGE/VIDEO',
+  mode varchar(30) NOT NULL COMMENT 'TEXT_TO_IMAGE/IMAGE_TO_IMAGE/TEXT_TO_VIDEO/IMAGE_TO_VIDEO',
+  prompt_raw text NOT NULL COMMENT '用户原始提示词',
+  prompt_final longtext NULL COMMENT '增强后的最终提示词',
+  negative_prompt text NULL COMMENT '负面提示词',
+  artifact_id bigint NULL COMMENT '关联文物ID',
+  reference_file_id bigint NULL COMMENT '参考文件ID',
+  provider varchar(50) NOT NULL COMMENT '供应商标识',
+  model varchar(100) NULL COMMENT '实际模型',
+  provider_task_id varchar(255) NULL COMMENT '供应商任务ID',
+  status varchar(20) NOT NULL DEFAULT 'PENDING' COMMENT 'PENDING/PROCESSING/SUCCEEDED/FAILED/CANCELED',
+  progress int NOT NULL DEFAULT 0 COMMENT '0-100',
+  request_params json NULL COMMENT '生成参数',
+  provider_response json NULL COMMENT '脱敏后的供应商响应',
+  result_file_id bigint NULL COMMENT 'sys_file_info.id',
+  result_url varchar(500) NULL COMMENT '项目内稳定访问地址',
+  error_code varchar(64) NULL COMMENT '标准错误码',
+  error_message varchar(500) NULL COMMENT '可展示失败原因',
+  retry_count int NOT NULL DEFAULT 0 COMMENT '已重试次数',
+  started_time datetime NULL,
+  finished_time datetime NULL,
+  create_time datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  update_time datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (id),
+  UNIQUE KEY uk_task_id (task_id),
+  KEY idx_user_create_time (user_id, create_time),
+  KEY idx_status_update_time (status, update_time),
+  KEY idx_provider_task_id (provider_task_id),
+  KEY idx_message_id (message_id),
+  KEY idx_result_file_id (result_file_id)
+) COMMENT='AI图片和视频生成任务';
+
+ALTER TABLE ai_chat_message
+  MODIFY COLUMN message_type varchar(32) NOT NULL DEFAULT 'TEXT'
+  COMMENT 'TEXT/MULTIMODAL/SYSTEM/MEDIA_GENERATION_REQUEST/MEDIA_GENERATION';
+
+ALTER TABLE ai_media_generation_task
+  ADD COLUMN favorite tinyint NOT NULL DEFAULT 0 COMMENT '用户是否收藏',
+  ADD COLUMN share_token varchar(64) NULL COMMENT '公开分享令牌',
+  ADD COLUMN share_enabled tinyint NOT NULL DEFAULT 0 COMMENT '是否允许公开分享',
+  ADD UNIQUE KEY uk_share_token (share_token),
+  ADD KEY idx_user_favorite (user_id, favorite, create_time);

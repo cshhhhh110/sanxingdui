@@ -128,6 +128,41 @@
                   </li>
                 </ul>
               </details>
+              <div v-if="messageItem.messageType === 'MEDIA_GENERATION'" class="generation-card">
+                <div v-if="['PENDING', 'PROCESSING'].includes(messageItem.generationTask?.status)" class="generation-progress">
+                  <i class="fas fa-spinner fa-spin"></i>
+                  <div>
+                    <strong>{{ getGenerationStageLabel(messageItem) }}</strong>
+                    <span>{{ getGenerationProgress(messageItem) }}%</span>
+                  </div>
+                  <div class="generation-progress-track">
+                    <i :style="{ width: `${getGenerationProgress(messageItem)}%` }"></i>
+                  </div>
+                </div>
+                <div v-else-if="messageItem.generationTask?.status === 'FAILED'" class="generation-error">
+                  <i class="fas fa-circle-exclamation"></i>
+                  <span>{{ messageItem.generationTask.errorMessage || `${getGenerationMediaLabel(messageItem)}生成失败` }}</span>
+                </div>
+                <img
+                  v-else-if="messageItem.generationTask?.status === 'SUCCEEDED' && messageItem.generationTask?.resultUrl && !messageItem.attachments?.length && getGenerationMediaType(messageItem) === 'IMAGE'"
+                  :src="normalizeAttachmentUrl(messageItem.generationTask.resultUrl)"
+                  alt="AI 生成图片"
+                  class="generation-image"
+                  role="button"
+                  tabindex="0"
+                  title="点击放大图片"
+                  @click="openImagePreview(messageItem.generationTask.resultUrl, 'AI 生成图片')"
+                  @keydown.enter.prevent="openImagePreview(messageItem.generationTask.resultUrl, 'AI 生成图片')"
+                  @keydown.space.prevent="openImagePreview(messageItem.generationTask.resultUrl, 'AI 生成图片')"
+                />
+                <video
+                  v-else-if="messageItem.generationTask?.status === 'SUCCEEDED' && messageItem.generationTask?.resultUrl && !messageItem.attachments?.length"
+                  :src="normalizeAttachmentUrl(messageItem.generationTask.resultUrl)"
+                  class="generation-video"
+                  controls
+                  preload="metadata"
+                ></video>
+              </div>
               <div v-if="messageItem.attachments?.length" class="message-attachments">
                 <div
                   v-for="attachment in messageItem.attachments"
@@ -139,6 +174,12 @@
                     class="attachment-image"
                     :src="normalizeAttachmentUrl(attachment.filePath || attachment.previewUrl)"
                     :alt="attachment.fileName"
+                    role="button"
+                    tabindex="0"
+                    title="点击放大图片"
+                    @click="openImagePreview(attachment.filePath || attachment.previewUrl, attachment.fileName)"
+                    @keydown.enter.prevent="openImagePreview(attachment.filePath || attachment.previewUrl, attachment.fileName)"
+                    @keydown.space.prevent="openImagePreview(attachment.filePath || attachment.previewUrl, attachment.fileName)"
                   />
                   <video
                     v-else-if="attachment.mediaType === 'VIDEO'"
@@ -243,7 +284,7 @@
           <button
             class="send-button showcase-button-hover"
             type="submit"
-            :disabled="(!draft.trim() && pendingAttachments.length === 0) || isThinking || isUploadingAttachments || isListening || isTranscribingVoice"
+            :disabled="(!draft.trim() && pendingAttachments.length === 0) || isThinking || isUploadingAttachments || isListening || isTranscribingVoice || generationBusy"
           >
             <i class="fas fa-paper-plane"></i>
             {{ isUploadingAttachments ? '上传中' : competitionActionLabels.send }}
@@ -272,6 +313,21 @@
       </section>
     </section>
   </main>
+  <Teleport to="body">
+    <div
+      v-if="imagePreview.visible"
+      class="image-preview-overlay"
+      role="dialog"
+      aria-modal="true"
+      :aria-label="imagePreview.alt || '图片预览'"
+      @click.self="closeImagePreview"
+    >
+      <button class="image-preview-close" type="button" aria-label="关闭图片预览" title="关闭" @click="closeImagePreview">
+        <i class="fas fa-xmark"></i>
+      </button>
+      <img :src="imagePreview.url" :alt="imagePreview.alt" class="image-preview-content" />
+    </div>
+  </Teleport>
 </template>
 
 <script setup>
@@ -281,6 +337,7 @@ import { fetchEventSource } from '@microsoft/fetch-event-source'
 import { useRoute, useRouter } from 'vue-router'
 import { useUserStore } from '@/store/user'
 import { createSession as createSessionApi, getChatStreamUrl, transcribeSpeechInput } from '@/api/AiChatApi'
+import { createImageGeneration, createVideoGeneration, getGenerationTask } from '@/api/MediaGenerationApi'
 import { uploadTempFile } from '@/api/FileApi'
 import { matchFixedAnswer } from '@/config/chatReplyConfig'
 import { buildRagPrompt, searchKnowledge } from '@/utils/knowledgeSearch'
@@ -291,6 +348,7 @@ import { getSpacetimeArtifactDetail } from '@/api/SpacetimeApi'
 import aiAvatar from '@/assets/sanxingdui-ai-chat/xuanmiao-avatar.png'
 import { getRecentArtifactTrail, pushCompetitionTrail } from '@/utils/competitionTrail'
 import { agentOrchestrator } from '@/agent/AgentOrchestrator'
+import { detectMediaIntent } from '@/utils/mediaIntent'
 
 const route = useRoute()
 const router = useRouter()
@@ -311,6 +369,8 @@ const activeQuickCard = ref('hot')
 const artifactContext = ref(null)
 const lastAutoAskedEntityId = ref('')
 const pendingAttachments = ref([])
+const imagePreview = ref({ visible: false, url: '', alt: '' })
+const generationPollers = new Map()
 
 const HERITAGE_KNOWLEDGE_KEYWORDS = [
   '三星堆',
@@ -451,11 +511,15 @@ const contextJourneyLine = computed(() => {
 
 const composerPlaceholder = computed(() => {
   if (hasArtifactContext.value) {
-    return `围绕“${contextTitle.value}”提问，例如它的象征意义、工艺特点或时代背景`
+    return `围绕“${contextTitle.value}”提问，或描述要生成的图片、视频`
   }
 
-  return '请输入你想了解的三星堆相关问题'
+  return '提问，或描述你想生成的三星堆主题图片、视频'
 })
+
+const generationBusy = computed(() => messages.value.some((item) =>
+  item.messageType === 'MEDIA_GENERATION' && ['PENDING', 'PROCESSING'].includes(item.generationTask?.status)
+))
 
 const currentSuggestQuestions = computed(() => {
   const suggestionGroups = buildContextSuggestionGroups()
@@ -538,10 +602,41 @@ onBeforeUnmount(() => {
       URL.revokeObjectURL(attachment.previewUrl)
     }
   })
+  generationPollers.forEach((timer) => window.clearTimeout(timer))
+  generationPollers.clear()
+  closeImagePreview()
 })
+
+function handleImagePreviewKeydown(event) {
+  if (event.key === 'Escape') closeImagePreview()
+}
+
+function openImagePreview(url, alt = '图片预览') {
+  const normalizedUrl = normalizeAttachmentUrl(url)
+  if (!normalizedUrl) return
+  imagePreview.value = { visible: true, url: normalizedUrl, alt: alt || '图片预览' }
+  document.body.style.overflow = 'hidden'
+  window.addEventListener('keydown', handleImagePreviewKeydown)
+}
+
+function closeImagePreview() {
+  imagePreview.value = { visible: false, url: '', alt: '' }
+  document.body.style.overflow = ''
+  window.removeEventListener('keydown', handleImagePreviewKeydown)
+}
 
 async function initializeConversation() {
   chatAbortController?.abort?.()
+  generationPollers.forEach((timer) => window.clearTimeout(timer))
+  generationPollers.clear()
+  pendingAttachments.value.forEach((attachment) => {
+    if (attachment.previewUrl) URL.revokeObjectURL(attachment.previewUrl)
+  })
+  pendingAttachments.value = []
+  draft.value = ''
+  isThinking.value = false
+  showThinkingBubble.value = false
+  window.localStorage.removeItem('ai-chat-current-session')
   await loadArtifactContext()
   resetMessages()
   void maybeAutoStartGuide()
@@ -1461,6 +1556,152 @@ async function toggleVoiceRecording() {
   }
 }
 
+function getGenerationMediaType(messageItem) {
+  return messageItem.generationTask?.mediaType || messageItem.generationMediaType || 'IMAGE'
+}
+
+function getGenerationMediaLabel(messageItem) {
+  return getGenerationMediaType(messageItem) === 'VIDEO' ? '视频' : '图片'
+}
+
+function getGenerationProgress(messageItem) {
+  const task = messageItem.generationTask || {}
+  const progress = Number(task.progress) || 0
+  if (task.status === 'PENDING') return Math.max(progress, 5)
+  if (task.status === 'PROCESSING') return Math.max(progress, 10)
+  return Math.max(0, Math.min(100, progress))
+}
+
+function getGenerationStageLabel(messageItem) {
+  const task = messageItem.generationTask || {}
+  const mediaLabel = getGenerationMediaLabel(messageItem)
+  if (task.status === 'PENDING') return `${mediaLabel}任务排队中`
+  if (getGenerationProgress(messageItem) >= 75) return `正在保存${mediaLabel}`
+  return `正在生成${mediaLabel}`
+}
+
+async function sendMediaGeneration(question, mediaType) {
+  const mediaLabel = mediaType === 'VIDEO' ? '视频' : '图片'
+  if (!question) {
+    message.warning(`请输入${mediaLabel}创作描述`)
+    return
+  }
+  if (mediaType === 'IMAGE' && pendingAttachments.value.length) {
+    message.warning('对话生图暂不支持参考附件，请直接输入图片描述')
+    return
+  }
+  if (mediaType === 'VIDEO' && pendingAttachments.value.some((item) => item.mediaType !== 'IMAGE')) {
+    message.warning('生成视频时仅支持附加一张参考图片')
+    return
+  }
+  if (mediaType === 'VIDEO' && pendingAttachments.value.length > 1) {
+    message.warning('生成视频时最多附加一张参考图片')
+    return
+  }
+  if (!currentSessionId.value) await createSession()
+  if (!currentSessionId.value) {
+    message.error('创建聊天会话失败')
+    return
+  }
+
+  messages.value.push({
+    id: Date.now(),
+    role: 'user',
+    content: [question],
+    messageType: 'MEDIA_GENERATION_REQUEST',
+    attachments: pendingAttachments.value.map(toDisplayAttachment),
+    time: getCurrentTime()
+  })
+  const localMessage = {
+    id: Date.now() + Math.random(),
+    role: 'assistant',
+    content: [`正在生成${mediaLabel}…`],
+    messageType: 'MEDIA_GENERATION',
+    generationMediaType: mediaType,
+    generationTask: { status: 'PENDING', progress: 0, mediaType },
+    attachments: [],
+    time: getCurrentTime()
+  }
+  messages.value.push(localMessage)
+  draft.value = ''
+  const referenceAttachments = [...pendingAttachments.value]
+  pendingAttachments.value = []
+  scrollToBottom()
+
+  try {
+    let referenceFileId = null
+    if (referenceAttachments.length) {
+      const uploaded = await ensureAttachmentsUploaded(referenceAttachments)
+      referenceFileId = uploaded[0]?.fileId || null
+    }
+    const commonPayload = {
+      prompt: question,
+      negativePrompt: '文字乱码，水印，低清晰度，主体变形',
+      sessionId: currentSessionId.value
+    }
+    const task = mediaType === 'VIDEO'
+      ? await createVideoGeneration({
+          ...commonPayload,
+          mode: referenceFileId ? 'IMAGE_TO_VIDEO' : 'TEXT_TO_VIDEO',
+          aspectRatio: '16:9',
+          durationSeconds: 5,
+          cameraMotion: 'SLOW_PUSH',
+          referenceFileId
+        })
+      : await createImageGeneration({
+          ...commonPayload,
+          mode: 'TEXT_TO_IMAGE',
+          style: 'MUSEUM_POSTER',
+          aspectRatio: '1:1',
+          count: 1
+        })
+    localMessage.generationTaskId = task.taskId
+    localMessage.generationTask = task
+    pollGenerationMessage(localMessage)
+  } catch (error) {
+    localMessage.content = [`${mediaLabel}生成任务创建失败`]
+    localMessage.generationTask = { status: 'FAILED', errorMessage: error.message || '任务创建失败' }
+    pendingAttachments.value = referenceAttachments
+  }
+}
+
+async function pollGenerationMessage(messageItem) {
+  const taskId = messageItem.generationTaskId || messageItem.generationTask?.taskId
+  if (!taskId || generationPollers.has(taskId)) return
+  const poll = async () => {
+    try {
+      const task = await getGenerationTask(taskId)
+      messageItem.generationTask = task
+      if (task.status === 'SUCCEEDED') {
+        const mediaType = getGenerationMediaType(messageItem)
+        const mediaLabel = mediaType === 'VIDEO' ? '视频' : '图片'
+        messageItem.content = [`${mediaLabel}已生成`]
+        messageItem.attachments = [{
+          fileId: task.resultFileId,
+          mediaType,
+          fileName: mediaType === 'VIDEO' ? 'AI生成视频.mp4' : 'AI生成图片.png',
+          filePath: task.resultUrl
+        }]
+        generationPollers.delete(taskId)
+        scrollToBottom()
+        return
+      }
+      if (['FAILED', 'CANCELED'].includes(task.status)) {
+        const mediaLabel = getGenerationMediaLabel(messageItem)
+        messageItem.content = [task.status === 'FAILED' ? `${mediaLabel}生成失败` : `${mediaLabel}生成已取消`]
+        generationPollers.delete(taskId)
+        return
+      }
+      const timer = window.setTimeout(poll, 2000)
+      generationPollers.set(taskId, timer)
+    } catch {
+      const timer = window.setTimeout(poll, 4000)
+      generationPollers.set(taskId, timer)
+    }
+  }
+  generationPollers.set(taskId, window.setTimeout(poll, 300))
+}
+
 async function sendMessage(presetQuestion = '') {
   const question = (presetQuestion || draft.value).trim()
   if (
@@ -1474,6 +1715,12 @@ async function sendMessage(presetQuestion = '') {
   }
 
   stopVoiceRecording({ transcribe: false })
+
+  const mediaIntent = detectMediaIntent(question)
+  if (mediaIntent === 'IMAGE' || mediaIntent === 'VIDEO') {
+    await sendMediaGeneration(question, mediaIntent)
+    return
+  }
 
   const fixedAnswer = pendingAttachments.value.length ? null : matchFixedAnswer(question)
 
@@ -1734,6 +1981,87 @@ function getCurrentTime() {
 .ai-guide-page button,
 .ai-guide-page textarea {
   font-family: inherit;
+}
+
+.generation-card {
+  width: min(520px, 100%);
+  margin-top: 8px;
+  border: 1px solid rgba(73, 94, 76, 0.18);
+  border-radius: 7px;
+  overflow: hidden;
+  background: #f7f9f6;
+}
+
+.generation-progress,
+.generation-error {
+  display: grid;
+  grid-template-columns: 28px 1fr;
+  gap: 10px;
+  align-items: center;
+  padding: 16px;
+}
+
+.generation-progress > i { color: #356348; font-size: 18px; }
+.generation-progress div:nth-child(2) { display: flex; justify-content: space-between; gap: 18px; }
+.generation-progress span { color: #727a70; font-size: 12px; }
+.generation-progress-track { grid-column: 1 / -1; height: 6px; overflow: hidden; border-radius: 3px; background: #dfe5de; }
+.generation-progress-track i { display: block; height: 100%; background: #356348; transition: width .3s ease; }
+.generation-error { color: #9e3f38; }
+.generation-image,
+.generation-video { display: block; width: 100%; max-height: 520px; object-fit: contain; background: #171a17; }
+
+.generation-image,
+.attachment-image {
+  cursor: zoom-in;
+}
+
+.generation-image:focus-visible,
+.attachment-image:focus-visible {
+  outline: 3px solid #d6bd82;
+  outline-offset: 2px;
+}
+
+.image-preview-overlay {
+  position: fixed;
+  z-index: 10000;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: 64px 32px 32px;
+  background: rgba(12, 17, 14, 0.9);
+  backdrop-filter: blur(6px);
+}
+
+.image-preview-content {
+  display: block;
+  max-width: min(1200px, 94vw);
+  max-height: calc(100vh - 96px);
+  object-fit: contain;
+  border-radius: 6px;
+  box-shadow: 0 24px 64px rgba(0, 0, 0, 0.42);
+}
+
+.image-preview-close {
+  position: fixed;
+  top: 20px;
+  right: 24px;
+  display: grid;
+  width: 42px;
+  height: 42px;
+  place-items: center;
+  border: 1px solid rgba(255, 255, 255, 0.34);
+  border-radius: 50%;
+  color: #fff;
+  background: rgba(23, 31, 27, 0.78);
+  cursor: pointer;
+  font-size: 22px;
+}
+
+.image-preview-close:hover,
+.image-preview-close:focus-visible {
+  background: #42664f;
+  outline: 2px solid #d6bd82;
+  outline-offset: 2px;
 }
 
 .ai-guide-page button {

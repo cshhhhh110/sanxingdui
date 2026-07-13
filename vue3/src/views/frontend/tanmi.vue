@@ -82,15 +82,24 @@
         </div>
       </div>
 
-      <!-- 3D 互动入口 -->
-      <div class="action-card" ref="btnRef">
+      <!-- AI 创作入口 -->
+      <div
+          class="action-card"
+          ref="btnRef"
+          role="link"
+          tabindex="0"
+          aria-label="进入 AI 图片与视频生成器"
+          @click="goToGenerator"
+          @keydown.enter.prevent="goToGenerator"
+          @keydown.space.prevent="goToGenerator"
+      >
         <div class="action-deco"></div>
         <div class="action-inner">
           <div class="action-text">
             <div class="action-title">AI 图片生成器</div>
             <div class="action-desc">输入文字描述，一键生成古蜀风格、三星堆、非遗主题图片</div>
           </div>
-          <button class="action-btn" @click="goToQuiz">立即体验</button>
+          <button type="button" class="action-btn" @click.stop="goToGenerator">立即体验</button>
         </div>
       </div>
     </div>
@@ -279,12 +288,14 @@ const goToDetail = (key) => {
   }
 }
 
-// 3D立即体验跳转到知识问答
-const goToQuiz = () => {
-  router.push({ name: 'ai-image-generator' }).then(() => {
-    // 跳转完成后滚动到顶部
-    window.scrollTo({ top: 0, left: 0, behavior: 'auto' });
-  });
+const goToGenerator = async () => {
+  try {
+    await router.push('/ai-image-generator')
+    window.scrollTo({ top: 0, left: 0, behavior: 'auto' })
+  } catch (error) {
+    console.error('进入 AI 创作页失败:', error)
+    showToast('页面打开失败，请稍后重试')
+  }
 }
 
 const calculateCurrentStepPosition = async () => {
@@ -784,6 +795,18 @@ watch(guideStep, async () => {
   border-radius: 14px;
   padding: 20px;
   overflow: hidden;
+  cursor: pointer;
+  transition: filter 0.15s, box-shadow 0.15s;
+}
+
+.action-card:hover {
+  filter: brightness(1.06);
+}
+
+.action-card:focus-visible {
+  outline: 3px solid #FAC775;
+  outline-offset: 3px;
+  box-shadow: 0 0 0 2px #42664f;
 }
 
 .action-deco {

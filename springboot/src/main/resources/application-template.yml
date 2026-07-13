@@ -173,6 +173,28 @@ file:
     path: ./files
     maxSize: 524288000  # 500MB (500 * 1024 * 1024)
 
+media-generation:
+  enabled: ${MEDIA_GENERATION_ENABLED:true}
+  storage-dir: ${MEDIA_GENERATION_STORAGE_DIR:files/generated}
+  safety:
+    blocked-terms: ${MEDIA_GENERATION_BLOCKED_TERMS:儿童色情,制作炸弹,恐怖主义宣传,仇恨煽动}
+  image:
+    provider: siliconflow
+    base-url: ${IMAGE_GENERATION_BASE_URL:${spring.ai.openai.base-url}}
+    api-key: ${IMAGE_GENERATION_API_KEY:${spring.ai.openai.api-key}}
+    model: ${IMAGE_GENERATION_MODEL:Qwen/Qwen-Image}
+    timeout-seconds: 180
+    max-result-bytes: 20971520
+  video:
+    provider: siliconflow
+    base-url: ${VIDEO_GENERATION_BASE_URL:${spring.ai.openai.base-url}}
+    api-key: ${VIDEO_GENERATION_API_KEY:${spring.ai.openai.api-key}}
+    text-model: ${VIDEO_TEXT_MODEL:Wan-AI/Wan2.2-T2V-A14B}
+    image-model: ${VIDEO_IMAGE_MODEL:Wan-AI/Wan2.2-I2V-A14B}
+    request-timeout-seconds: 30
+    poll-interval-ms: 8000
+    max-result-bytes: 209715200
+
 # ========== Neo4j 图谱读模型（默认关闭） ==========
 graph:
   neo4j:

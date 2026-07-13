@@ -6,7 +6,7 @@
 - 前端：Vue 3 + Vite，默认端口 `8800`
 - 数据库：MySQL，复现建议库名 `sanxingdui_repro`
 - 可选图谱：Neo4j，默认 `bolt://localhost:7687`
-- 可选图片生成服务：默认 `http://127.0.0.1:8001`
+- 图片生成：Spring Boot 直连 SiliconFlow 图片模型 API
 
 ## 环境要求
 
@@ -123,21 +123,26 @@ docs/neo4j-graph-seed.cypher
 
 即使 Neo4j 未启用，后端仍会回退到 MySQL 图谱数据。
 
-## 可选：AI 图片生成
+## AI 图片生成
 
-`/ai-image-generator` 默认请求：
+`/ai-image-generator` 和聊天页生图模式统一请求 Spring Boot 的
+`/api/media-generation/image`。后端通过 `SiliconFlowImageGenerationProvider`
+直接调用 SiliconFlow，并将短时结果下载到 `springboot/files/generated`。
 
-```text
-http://127.0.0.1:8001/api/generate-image
-```
-
-这个图片生成服务是可选外部服务，不属于主后端 `8889`。如果没有启动它，页面会提示服务未连接，但不影响其他页面运行。
-
-前端可通过 `vue3/.env.development` 调整：
+图片模型默认使用 `Qwen/Qwen-Image`，可通过环境变量调整：
 
 ```env
-VITE_IMAGE_API_BASE = http://127.0.0.1:8001
+IMAGE_GENERATION_MODEL=Qwen/Qwen-Image
+IMAGE_GENERATION_API_KEY=<your-api-key>
 ```
+
+没有单独配置 `IMAGE_GENERATION_API_KEY` 时，后端复用
+`spring.ai.openai.api-key`。供应商密钥不得写入前端环境变量。
+
+视频生成使用 `Wan-AI/Wan2.2-T2V-A14B` 和
+`Wan-AI/Wan2.2-I2V-A14B`，通过 `/v1/video/submit` 提交并由后端定时查询
+`/v1/video/status`。完成后的短时视频地址会立即转存到本地，并通过
+`ffprobe` 校验后写入 `sys_file_info`。当前模型输出约 5 秒视频。
 
 ## 常用验证
 
