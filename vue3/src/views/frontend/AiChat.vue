@@ -99,8 +99,93 @@
             </div>
 
             <div class="message-stack">
-              <div class="message-bubble">
-                <p v-for="line in messageItem.content" :key="line">{{ line }}</p>
+              <div
+                class="message-bubble"
+                :class="{ 'message-bubble--with-exploration': hasExploration(messageItem) }"
+              >
+                <div
+                  v-if="messageItem.role === 'assistant' && hasExploration(messageItem) && !messageItem.streamArchived"
+                  class="message-exploration message-exploration--live"
+                >
+                  <div class="exploration-inline-title">
+                    <span>
+                      <i class="fas fa-paw"></i>
+                      玄喵正在探索
+                    </span>
+                    <small>{{ getExplorationSummaryStatus(messageItem) }}</small>
+                  </div>
+                  <p class="exploration-live-line">{{ getLiveExplorationLine(messageItem) }}</p>
+                </div>
+
+                <div class="message-answer">
+                  <p v-for="line in messageItem.content" :key="line">{{ line }}</p>
+                </div>
+
+                <details
+                  v-if="messageItem.role === 'assistant' && hasExploration(messageItem) && messageItem.streamArchived"
+                  class="message-exploration message-exploration--archived exploration-archive"
+                >
+                  <summary>
+                    <span>{{ getExplorationArchiveSummary(messageItem) }}</span>
+                  </summary>
+                  <p v-if="messageItem.explorationTrace?.contextLine" class="exploration-context-line">
+                    {{ messageItem.explorationTrace.contextLine }}
+                  </p>
+                  <ol v-if="getExplorationStageEvents(messageItem).length" class="agent-trace-steps exploration-timeline">
+                    <li
+                      v-for="step in getExplorationStageEvents(messageItem)"
+                      :key="step.key"
+                      :class="`agent-trace-step--${step.status || 'pending'}`"
+                    >
+                      <span class="agent-step-dot"></span>
+                      <span class="agent-step-copy">
+                        <strong><span class="exploration-step-icon">{{ step.icon }}</span>{{ step.label }}</strong>
+                        <small v-if="step.detail">{{ step.detail }}</small>
+                      </span>
+                    </li>
+                  </ol>
+                  <details class="agent-trace-details exploration-expert">
+                    <summary>专家模式：查看 Agent 信息</summary>
+                    <dl>
+                      <div>
+                        <dt>route</dt>
+                        <dd>{{ messageItem.explorationTrace?.technicalTrace?.route || '-' }}</dd>
+                      </div>
+                      <div v-if="messageItem.explorationTrace?.technicalTrace?.toolName || messageItem.explorationTrace?.technicalTrace?.tool">
+                        <dt>tool</dt>
+                        <dd>{{ messageItem.explorationTrace.technicalTrace.toolName || messageItem.explorationTrace.technicalTrace.tool }}</dd>
+                      </div>
+                      <div v-if="messageItem.explorationTrace?.technicalTrace?.arguments">
+                        <dt>arguments</dt>
+                        <dd>{{ formatAgentTraceArguments(messageItem.explorationTrace?.technicalTrace || {}) }}</dd>
+                      </div>
+                      <div v-if="messageItem.explorationTrace?.technicalTrace?.duration">
+                        <dt>duration</dt>
+                        <dd>{{ messageItem.explorationTrace.technicalTrace.duration }}ms</dd>
+                      </div>
+                      <div v-if="messageItem.explorationTrace?.technicalTrace">
+                        <dt>trace</dt>
+                        <dd>{{ formatAgentTraceArguments({ arguments: messageItem.explorationTrace.technicalTrace }) }}</dd>
+                      </div>
+                    </dl>
+                  </details>
+                </details>
+                <div
+                  v-if="messageItem.role === 'assistant' && messageItem.streamArchived && getFollowupSuggestions(messageItem).length"
+                  class="message-followups"
+                >
+                  <strong>继续探索</strong>
+                  <div class="followup-list">
+                    <button
+                      v-for="suggestion in getFollowupSuggestions(messageItem)"
+                      :key="suggestion"
+                      type="button"
+                      @click="handleSuggest(suggestion)"
+                    >
+                      {{ suggestion }}
+                    </button>
+                  </div>
+                </div>
               </div>
               <details v-if="messageItem.references?.length" class="message-references">
                 <summary class="references-title">
@@ -116,15 +201,21 @@
                     :key="getReferenceKey(reference, referenceIndex)"
                   >
                     <span class="reference-index">{{ referenceIndex + 1 }}</span>
-                    <button
-                      type="button"
-                      class="reference-copy reference-copy--button"
-                      :disabled="!getReferenceOpenTarget(reference)"
-                      @click="openReference(reference)"
-                    >
-                      <strong>{{ reference.title || '知识库文档' }}</strong>
-                      <small>{{ formatReferenceMeta(reference) }}</small>
-                    </button>
+                    <div class="reference-copy">
+                      <button
+                        type="button"
+                        class="reference-copy--button"
+                        :disabled="!getReferenceOpenTarget(reference)"
+                        @click="openReference(reference)"
+                      >
+                        <strong>{{ getReferenceDisplayTitle(reference) }}</strong>
+                        <small>{{ getReferenceVisitorMeta(reference) }}</small>
+                      </button>
+                      <details class="reference-expert" @click.stop>
+                        <summary>专家信息</summary>
+                        <span>{{ formatReferenceMeta(reference) }}</span>
+                      </details>
+                    </div>
                   </li>
                 </ul>
               </details>
@@ -163,45 +254,6 @@
                   preload="metadata"
                 ></video>
               </div>
-              <details v-if="messageItem.agentTrace" class="message-agent-trace">
-                <summary class="agent-trace-title">
-                  <span>
-                    <i class="fas fa-route"></i>
-                    执行信息
-                  </span>
-                  <small>{{ messageItem.agentTrace.route || 'UNKNOWN' }}</small>
-                </summary>
-                <dl>
-                  <div>
-                    <dt>路由</dt>
-                    <dd>{{ messageItem.agentTrace.route || '-' }}</dd>
-                  </div>
-                  <div v-if="messageItem.agentTrace.tool">
-                    <dt>工具</dt>
-                    <dd>{{ messageItem.agentTrace.tool }}</dd>
-                  </div>
-                  <div v-if="messageItem.agentTrace.confidence">
-                    <dt>置信度</dt>
-                    <dd>{{ Math.round(messageItem.agentTrace.confidence * 100) }}%</dd>
-                  </div>
-                  <div v-if="messageItem.agentTrace.success !== undefined">
-                    <dt>结果</dt>
-                    <dd>{{ messageItem.agentTrace.success ? '成功' : '失败' }}</dd>
-                  </div>
-                  <div v-if="formatAgentTraceArguments(messageItem.agentTrace)">
-                    <dt>参数</dt>
-                    <dd>{{ formatAgentTraceArguments(messageItem.agentTrace) }}</dd>
-                  </div>
-                  <div v-if="messageItem.agentTrace.referenceCount">
-                    <dt>资料</dt>
-                    <dd>{{ messageItem.agentTrace.referenceCount }} 条</dd>
-                  </div>
-                  <div v-if="messageItem.agentTrace.reason">
-                    <dt>原因</dt>
-                    <dd>{{ messageItem.agentTrace.reason }}</dd>
-                  </div>
-                </dl>
-              </details>
               <div v-if="messageItem.attachments?.length" class="message-attachments">
                 <div
                   v-for="attachment in messageItem.attachments"
@@ -380,8 +432,41 @@ import { createImageGeneration, createVideoGeneration, getGenerationTask } from 
 import { uploadTempFile } from '@/api/FileApi'
 import { matchFixedAnswer } from '@/config/chatReplyConfig'
 import { buildRagPrompt, searchKnowledge } from '@/utils/knowledgeSearch'
-import { AgentRoute, agentOrchestrator } from '@/agent'
-import { createBrowserSpeechRecognition } from '@/utils/browserSpeech'
+import {
+  AgentRoute,
+  agentOrchestrator,
+  buildActiveGuideContext,
+  buildActiveGuideFollowups,
+  buildKnowledgeFollowupSuggestions,
+  discoverKnowledgeRelations,
+  createSpeechInputService,
+  getSpeechInputSupportMessage,
+  SpeechInputService,
+  SpeechInputStatus
+} from '@/agent'
+import { normalizeAgentTrace } from '@/agent/trace'
+import {
+  formatExplorationStatus,
+  mergeExplorationTrace
+} from '@/agent/explorationTrace'
+import {
+  createAgentStreamEvent,
+  createCompletedEvent,
+  createContextStartEvent,
+  createErrorEvent,
+  createGeneratingEvent,
+  createGuideCompletedEvent,
+  createGuideContinueEvent,
+  createGuideFirstStopEvent,
+  createGuideRecommendationEvent,
+  createGuideRoutePlanningEvent,
+  createGuideStatusSyncedEvent,
+  createKnowledgeEvent,
+  createKnowledgeRelationEvent,
+  createToolEvent,
+  parseAgentStreamEvent,
+  streamEventToStep
+} from '@/agent/streamEvents'
 import { formatYearRange } from '@/data/competitionArtifacts'
 import { competitionActionLabels } from '@/data/competitionUi'
 import { getSpacetimeArtifactDetail } from '@/api/SpacetimeApi'
@@ -389,6 +474,15 @@ import aiAvatar from '@/assets/sanxingdui-ai-chat/xuanmiao-avatar.png'
 import { getRecentArtifactTrail, pushCompetitionTrail } from '@/utils/competitionTrail'
 import { agentOrchestrator } from '@/agent/AgentOrchestrator'
 import { detectMediaIntent } from '@/utils/mediaIntent'
+import {
+  buildContextualQuestion,
+  getXuanmiaoContext,
+  getXuanmiaoContextPayload,
+  rememberXuanmiaoMessage,
+  setXuanmiaoArtifactContext,
+  setXuanmiaoPageContext,
+  updateXuanmiaoContext
+} from '@/agent/context'
 
 const route = useRoute()
 const router = useRouter()
@@ -404,6 +498,7 @@ const showThinkingBubble = ref(false)
 const isUploadingAttachments = ref(false)
 const isListening = ref(false)
 const isTranscribingVoice = ref(false)
+const voiceInputStatus = ref(SpeechInputStatus.IDLE)
 const currentSessionId = ref(null)
 const activeQuickCard = ref('hot')
 const artifactContext = ref(null)
@@ -599,12 +694,7 @@ const currentUserAvatar = computed(() => {
   )
 })
 
-const voiceInputSupported = computed(() => {
-  if (typeof window === 'undefined' || typeof navigator === 'undefined') {
-    return false
-  }
-  return Boolean(navigator.mediaDevices?.getUserMedia && (window.AudioContext || window.webkitAudioContext))
-})
+const voiceInputSupported = computed(() => SpeechInputService.isSupported())
 
 const voiceButtonTitle = computed(() => {
   if (!voiceInputSupported.value) return '当前浏览器不支持麦克风录音'
@@ -616,14 +706,7 @@ const voiceButtonTitle = computed(() => {
 let suggestionResizeObserver = null
 let lastSuggestionRowWidth = 0
 let chatAbortController = null
-let voiceAudioContext = null
-let voiceMediaStream = null
-let voiceSourceNode = null
-let voiceProcessorNode = null
-let voiceAudioChunks = []
-let voiceSampleRate = 44100
-let voiceStopTimer = null
-let speechRecognition = null
+let speechInputService = null
 
 const messages = ref([])
 
@@ -699,6 +782,10 @@ async function initializeConversation() {
   isThinking.value = false
   showThinkingBubble.value = false
   window.localStorage.removeItem('ai-chat-current-session')
+  setXuanmiaoPageContext({
+    currentPage: route.fullPath,
+    currentScene: 'AI文博助手'
+  })
   await loadArtifactContext()
   resetMessages()
   void maybeAutoStartGuide()
@@ -713,6 +800,11 @@ async function loadArtifactContext() {
   try {
     artifactContext.value = await getSpacetimeArtifactDetail({ entityId: route.query.entityId }, { showDefaultMsg: false })
     if (artifactContext.value?.entityId) {
+      setXuanmiaoArtifactContext(artifactContext.value, {
+        currentPage: route.fullPath,
+        currentScene: 'AI文博助手',
+        lastAction: 'open_ai_chat_artifact'
+      })
       pushCompetitionTrail({
         entityId: artifactContext.value.entityId,
         title: artifactContext.value.displayTitle,
@@ -839,10 +931,41 @@ function updateAssistantReferencesById(messageId, docs = []) {
   }
 
   targetMessage.references = normalizeKnowledgeReferences(docs)
+  if (targetMessage.agentTrace) {
+    updateAssistantExplorationTraceById(messageId, targetMessage.agentTrace, {
+      references: targetMessage.references
+    })
+  }
   scrollToBottom()
 }
 
-function updateAssistantAgentTraceById(messageId, trace = null) {
+function updateAssistantKnowledgeGraphById(messageId, knowledgeGraph = null) {
+  if (!knowledgeGraph) {
+    return
+  }
+  const targetMessage = messages.value.find((item) => item.id === messageId)
+  if (!targetMessage) {
+    return
+  }
+  targetMessage.knowledgeGraph = knowledgeGraph
+  targetMessage.activeGuide = buildActiveGuideContext(targetMessage.sourceQuestion || '', getXuanmiaoContext(), knowledgeGraph)
+  targetMessage.followupSuggestions = buildActiveGuideFollowups({
+    question: targetMessage.sourceQuestion || '',
+    context: getXuanmiaoContext(),
+    knowledgeGraph
+  })
+  if (!targetMessage.followupSuggestions.length) {
+    targetMessage.followupSuggestions = buildKnowledgeFollowupSuggestions(knowledgeGraph)
+  }
+  if (targetMessage.agentTrace) {
+    updateAssistantExplorationTraceById(messageId, targetMessage.agentTrace, {
+      knowledgeGraph,
+      activeGuide: targetMessage.activeGuide
+    })
+  }
+}
+
+function updateAssistantAgentTraceById(messageId, trace = null, options = {}) {
   if (!trace) {
     return
   }
@@ -851,28 +974,548 @@ function updateAssistantAgentTraceById(messageId, trace = null) {
     return
   }
 
-  targetMessage.agentTrace = {
-    ...(targetMessage.agentTrace || {}),
-    ...trace
+  targetMessage.agentTrace = normalizeAgentTrace(trace, targetMessage.agentTrace || {})
+  updateAssistantExplorationTraceById(messageId, targetMessage.agentTrace, options)
+  scrollToBottom()
+}
+
+function updateAssistantExplorationTraceById(messageId, trace = null, options = {}) {
+  if (!trace) {
+    return
+  }
+  const targetMessage = messages.value.find((item) => item.id === messageId)
+  if (!targetMessage) {
+    return
+  }
+
+  const references = options.references || targetMessage.references || []
+  const knowledgeGraph = options.knowledgeGraph || targetMessage.knowledgeGraph || null
+  const activeGuide = options.activeGuide || targetMessage.activeGuide || null
+  targetMessage.explorationTrace = mergeExplorationTrace(
+    targetMessage.explorationTrace,
+    trace,
+    {
+      message: options.message || trace.message || '',
+      context: getXuanmiaoContextPayload({
+        currentPage: route.fullPath,
+        surface: 'ai_chat'
+      }),
+      references,
+      knowledgeGraph,
+      activeGuide
+    }
+  )
+  if (targetMessage.streamEvents?.length) {
+    targetMessage.explorationTrace.userFriendlySteps = targetMessage.streamEvents.map(streamEventToStep)
+  }
+}
+
+function buildAgentTrace(result = {}, extra = {}) {
+  if (!result?.route && !result?.trace && !extra.route) {
+    return null
+  }
+
+  return normalizeAgentTrace(result.trace, {
+    route: result.route || extra.route || '',
+    toolName: result.toolName || result.tool || '',
+    tool: result.toolName || result.tool || '',
+    arguments: result.arguments || {},
+    confidence: Number(result.confidence) || 0,
+    reason: result.reason || '',
+    status: result.success === false ? 'failed' : (result.success === true ? 'success' : ''),
+    result: result.message || '',
+    handled: Boolean(result.handled),
+    referenceCount: extra.referenceCount || 0,
+    message: extra.message || result.trace?.message || ''
+  })
+}
+
+function formatAgentTraceStatus(trace = {}) {
+  const route = trace.route || 'UNKNOWN'
+  const statusText = trace.status === 'running'
+    ? '执行中'
+    : trace.status === 'failed'
+      ? '失败'
+      : trace.status === 'success'
+        ? '完成'
+        : '待处理'
+  return `${route} · ${statusText}`
+}
+
+function formatExplorationTraceStatus(explorationTrace = {}) {
+  return formatExplorationStatus(explorationTrace)
+}
+
+const EXPLORATION_STAGE_MAP = {
+  understand: {
+    order: 10,
+    icon: '🐱',
+    label: '正在理解问题'
+  },
+  search: {
+    order: 20,
+    icon: '📚',
+    label: '正在查阅资料'
+  },
+  relation: {
+    order: 30,
+    icon: '🔎',
+    label: '正在整理线索'
+  },
+  tool_prepare: {
+    order: 35,
+    icon: '🏛',
+    label: '正在定位展陈节点'
+  },
+  tool_execute: {
+    order: 36,
+    icon: '🧭',
+    label: '正在加载参观路线'
+  },
+  generate: {
+    order: 40,
+    icon: '✨',
+    label: '正在生成讲解'
+  },
+  guide: {
+    order: 50,
+    icon: '🧭',
+    label: '正在推荐继续探索'
+  },
+  error: {
+    order: 90,
+    icon: '⚠️',
+    label: '正在切换备用方案'
+  }
+}
+
+function hasExploration(messageItem = {}) {
+  return messageItem.role === 'assistant' && Boolean(
+    messageItem.streamEvents?.length ||
+    messageItem.explorationTrace
+  )
+}
+
+function getEventStageKey(event = {}) {
+  if (event.status === 'failed' || event.type === 'error') {
+    return 'error'
+  }
+  if (event.type === 'knowledge_search') {
+    return 'search'
+  }
+  if (event.type === 'relation_discovery') {
+    return 'relation'
+  }
+  if (event.type === 'proactive_direction') {
+    return 'guide'
+  }
+  if (event.type === 'route_planning' || event.type === 'guide_plan_created' || event.type === 'guide_preparing_visit' || event.type === 'guide_introducing_destination') {
+    return 'tool_prepare'
+  }
+  if (event.type === 'guide_first_stop_opening' || event.type === 'guide_continue_requested' || event.type === 'guide_next_stop_opening' || event.type === 'guide_navigating') {
+    return 'tool_execute'
+  }
+  if (event.type === 'guide_status_synced' || event.type === 'guide_completed' || event.type === 'guide_arrived' || event.type === 'guide_explaining') {
+    return 'generate'
+  }
+  if (event.type === 'tool_prepare') {
+    return 'tool_prepare'
+  }
+  if (event.type === 'tool_execute') {
+    return 'tool_execute'
+  }
+  if (event.type === 'generating' || event.type === 'completed') {
+    return 'generate'
+  }
+  return 'understand'
+}
+
+function getExplorationStageEvents(messageItem = {}) {
+  const rawEvents = Array.isArray(messageItem.streamEvents) ? messageItem.streamEvents : []
+  const stages = new Map()
+
+  rawEvents.forEach((event) => {
+    const stageKey = getEventStageKey(event)
+    const stage = EXPLORATION_STAGE_MAP[stageKey] || EXPLORATION_STAGE_MAP.understand
+    const previous = stages.get(stageKey)
+    const status = event.status === 'failed'
+      ? 'failed'
+      : messageItem.streamArchived
+        ? 'success'
+        : event.status || previous?.status || 'running'
+
+    stages.set(stageKey, {
+      key: stageKey,
+      order: stage.order,
+      icon: getVisitorStageIcon(event, stageKey, messageItem),
+      label: getVisitorStageLabel(event, stageKey, messageItem),
+      detail: previous?.detail || '',
+      status
+    })
+  })
+
+  if (!stages.size && messageItem.explorationTrace?.userFriendlySteps?.length) {
+    messageItem.explorationTrace.userFriendlySteps.forEach((step = {}) => {
+      const stageKey = getTraceStepStageKey(step)
+      const stage = EXPLORATION_STAGE_MAP[stageKey] || EXPLORATION_STAGE_MAP.understand
+      if (!stages.has(stageKey)) {
+        stages.set(stageKey, {
+          key: stageKey,
+          order: stage.order,
+          icon: step.icon || stage.icon,
+          label: normalizeArchivedStageLabel(step.label || stage.label),
+          detail: step.detail || '',
+          status: messageItem.streamArchived ? 'success' : (step.status || 'running')
+        })
+      }
+    })
+  }
+
+  return Array.from(stages.values())
+    .sort((left, right) => left.order - right.order)
+}
+
+function getTraceStepStageKey(step = {}) {
+  const label = `${step.label || ''} ${step.detail || ''}`
+  if (/资料|知识|查阅|检索/.test(label)) {
+    return 'search'
+  }
+  if (/线索|关联|整理/.test(label)) {
+    return 'relation'
+  }
+  if (/工具|调度|打开|搜索|商城|天气|展线|定位/.test(label)) {
+    return 'tool_prepare'
+  }
+  if (/生成|讲解|回答|完成/.test(label)) {
+    return 'generate'
+  }
+  if (/失败|错误|备用/.test(label)) {
+    return 'error'
+  }
+  return 'understand'
+}
+
+function appendAssistantStreamEventById(messageId, event = null) {
+  if (!event) {
+    return
+  }
+  const targetMessage = messages.value.find((item) => item.id === messageId)
+  if (!targetMessage) {
+    return
+  }
+  if (!Array.isArray(targetMessage.streamEvents)) {
+    targetMessage.streamEvents = []
+  }
+  const normalizedEvent = createAgentStreamEvent(event.type || 'thinking_status', event)
+  normalizedEvent.message = getVisitorStageLabel(normalizedEvent, getEventStageKey(normalizedEvent), targetMessage)
+  normalizedEvent.icon = getVisitorStageIcon(normalizedEvent, getEventStageKey(normalizedEvent), targetMessage)
+  const normalizedStage = getEventStageKey(normalizedEvent)
+  const existingStageIndex = targetMessage.streamEvents.findIndex((item) => getEventStageKey(item) === normalizedStage)
+  if (existingStageIndex >= 0 && normalizedEvent.type !== 'error') {
+    targetMessage.streamEvents[existingStageIndex] = {
+      ...targetMessage.streamEvents[existingStageIndex],
+      ...normalizedEvent,
+      id: targetMessage.streamEvents[existingStageIndex].id
+    }
+    if (targetMessage.agentTrace) {
+      updateAssistantExplorationTraceById(messageId, targetMessage.agentTrace)
+    }
+    scrollToBottom()
+    return
+  }
+  const lastEvent = targetMessage.streamEvents[targetMessage.streamEvents.length - 1]
+  if (lastEvent && lastEvent.type === normalizedEvent.type && lastEvent.message === normalizedEvent.message) {
+    targetMessage.streamEvents[targetMessage.streamEvents.length - 1] = {
+      ...lastEvent,
+      ...normalizedEvent
+    }
+  } else {
+    targetMessage.streamEvents.push(normalizedEvent)
+  }
+  if (targetMessage.agentTrace) {
+    updateAssistantExplorationTraceById(messageId, targetMessage.agentTrace)
   }
   scrollToBottom()
 }
 
-function buildAgentTrace(result = {}, extra = {}) {
-  if (!result?.route && !extra.route) {
-    return null
+function archiveAssistantStreamById(messageId, finalMessage = '探索完成') {
+  const targetMessage = messages.value.find((item) => item.id === messageId)
+  if (!targetMessage) {
+    return
+  }
+  if (!targetMessage.streamEvents?.some((event) => event.type === 'completed')) {
+    appendAssistantStreamEventById(messageId, createCompletedEvent(finalMessage))
+  }
+  targetMessage.streamArchived = true
+  targetMessage.followupSuggestions = buildFollowupSuggestions(targetMessage)
+  if (targetMessage.agentTrace) {
+    updateAssistantExplorationTraceById(messageId, targetMessage.agentTrace)
+  }
+  scrollToBottom()
+}
+
+function getExplorationSummaryStatus(messageItem = {}) {
+  if (!messageItem.streamArchived) {
+    const latest = messageItem.streamEvents?.[messageItem.streamEvents.length - 1]
+    return latest?.status === 'failed' ? '备用方案' : '实时'
+  }
+  return `${getExplorationStepCount(messageItem)}步 · ${getExplorationDuration(messageItem)}`
+}
+
+function getExplorationStepCount(messageItem = {}) {
+  return getExplorationStageEvents(messageItem).length
+}
+
+function getExplorationArchiveSummary(messageItem = {}) {
+  return `玄喵探索过程 · ${getExplorationStepCount(messageItem)}步 · ${getExplorationDuration(messageItem)}`
+}
+
+function getLiveExplorationLine(messageItem = {}) {
+  const stages = getExplorationStageEvents(messageItem)
+  const latestRunning = [...stages].reverse().find((stage) => stage.status === 'running')
+  const latest = latestRunning || stages[stages.length - 1]
+  if (!latest?.label) {
+    return '正在把问题和当前展陈线索对齐'
+  }
+  return `${latest.icon || '🐱'} ${latest.label}`
+}
+
+function getExplorationDuration(messageItem = {}) {
+  const traceDuration = Number(messageItem.explorationTrace?.technicalTrace?.duration) || 0
+  if (traceDuration > 0) {
+    return formatDuration(traceDuration)
+  }
+  const events = Array.isArray(messageItem.streamEvents) ? messageItem.streamEvents : []
+  if (events.length >= 2) {
+    const first = new Date(events[0].timestamp).getTime()
+    const last = new Date(events[events.length - 1].timestamp).getTime()
+    if (!Number.isNaN(first) && !Number.isNaN(last) && last >= first) {
+      return formatDuration(last - first)
+    }
+  }
+  return '刚刚'
+}
+
+function formatDuration(ms = 0) {
+  if (!ms || ms < 100) {
+    return '刚刚'
+  }
+  if (ms < 1000) {
+    return `${Math.round(ms)}ms`
+  }
+  return `${(ms / 1000).toFixed(ms < 10000 ? 1 : 0)}s`
+}
+
+function getVisitorStageIcon(event = {}, stageKey = '', messageItem = {}) {
+  if (stageKey === 'search') return '📚'
+  if (stageKey === 'relation') return inferTopic(messageItem).includes('神树') ? '🌳' : '🔎'
+  if (stageKey === 'tool_prepare') return '🏛'
+  if (stageKey === 'tool_execute') return '🧭'
+  if (stageKey === 'generate') return messageItem.streamArchived ? '✓' : '✨'
+  if (stageKey === 'error') return '⚠️'
+  return event.icon || '🐱'
+}
+
+function getVisitorStageLabel(event = {}, stageKey = '', messageItem = {}) {
+  const topic = inferTopic(messageItem)
+  const routeName = messageItem.agentTrace?.route || messageItem.explorationTrace?.technicalTrace?.route || ''
+  const toolName = event.metadata?.toolName ||
+    messageItem.agentTrace?.toolName ||
+    messageItem.agentTrace?.tool ||
+    messageItem.explorationTrace?.technicalTrace?.toolName ||
+    ''
+  const args = event.metadata?.arguments ||
+    messageItem.agentTrace?.arguments ||
+    messageItem.explorationTrace?.technicalTrace?.arguments ||
+    {}
+  const target = inferToolTarget(args, topic)
+  const archived = Boolean(messageItem.streamArchived)
+
+  if (stageKey === 'search') {
+    return archived ? `查阅${topic}资料` : `正在查阅${topic}资料`
+  }
+  if (stageKey === 'relation') {
+    if (event.type === 'proactive_direction') {
+      const suggestion = event.metadata?.suggestions?.[0] || ''
+      return archived
+        ? (suggestion ? `推荐继续探索：${suggestion}` : '推荐新的探索方向')
+        : (suggestion ? `正在生成继续探索建议：${suggestion}` : '正在生成继续探索建议')
+    }
+    const relation = Array.isArray(event.metadata?.relations) ? event.metadata.relations[0] : null
+    if (relation?.sourceName && relation?.targetName) {
+      return archived
+        ? `发现${relation.sourceName}与${relation.targetName}的关联线索`
+        : `正在分析${relation.sourceName}与${relation.targetName}的关联`
+    }
+    if (isSanxingduiJinshaQuestion(messageItem)) {
+      return archived ? '整理三星堆与金沙的关联' : '正在整理三星堆与金沙的关联'
+    }
+    return archived ? `整理${topic}相关线索` : `正在整理${topic}相关线索`
+  }
+  if (stageKey === 'tool_prepare') {
+    if (['guide_preparing_visit', 'guide_introducing_destination'].includes(event.type)) {
+      return archived ? event.message.replace(/^正在/, '') : event.message
+    }
+    if (event.type === 'route_planning' || event.type === 'guide_plan_created') {
+      const firstStop =
+        event.metadata?.routePlan?.nodes?.[0]?.artifact ||
+        event.metadata?.routePlan?.stops?.[0]?.artifactName ||
+        target
+      return archived ? `规划参观路线：${firstStop}` : `正在规划参观路线：${firstStop}`
+    }
+    if (/trail|spacetime|control_trail/.test(toolName)) {
+      return archived ? `定位${target}展陈节点` : `正在定位${target}展陈节点`
+    }
+    if (toolName === 'search_product') {
+      return archived ? `查找${target}文创商品` : `正在查找${target}文创商品`
+    }
+    if (toolName === 'get_weather') {
+      return archived ? `查询${target || '参观'}出行信息` : `正在查询${target || '参观'}出行信息`
+    }
+    return archived ? '准备展馆能力' : '正在准备展馆能力'
+  }
+  if (stageKey === 'tool_execute') {
+    if (event.type === 'guide_navigating') {
+      return archived ? event.message.replace(/^正在/, '') : event.message
+    }
+    if (event.type === 'guide_first_stop_opening' || event.type === 'guide_next_stop_opening') {
+      const nodeName = event.metadata?.node?.artifact || target
+      return archived ? `打开导览站点：${nodeName}` : `正在打开导览站点：${nodeName}`
+    }
+    if (event.type === 'guide_continue_requested') {
+      return archived ? '继续当前导览路线' : '正在继续当前导览路线'
+    }
+    if (/trail|spacetime|control_trail/.test(toolName)) {
+      return archived ? '加载参观路线' : '正在加载参观路线'
+    }
+    return archived ? '完成工具调用' : '正在调度展馆能力'
+  }
+  if (stageKey === 'generate') {
+    if (event.type === 'guide_arrived' || event.type === 'guide_explaining') {
+      return archived ? event.message.replace(/^正在/, '') : event.message
+    }
+    if (event.type === 'guide_status_synced') {
+      const artifactName = event.metadata?.trailStatus?.artifactName || target
+      return archived ? `已到达${artifactName}` : `正在确认已到达${artifactName}`
+    }
+    if (event.type === 'guide_completed') {
+      return archived ? '完成导览路线' : '正在完成导览路线'
+    }
+    if (routeName === AgentRoute.TOOL_CALL || /trail|spacetime|control_trail/.test(toolName)) {
+      return archived ? '已完成跳转' : '正在确认操作结果'
+    }
+    if (isSanxingduiJinshaQuestion(messageItem)) {
+      return archived ? '完成文化关系讲解' : '正在生成文化关系讲解'
+    }
+    return archived ? '完成讲解' : '正在生成讲解'
+  }
+  if (stageKey === 'guide') {
+    const suggestion = event.metadata?.suggestions?.[0] || ''
+    return archived
+      ? (suggestion ? `推荐下一站：${suggestion}` : '推荐新的探索方向')
+      : (suggestion ? `正在生成下一步建议：${suggestion}` : '正在生成下一步建议')
+  }
+  if (stageKey === 'error') {
+    return archived ? '已切换备用方案' : '正在切换备用方案'
+  }
+  if (messageItem.explorationTrace?.contextLine) {
+    return archived
+      ? messageItem.explorationTrace.contextLine.replace(/^基于你的当前探索：/, '结合当前展陈：')
+      : messageItem.explorationTrace.contextLine.replace(/^基于你的当前探索：/, '正在结合当前展陈：')
+  }
+  return archived ? '理解问题意图' : '正在理解问题意图'
+}
+
+function normalizeArchivedStageLabel(label = '') {
+  return String(label || '')
+    .replace(/^正在/, '')
+    .replace(/^已找到 \d+ 条相关资料线索，正在整理关联\.{0,3}$/, '整理资料线索')
+    .replace(/\.{3}$/, '')
+}
+
+function inferTopic(messageItem = {}) {
+  const graphEntity = messageItem.knowledgeGraph?.entities?.[0] ||
+    messageItem.explorationTrace?.knowledge?.entityDetails?.[0]
+  if (graphEntity?.name) {
+    return graphEntity.name
   }
 
-  return {
-    route: result.route || extra.route || '',
-    tool: result.tool || '',
-    arguments: result.arguments || {},
-    confidence: Number(result.confidence) || 0,
-    reason: result.reason || '',
-    success: result.success,
-    handled: Boolean(result.handled),
-    referenceCount: extra.referenceCount || 0
+  const context = getXuanmiaoContext()
+  const text = [
+    messageItem.sourceQuestion,
+    context.currentArtifact,
+    context.currentTrailNode,
+    messageItem.explorationTrace?.contextLine,
+    ...(messageItem.references || []).map((item) => `${item.title || ''} ${item.path || ''}`)
+  ].filter(Boolean).join(' ')
+
+  const topicCandidates = [
+    '青铜神树',
+    '金面具',
+    '三星堆与金沙',
+    '三星堆',
+    '金沙遗址',
+    '祭祀坑',
+    '青铜纵目面具',
+    '青铜大立人',
+    '金杖',
+    '古蜀文明'
+  ]
+  if (/三星堆/.test(text) && /金沙/.test(text)) {
+    return '古蜀文明'
   }
+  return topicCandidates.find((item) => text.includes(item)) || '古蜀文明'
+}
+
+function isSanxingduiJinshaQuestion(messageItem = {}) {
+  const text = [
+    messageItem.sourceQuestion,
+    ...(messageItem.references || []).map((item) => item.title || '')
+  ].filter(Boolean).join(' ')
+  return /三星堆/.test(text) && /金沙/.test(text)
+}
+
+function inferToolTarget(args = {}, fallback = '') {
+  return args.keyword || args.artifactName || args.artifactTitle || args.target || args.city || fallback || '当前文物'
+}
+
+function formatStreamEventTime(event = {}) {
+  const date = event.timestamp ? new Date(event.timestamp) : new Date()
+  if (Number.isNaN(date.getTime())) {
+    return ''
+  }
+  return date.toLocaleTimeString('zh-CN', {
+    hour12: false,
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit'
+  })
+}
+
+function appendStreamEventFromTrace(messageId, trace = {}) {
+  if (!trace) {
+    return
+  }
+  if (!trace.route) {
+    appendAssistantStreamEventById(messageId, createAgentStreamEvent('thinking_status'))
+    return
+  }
+  if (trace.route === AgentRoute.RAG) {
+    appendAssistantStreamEventById(messageId, createKnowledgeEvent(0, getXuanmiaoContext()))
+    return
+  }
+  if (trace.route === AgentRoute.TOOL_CALL) {
+    appendAssistantStreamEventById(
+      messageId,
+      createToolEvent(trace.toolName || trace.tool || '', trace.status === 'running' ? 'prepare' : 'execute', trace.arguments || {})
+    )
+    return
+  }
+  if (trace.route === AgentRoute.UNSUPPORTED || trace.status === 'failed') {
+    appendAssistantStreamEventById(messageId, createErrorEvent('玄喵正在确认当前能力边界，并准备给出替代说明...'))
+    return
+  }
+  appendAssistantStreamEventById(messageId, createGeneratingEvent())
 }
 
 function formatAgentTraceArguments(trace = {}) {
@@ -935,23 +1578,28 @@ function toAgentAttachment(attachment = {}) {
   }
 }
 
-async function routeAiChatMessage(question, attachments = []) {
+async function routeAiChatMessage(question, attachments = [], onTrace = null, onExperienceEvent = null) {
+  const routingContext = getXuanmiaoContextPayload({
+    surface: 'ai_chat',
+    currentPage: route.fullPath,
+    currentPath: route.fullPath,
+    artifactEntityId: getCurrentArtifactEntityId(),
+    artifactTitle: contextTitle.value,
+    hasAttachments: attachments.length > 0,
+    attachmentTypes: attachments.map((item) => item.mediaType || item.fileType || '')
+  })
+
   return agentOrchestrator.handle(question, {
     attachments: attachments.map(toAgentAttachment),
-    routingContext: {
-      surface: 'ai_chat',
-      currentPath: route.fullPath,
-      artifactEntityId: getCurrentArtifactEntityId(),
-      artifactTitle: contextTitle.value,
-      hasAttachments: attachments.length > 0,
-      attachmentTypes: attachments.map((item) => item.mediaType || item.fileType || '')
-    },
+    routingContext,
     toolContext: {
       router,
       currentArtifact: getCurrentArtifactEntityId(),
       isAuthenticated: userStore.isLoggedIn,
       userId: userStore.userInfo?.id || userStore.user?.id || null
-    }
+    },
+    onTrace,
+    onExperienceEvent
   })
 }
 
@@ -983,6 +1631,9 @@ function formatAgentExecutionMessage(result = {}) {
     case 'get_current_datetime':
       return data.summary || data.message || result.message || '当前日期时间已获取。'
     case 'control_trail':
+      if (data.routePlan) {
+        return result.message || data.message || '已为你规划参观路线。'
+      }
       return data.silent ? '已执行时空展线操作。' : (data.message || '已切换到时空展线。')
     case 'open_artifact_detail':
       return '已打开文物详情页。'
@@ -1032,6 +1683,136 @@ function formatReferenceMeta(reference = {}) {
   return parts.join(' · ') || '本地知识库'
 }
 
+function getReferenceDisplayTitle(reference = {}) {
+  const rawTitle = reference.title || getFileNameFromPath(reference.path || reference.sources?.[0] || '') || ''
+  const text = `${rawTitle} ${reference.path || ''}`
+  if (/青铜神树/.test(text)) return '青铜神树研究资料'
+  if (/金面具|黄金面具/.test(text)) return '金面具研究资料'
+  if (/金沙/.test(text)) return '金沙遗址资料'
+  if (/祭祀坑/.test(text)) return '祭祀坑研究资料'
+  if (/古蜀/.test(text)) return '古蜀文明相关资料'
+  if (/三星堆/.test(text)) return '三星堆遗址资料'
+  if (/青铜/.test(text)) return '三星堆青铜器资料'
+  return rawTitle
+    .replace(/\.(md|markdown|txt|json|csv)$/i, '')
+    .replace(/[-_]/g, ' ')
+    .trim() || '本地知识库资料'
+}
+
+function getReferenceVisitorMeta(reference = {}) {
+  if (getReferenceOpenTarget(reference)) {
+    return '可在本地知识库中继续查看'
+  }
+  if (reference.type) {
+    return '来自本地知识库'
+  }
+  return '资料已用于本次讲解'
+}
+
+function getFollowupSuggestions(messageItem = {}) {
+  if (!messageItem.followupSuggestions?.length) {
+    messageItem.followupSuggestions = buildFollowupSuggestions(messageItem)
+  }
+  return messageItem.followupSuggestions
+}
+
+function buildFollowupSuggestions(messageItem = {}) {
+  const activeGuideSuggestions = buildActiveGuideFollowups({
+    question: messageItem.sourceQuestion || '',
+    context: getXuanmiaoContext(),
+    knowledgeGraph: messageItem.knowledgeGraph ||
+      messageItem.explorationTrace?.knowledge?.graph ||
+      messageItem.explorationTrace?.technicalTrace?.knowledgeGraph ||
+      {}
+  })
+  if (activeGuideSuggestions.length) {
+    return uniqueSuggestions(activeGuideSuggestions)
+  }
+
+  const graphSuggestions = buildKnowledgeFollowupSuggestions(
+    messageItem.knowledgeGraph ||
+    messageItem.explorationTrace?.knowledge?.graph ||
+    messageItem.explorationTrace?.technicalTrace?.knowledgeGraph ||
+    {}
+  )
+  if (graphSuggestions.length) {
+    return uniqueSuggestions(graphSuggestions)
+  }
+
+  const topic = inferFollowupTopic(messageItem)
+  const routeName = messageItem.agentTrace?.route || messageItem.explorationTrace?.technicalTrace?.route || ''
+  const toolName = messageItem.agentTrace?.toolName ||
+    messageItem.agentTrace?.tool ||
+    messageItem.explorationTrace?.technicalTrace?.toolName ||
+    ''
+  const text = `${messageItem.sourceQuestion || ''} ${messageItem.content?.join(' ') || ''}`
+
+  if (routeName === AgentRoute.TOOL_CALL || toolName) {
+    if (/trail|spacetime|control_trail/.test(toolName)) {
+      return uniqueSuggestions([
+        `介绍${topic}`,
+        `${topic}为什么重要？`,
+        `播放${topic}语音讲解`
+      ])
+    }
+    if (toolName === 'search_product') {
+      return uniqueSuggestions([
+        `${topic}文创有什么设计亮点？`,
+        `查看${topic}时空展线`,
+        `${topic}和三星堆祭祀有什么关系？`
+      ])
+    }
+  }
+
+  if (/三星堆/.test(text) && /金沙/.test(text)) {
+    return uniqueSuggestions([
+      '为什么三星堆青铜器造型独特？',
+      '金沙遗址发现了什么？',
+      '查看三星堆青铜神树'
+    ])
+  }
+
+  if (topic && topic !== '古蜀文明') {
+    return uniqueSuggestions([
+      `${topic}为什么重要？`,
+      `${topic}和祭祀有什么关系？`,
+      `查看${topic}时空展线`
+    ])
+  }
+
+  return uniqueSuggestions([
+    '为什么三星堆青铜器造型独特？',
+    '祭祀坑的发现意味着什么？',
+    '三星堆和金沙之间有什么联系？'
+  ])
+}
+
+function inferFollowupTopic(messageItem = {}) {
+  const context = getXuanmiaoContext()
+  if (context.currentArtifact) {
+    return context.currentArtifact
+  }
+  const text = [
+    messageItem.sourceQuestion,
+    messageItem.content?.join(' '),
+    ...(messageItem.references || []).map((item) => `${item.title || ''} ${item.path || ''}`)
+  ].filter(Boolean).join(' ')
+  return [
+    '青铜神树',
+    '金面具',
+    '青铜纵目面具',
+    '青铜大立人',
+    '金杖',
+    '祭祀坑',
+    '金沙遗址',
+    '三星堆'
+  ].find((item) => text.includes(item)) || '古蜀文明'
+}
+
+function uniqueSuggestions(items = []) {
+  return [...new Set(items.filter(Boolean))].slice(0, 3)
+}
+
 function wait(ms) {
   return new Promise((resolve) => window.setTimeout(resolve, ms))
 }
@@ -1065,10 +1846,21 @@ function appendAssistantPlaceholder(content = '...') {
     id,
     role: 'assistant',
     content: [content],
+    knowledgeGraph: null,
+    streamEvents: [],
+    streamArchived: false,
     time: getCurrentTime()
   })
   scrollToBottom()
   return id
+}
+
+function attachAssistantQuestion(messageId, question = '') {
+  const targetMessage = messages.value.find((item) => item.id === messageId)
+  if (!targetMessage) {
+    return
+  }
+  targetMessage.sourceQuestion = question
 }
 
 function buildAutoGuideQuestion() {
@@ -1096,6 +1888,7 @@ async function requestAutoGuide(expectedEntityId) {
     id: placeholderId,
     role: 'assistant',
     content: ['玄喵正在结合当前文物整理讲解线索……'],
+    sourceQuestion: question,
     time: getCurrentTime()
   })
   scrollToBottom()
@@ -1242,11 +2035,13 @@ async function createSession() {
 }
 
 function getCurrentContextPayload() {
+  const sharedContext = getXuanmiaoContext()
   if (!hasArtifactContext.value) {
-    return null
+    return sharedContext
   }
 
   return {
+    ...sharedContext,
     title: contextTitle.value,
     entityId: artifactContext.value?.entityId || route.query.entityId || '',
     site: contextSite.value,
@@ -1472,163 +2267,6 @@ function normalizeAttachmentUrl(url) {
   return `${staticBaseURL}/${url.replace(/^\/+/, '')}`
 }
 
-function stopVoiceInput() {
-  if (speechRecognition) {
-    try {
-      speechRecognition.abort()
-    } catch (error) {
-      console.warn('语音输入停止失败:', error)
-    }
-  }
-  speechRecognition = null
-  isListening.value = false
-}
-
-function ensureVoiceInput() {
-  if (speechRecognition) {
-    return speechRecognition
-  }
-
-  const recognition = createBrowserSpeechRecognition()
-  if (!recognition) {
-    return null
-  }
-
-  recognition.onstart = () => {
-    isListening.value = true
-  }
-
-  recognition.onresult = (event) => {
-    let transcript = ''
-    for (let i = event.resultIndex; i < event.results.length; i += 1) {
-      transcript += event.results[i][0]?.transcript || ''
-    }
-
-    const text = transcript.trim()
-    if (text) {
-      draft.value = text
-    }
-  }
-
-  recognition.onerror = (event) => {
-    isListening.value = false
-    speechRecognition = null
-    if (event?.error && event.error !== 'aborted') {
-      message.warning('语音输入暂时不可用，请改用文字输入。')
-    }
-  }
-
-  recognition.onend = () => {
-    isListening.value = false
-    speechRecognition = null
-  }
-
-  speechRecognition = recognition
-  return speechRecognition
-}
-
-function toggleVoiceInput() {
-  if (!voiceInputSupported.value) {
-    message.warning('当前浏览器不支持语音输入。')
-    return
-  }
-
-  if (isThinking.value) {
-    return
-  }
-
-  if (isListening.value) {
-    stopVoiceInput()
-    return
-  }
-
-  const recognition = ensureVoiceInput()
-  if (!recognition) {
-    message.warning('当前浏览器不支持语音输入。')
-    return
-  }
-
-  try {
-    recognition.start()
-  } catch (error) {
-    console.warn('启动语音输入失败:', error)
-    message.warning('语音输入启动失败，请稍后再试。')
-  }
-}
-
-function cleanupVoiceRecorder() {
-  if (voiceStopTimer) {
-    clearTimeout(voiceStopTimer)
-    voiceStopTimer = null
-  }
-
-  try {
-    voiceProcessorNode?.disconnect()
-    voiceSourceNode?.disconnect()
-  } catch (error) {
-    console.warn('Disconnect voice recorder failed:', error)
-  }
-
-  if (voiceMediaStream) {
-    voiceMediaStream.getTracks().forEach((track) => track.stop())
-  }
-
-  if (voiceAudioContext && voiceAudioContext.state !== 'closed') {
-    void voiceAudioContext.close()
-  }
-
-  voiceAudioContext = null
-  voiceMediaStream = null
-  voiceSourceNode = null
-  voiceProcessorNode = null
-}
-
-function mergeAudioChunks(chunks) {
-  const totalLength = chunks.reduce((sum, chunk) => sum + chunk.length, 0)
-  const result = new Float32Array(totalLength)
-  let offset = 0
-  chunks.forEach((chunk) => {
-    result.set(chunk, offset)
-    offset += chunk.length
-  })
-  return result
-}
-
-function writeAscii(view, offset, text) {
-  for (let i = 0; i < text.length; i += 1) {
-    view.setUint8(offset + i, text.charCodeAt(i))
-  }
-}
-
-function encodeWav(samples, sampleRate) {
-  const bytesPerSample = 2
-  const buffer = new ArrayBuffer(44 + samples.length * bytesPerSample)
-  const view = new DataView(buffer)
-
-  writeAscii(view, 0, 'RIFF')
-  view.setUint32(4, 36 + samples.length * bytesPerSample, true)
-  writeAscii(view, 8, 'WAVE')
-  writeAscii(view, 12, 'fmt ')
-  view.setUint32(16, 16, true)
-  view.setUint16(20, 1, true)
-  view.setUint16(22, 1, true)
-  view.setUint32(24, sampleRate, true)
-  view.setUint32(28, sampleRate * bytesPerSample, true)
-  view.setUint16(32, bytesPerSample, true)
-  view.setUint16(34, 16, true)
-  writeAscii(view, 36, 'data')
-  view.setUint32(40, samples.length * bytesPerSample, true)
-
-  let offset = 44
-  for (let i = 0; i < samples.length; i += 1) {
-    const sample = Math.max(-1, Math.min(1, samples[i]))
-    view.setInt16(offset, sample < 0 ? sample * 0x8000 : sample * 0x7fff, true)
-    offset += bytesPerSample
-  }
-
-  return new Blob([view], { type: 'audio/wav' })
-}
-
 function appendVoiceTranscript(text) {
   const transcript = (text || '').trim()
   if (!transcript) return
@@ -1638,80 +2276,61 @@ function appendVoiceTranscript(text) {
     : transcript
 }
 
-async function transcribeVoiceChunks(chunks, sampleRate) {
-  if (!chunks.length) {
-    message.warning('没有录到有效声音，请重试。')
-    return
+function ensureSpeechInputService() {
+  if (speechInputService) {
+    return speechInputService
   }
 
-  const samples = mergeAudioChunks(chunks)
-  const durationSeconds = samples.length / sampleRate
-  if (durationSeconds < 0.4) {
-    message.warning('录音时间太短，请说完整内容后再停止。')
-    return
-  }
-
-  const audioBlob = encodeWav(samples, sampleRate)
-  const audioFile = new File([audioBlob], `voice-input-${Date.now()}.wav`, { type: 'audio/wav' })
-
-  isTranscribingVoice.value = true
-  try {
-    const transcript = await transcribeSpeechInput(audioFile, {
+  speechInputService = createSpeechInputService({
+    maxDurationMs: 60000,
+    transcribe: (file) => transcribeSpeechInput(file, {
       showDefaultMsg: false,
       errorMsg: '语音识别失败，请重试或改用文字输入。'
-    })
-    appendVoiceTranscript(transcript)
-  } catch (error) {
-    console.warn('Speech input transcription failed:', error)
-  } finally {
-    isTranscribingVoice.value = false
-  }
+    }),
+    onAutoStop: () => {
+      message.info('录音已达到 60 秒，正在自动识别。')
+      void stopVoiceRecording()
+    },
+    onStatus: ({ status }) => {
+      voiceInputStatus.value = status || SpeechInputStatus.IDLE
+      isListening.value = status === SpeechInputStatus.LISTENING
+      isTranscribingVoice.value = status === SpeechInputStatus.PROCESSING
+    },
+    onError: (error) => {
+      message.warning(error?.message || '语音输入失败，可以继续使用文字提问。')
+    }
+  })
+  return speechInputService
 }
 
 async function startVoiceRecording() {
-  const AudioContextCtor = window.AudioContext || window.webkitAudioContext
-  voiceMediaStream = await navigator.mediaDevices.getUserMedia({ audio: true })
-  voiceAudioContext = new AudioContextCtor()
-  voiceSampleRate = voiceAudioContext.sampleRate
-  voiceAudioChunks = []
-
-  voiceSourceNode = voiceAudioContext.createMediaStreamSource(voiceMediaStream)
-  voiceProcessorNode = voiceAudioContext.createScriptProcessor(4096, 1, 1)
-  voiceProcessorNode.onaudioprocess = (event) => {
-    const input = event.inputBuffer.getChannelData(0)
-    voiceAudioChunks.push(new Float32Array(input))
-  }
-
-  voiceSourceNode.connect(voiceProcessorNode)
-  voiceProcessorNode.connect(voiceAudioContext.destination)
-  isListening.value = true
+  await ensureSpeechInputService().start()
   message.info('正在录音，再次点击麦克风结束识别。')
-
-  voiceStopTimer = setTimeout(() => {
-    if (isListening.value) {
-      message.info('录音已达到 60 秒，正在自动识别。')
-      void stopVoiceRecording()
-    }
-  }, 60000)
 }
 
 async function stopVoiceRecording(options = {}) {
   const { transcribe = true } = options
-  const chunks = voiceAudioChunks.slice()
-  const sampleRate = voiceSampleRate
-
-  cleanupVoiceRecorder()
-  voiceAudioChunks = []
-  isListening.value = false
-
-  if (transcribe) {
-    await transcribeVoiceChunks(chunks, sampleRate)
+  if (!speechInputService) {
+    return
+  }
+  if (!transcribe) {
+    speechInputService.cancel()
+    isListening.value = false
+    isTranscribingVoice.value = false
+    voiceInputStatus.value = SpeechInputStatus.IDLE
+    return
+  }
+  try {
+    const transcript = await speechInputService.stopAndTranscribe()
+    appendVoiceTranscript(transcript)
+  } catch (error) {
+    console.warn('Speech input transcription failed:', error)
   }
 }
 
 async function toggleVoiceRecording() {
   if (!voiceInputSupported.value) {
-    message.warning('当前浏览器不支持麦克风录音，请改用文字输入。')
+    message.warning(getSpeechInputSupportMessage() || '当前浏览器暂不支持语音输入，请尝试Chrome或Edge。')
     return
   }
 
@@ -1727,10 +2346,10 @@ async function toggleVoiceRecording() {
   try {
     await startVoiceRecording()
   } catch (error) {
-    cleanupVoiceRecorder()
     isListening.value = false
+    isTranscribingVoice.value = false
     console.warn('Start voice input failed:', error)
-    message.warning('麦克风启动失败，请检查浏览器录音权限。')
+    message.warning(error?.message || '玄喵无法访问麦克风，请检查浏览器权限。')
   }
 }
 
@@ -1893,6 +2512,14 @@ async function sendMessage(presetQuestion = '') {
   }
 
   stopVoiceRecording({ transcribe: false })
+  updateXuanmiaoContext({
+    userId: userStore.userInfo?.id || userStore.user?.id || null,
+    currentPage: route.fullPath,
+    currentScene: 'AI文博助手'
+  })
+  rememberXuanmiaoMessage('user', question || '[附件消息]', {
+    topic: hasArtifactContext.value || getXuanmiaoContext().currentArtifact ? '文物追问' : ''
+  })
 
   const mediaIntent = detectMediaIntent(question)
   if (mediaIntent === 'IMAGE' || mediaIntent === 'VIDEO') {
@@ -1914,46 +2541,121 @@ async function sendMessage(presetQuestion = '') {
   pendingAttachments.value = []
   scrollToBottom()
   const assistantPlaceholderId = appendAssistantPlaceholder()
+  attachAssistantQuestion(assistantPlaceholderId, question)
 
   if (fixedAnswer) {
     await typeAssistantMessageById(assistantPlaceholderId, fixedAnswer.reply)
+    archiveAssistantStreamById(assistantPlaceholderId, '已完成快速讲解')
     return
   }
 
+  isThinking.value = true
+  showThinkingBubble.value = false
+  appendAssistantStreamEventById(
+    assistantPlaceholderId,
+    createContextStartEvent(getXuanmiaoContextPayload({
+      currentPage: route.fullPath,
+      surface: 'ai_chat'
+    }))
+  )
+
   let docs = []
   let pendingReferences = []
-  let userMessage = question
+  let pendingKnowledgeGraph = null
+  const contextualQuestion = buildContextualQuestion(question, getXuanmiaoContext())
+  let userMessage = contextualQuestion
   let uploadedAttachments = []
   let agentResult = null
+  const guideExperienceNarration = []
 
   try {
     uploadedAttachments = await ensureAttachmentsUploaded(attachmentsToSend)
   } catch (error) {
     console.error('附件上传失败:', error)
+    appendAssistantStreamEventById(assistantPlaceholderId, createErrorEvent('附件上传失败，请删除失败附件后重试。'))
     updateAssistantMessageById(assistantPlaceholderId, ['附件上传失败，请删除失败附件后重试。'])
+    archiveAssistantStreamById(assistantPlaceholderId, '探索暂时受阻')
     pendingAttachments.value = attachmentsToSend
+    isThinking.value = false
     return
   }
 
   try {
-    agentResult = await routeAiChatMessage(question, uploadedAttachments)
-    updateAssistantAgentTraceById(assistantPlaceholderId, buildAgentTrace(agentResult))
+    agentResult = await routeAiChatMessage(question, uploadedAttachments, (trace) => {
+      appendStreamEventFromTrace(assistantPlaceholderId, trace)
+      updateAssistantAgentTraceById(assistantPlaceholderId, trace, { message: question })
+    }, (event) => {
+      appendAssistantStreamEventById(assistantPlaceholderId, event)
+      if ([
+        'guide_preparing_visit',
+        'guide_introducing_destination',
+        'guide_navigating',
+        'guide_arrived',
+        'guide_explaining'
+      ].includes(event?.type) && event.message) {
+        guideExperienceNarration.push(event.message)
+        updateAssistantMessageById(assistantPlaceholderId, guideExperienceNarration.join('\n\n'))
+        scrollToBottom()
+      }
+    })
+    appendStreamEventFromTrace(assistantPlaceholderId, agentResult?.trace || agentResult)
+    updateAssistantAgentTraceById(
+      assistantPlaceholderId,
+      buildAgentTrace(agentResult, { message: question }),
+      { message: question }
+    )
   } catch (error) {
     console.warn('AI chat agent routing failed; continuing with chat fallback.', error)
+    appendAssistantStreamEventById(
+      assistantPlaceholderId,
+      createErrorEvent('玄喵的智能调度暂时不可用，正在切换普通问答方案...')
+    )
     updateAssistantAgentTraceById(assistantPlaceholderId, {
       route: 'CHAT_FALLBACK',
       success: false,
-      reason: 'Agent route failed; using chat fallback'
-    })
+      reason: 'Agent route failed; using chat fallback',
+      message: question
+    }, { message: question })
   }
 
   if (agentResult?.handled) {
     isThinking.value = false
     showThinkingBubble.value = false
+    if (agentResult.data?.routePlan) {
+      appendAssistantStreamEventById(
+        assistantPlaceholderId,
+        createGuideRoutePlanningEvent(agentResult.data.routePlan, getXuanmiaoContext())
+      )
+      if (agentResult.data?.guideAction === 'create_guide' || agentResult.data?.guideAction === 'restart_guide') {
+        appendAssistantStreamEventById(
+          assistantPlaceholderId,
+          createGuideFirstStopEvent(agentResult.data.routePlan)
+        )
+      }
+    }
+    if (agentResult.data?.guideAction === 'continue_guide') {
+      appendAssistantStreamEventById(
+        assistantPlaceholderId,
+        createGuideContinueEvent(agentResult.data.activeGuideState || getXuanmiaoContext().activeGuideState)
+      )
+    }
+    if (agentResult.data?.trailStatus) {
+      appendAssistantStreamEventById(
+        assistantPlaceholderId,
+        createGuideStatusSyncedEvent(agentResult.data.trailStatus)
+      )
+    }
+    if (agentResult.data?.activeGuideState?.status === 'completed') {
+      appendAssistantStreamEventById(
+        assistantPlaceholderId,
+        createGuideCompletedEvent(agentResult.data.activeGuideState)
+      )
+    }
     updateAssistantMessageById(
       assistantPlaceholderId,
       formatAgentExecutionMessage(agentResult)
     )
+    archiveAssistantStreamById(assistantPlaceholderId, agentResult.success ? '展馆能力已完成' : '探索暂时受阻')
     return
   }
 
@@ -1962,10 +2664,13 @@ async function sendMessage(presetQuestion = '') {
     agentResult?.route === AgentRoute.DIRECT_ANSWER &&
     agentResult.message
   ) {
+    appendAssistantStreamEventById(assistantPlaceholderId, createGeneratingEvent())
     await typeAssistantMessageById(assistantPlaceholderId, agentResult.message, {
       thinkingMs: 350,
       charDelay: 16
     })
+    archiveAssistantStreamById(assistantPlaceholderId, '讲解已生成')
+    rememberXuanmiaoMessage('assistant', agentResult.message)
     return
   }
 
@@ -1976,17 +2681,56 @@ async function sendMessage(presetQuestion = '') {
 
   if (shouldAttachKnowledge) {
     try {
-      docs = await searchKnowledge(question, 3)
+      appendAssistantStreamEventById(assistantPlaceholderId, createKnowledgeEvent(0, getXuanmiaoContext()))
+      docs = await searchKnowledge(contextualQuestion, 3)
       pendingReferences = normalizeKnowledgeReferences(docs)
+      pendingKnowledgeGraph = discoverKnowledgeRelations({
+        question: contextualQuestion,
+        context: getCurrentContextPayload(),
+        documents: docs
+      })
+      const pendingActiveGuide = buildActiveGuideContext(
+        contextualQuestion,
+        getXuanmiaoContext(),
+        pendingKnowledgeGraph
+      )
+      appendAssistantStreamEventById(
+        assistantPlaceholderId,
+        createKnowledgeEvent(pendingReferences.length, getXuanmiaoContext())
+      )
+      appendAssistantStreamEventById(
+        assistantPlaceholderId,
+        createKnowledgeRelationEvent(pendingKnowledgeGraph, getXuanmiaoContext())
+      )
+      if (pendingActiveGuide.followups.length) {
+        appendAssistantStreamEventById(
+          assistantPlaceholderId,
+          createGuideRecommendationEvent(pendingActiveGuide, getXuanmiaoContext())
+        )
+      }
+      updateAssistantKnowledgeGraphById(assistantPlaceholderId, pendingKnowledgeGraph)
       updateAssistantAgentTraceById(
         assistantPlaceholderId,
-        buildAgentTrace(agentResult, { referenceCount: pendingReferences.length })
+        buildAgentTrace(agentResult, {
+          referenceCount: pendingReferences.length,
+          message: question
+        }),
+        {
+          message: question,
+          references: pendingReferences,
+          knowledgeGraph: pendingKnowledgeGraph,
+          activeGuide: pendingActiveGuide
+        }
       )
       if (docs.length) {
-        userMessage = buildPromptWithContext(question, docs)
+        userMessage = buildPromptWithContext(contextualQuestion, docs)
       }
     } catch (error) {
       console.warn('Knowledge reference lookup failed; continuing AI chat without visible references.', error)
+      appendAssistantStreamEventById(
+        assistantPlaceholderId,
+        createErrorEvent('资料检索暂时不稳定，玄喵正在切换备用讲解方案...')
+      )
     }
   }
 
@@ -2043,12 +2787,16 @@ async function sendMessage(presetQuestion = '') {
   }
 
   if (!currentSessionId.value) {
+    appendAssistantStreamEventById(assistantPlaceholderId, createErrorEvent('会话暂时不可用，玄喵正在使用备用资料回答...'))
     updateAssistantMessageById(assistantPlaceholderId, getMockReply(question, docs))
+    archiveAssistantStreamById(assistantPlaceholderId, '已使用备用资料')
+    isThinking.value = false
     return
   }
 
   isThinking.value = true
   showThinkingBubble.value = false
+  appendAssistantStreamEventById(assistantPlaceholderId, createGeneratingEvent())
   chatAbortController?.abort?.()
   chatAbortController = new AbortController()
 
@@ -2069,11 +2817,21 @@ async function sendMessage(presetQuestion = '') {
       body: JSON.stringify({
         sessionId: currentSessionId.value,
         userMessage,
-        attachments: uploadedAttachments
+        attachments: uploadedAttachments,
+        context: getXuanmiaoContextPayload({
+          currentPage: route.fullPath,
+          surface: 'ai_chat'
+        })
       }),
       signal: chatAbortController.signal,
       openWhenHidden: true,
       onmessage(event) {
+        const streamEvent = parseAgentStreamEvent(event.data)
+        if (streamEvent) {
+          appendAssistantStreamEventById(assistantPlaceholderId, streamEvent)
+          return
+        }
+
         if (event.data === '[DONE]') {
           isThinking.value = false
           if (!aiResponse) {
@@ -2084,16 +2842,27 @@ async function sendMessage(presetQuestion = '') {
           } else if (pendingReferences.length) {
             updateAssistantReferencesById(assistantPlaceholderId, pendingReferences)
           }
+          if (aiResponse) {
+            rememberXuanmiaoMessage('assistant', aiResponse, {
+              topic: shouldAttachKnowledge ? '文物讲解' : ''
+            })
+          }
+          archiveAssistantStreamById(assistantPlaceholderId, aiResponse ? '讲解已生成' : '已使用备用资料')
           return
         }
 
         if (event.data.startsWith('[ERROR]')) {
           isThinking.value = false
+          appendAssistantStreamEventById(
+            assistantPlaceholderId,
+            createErrorEvent('当前智能生成服务暂时不可用，正在切换备用资料方案...')
+          )
           message.warning('AI 响应暂不可用')
           updateAssistantMessageById(
             assistantPlaceholderId,
             uploadedAttachments.length ? event.data.replace('[ERROR]', '') || buildAiUnavailableMessage(uploadedAttachments) : getMockReply(question, docs)
           )
+          archiveAssistantStreamById(assistantPlaceholderId, '已切换备用资料')
           return
         }
 
@@ -2103,10 +2872,15 @@ async function sendMessage(presetQuestion = '') {
       onerror(error) {
         console.error('AI SSE 连接失败:', error)
         isThinking.value = false
+        appendAssistantStreamEventById(
+          assistantPlaceholderId,
+          createErrorEvent('连接中断，玄喵正在切换备用资料方案...')
+        )
         updateAssistantMessageById(
           assistantPlaceholderId,
           uploadedAttachments.length ? buildAiUnavailableMessage(uploadedAttachments) : getMockReply(question, docs)
         )
+        archiveAssistantStreamById(assistantPlaceholderId, '已切换备用资料')
         return 999999999
       },
       onclose() {
@@ -2116,10 +2890,15 @@ async function sendMessage(presetQuestion = '') {
   } catch (error) {
     console.error('发送 AI 消息失败:', error)
     isThinking.value = false
+    appendAssistantStreamEventById(
+      assistantPlaceholderId,
+      createErrorEvent('消息发送失败，玄喵正在切换备用资料方案...')
+    )
     updateAssistantMessageById(
       assistantPlaceholderId,
       uploadedAttachments.length ? buildAiUnavailableMessage(uploadedAttachments) : getMockReply(question, docs)
     )
+    archiveAssistantStreamById(assistantPlaceholderId, '已切换备用资料')
   } finally {
     chatAbortController = null
   }
@@ -2857,6 +3636,116 @@ function getCurrentTime() {
   margin: 0;
 }
 
+.message-bubble--with-exploration {
+  display: grid;
+  gap: 10px;
+}
+
+.message-answer {
+  display: grid;
+  gap: 0;
+}
+
+.message-exploration {
+  display: grid;
+  gap: 7px;
+  color: #56655f;
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.message-exploration--live {
+  padding: 7px 9px;
+  background: rgba(238, 246, 240, 0.62);
+  border: 1px solid rgba(66, 102, 79, 0.12);
+  border-radius: 12px;
+}
+
+.message-exploration--archived {
+  padding-top: 6px;
+  margin-top: 0;
+  border-top: 1px dashed rgba(66, 102, 79, 0.12);
+}
+
+.exploration-inline-title {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  color: var(--primary-dark);
+  font-size: 11px;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+}
+
+.exploration-inline-title span {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+}
+
+.exploration-inline-title small {
+  color: #7a8b83;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0;
+}
+
+.exploration-live-line {
+  margin: 0;
+  color: #5f715f;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.message-exploration .agent-trace-steps {
+  margin-top: 0;
+}
+
+.message-exploration .agent-trace-steps li {
+  grid-template-columns: 14px minmax(0, 1fr);
+}
+
+.message-exploration .agent-step-copy strong {
+  font-size: 12px;
+}
+
+.message-followups {
+  display: grid;
+  gap: 8px;
+  padding-top: 4px;
+}
+
+.message-followups > strong {
+  color: #6f7d76;
+  font-size: 12px;
+  letter-spacing: 0.08em;
+}
+
+.followup-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+}
+
+.followup-list button {
+  padding: 6px 10px;
+  color: #3f604f;
+  font-size: 12px;
+  font-weight: 800;
+  cursor: pointer;
+  background: rgba(241, 247, 242, 0.84);
+  border: 1px solid rgba(66, 102, 79, 0.18);
+  border-radius: 999px;
+  transition: 0.18s ease;
+}
+
+.followup-list button:hover {
+  color: #7b5b24;
+  background: rgba(255, 248, 229, 0.9);
+  border-color: rgba(214, 189, 130, 0.55);
+}
+
 .message-stack time {
   color: #8e9b96;
   font-size: 13px;
@@ -2864,9 +3753,9 @@ function getCurrentTime() {
 
 .message-references {
   display: grid;
-  gap: 9px;
+  gap: 8px;
   max-width: 620px;
-  padding: 11px 13px 12px;
+  padding: 10px 12px 11px;
   color: #42584f;
   background: rgba(255, 253, 248, 0.72);
   border: 1px solid rgba(214, 189, 130, 0.42);
@@ -2879,7 +3768,7 @@ function getCurrentTime() {
   justify-content: space-between;
   gap: 12px;
   color: var(--primary);
-  font-size: 13px;
+  font-size: 12px;
   font-weight: 800;
   letter-spacing: 0.12em;
   cursor: pointer;
@@ -2937,6 +3826,24 @@ function getCurrentTime() {
   border-radius: 12px;
 }
 
+.exploration-journey {
+  display: grid;
+  gap: 10px;
+  padding: 14px 16px;
+  background:
+    radial-gradient(circle at 18px 18px, rgba(214, 189, 130, 0.18), transparent 28px),
+    linear-gradient(180deg, rgba(255, 253, 248, 0.92), rgba(238, 246, 240, 0.76));
+  border: 1px solid rgba(214, 189, 130, 0.5);
+  border-radius: 18px;
+  box-shadow: 0 14px 30px rgba(66, 102, 79, 0.08);
+}
+
+.exploration-journey--archived {
+  padding: 12px 14px;
+  background: rgba(255, 253, 248, 0.72);
+  border-style: dashed;
+}
+
 .agent-trace-title {
   display: flex;
   align-items: center;
@@ -2946,12 +3853,6 @@ function getCurrentTime() {
   font-size: 12px;
   font-weight: 800;
   letter-spacing: 0.08em;
-  cursor: pointer;
-  list-style: none;
-}
-
-.agent-trace-title::-webkit-details-marker {
-  display: none;
 }
 
 .agent-trace-title span {
@@ -2964,6 +3865,215 @@ function getCurrentTime() {
   color: #7a8b83;
   font-size: 11px;
   letter-spacing: 0;
+}
+
+.exploration-title {
+  color: var(--primary-dark);
+  font-size: 13px;
+  letter-spacing: 0.12em;
+}
+
+.exploration-context-line {
+  margin: 0;
+  padding: 8px 10px;
+  color: #5d6d52;
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1.5;
+  background: rgba(214, 189, 130, 0.14);
+  border-radius: 12px;
+}
+
+.agent-trace-steps {
+  display: grid;
+  gap: 8px;
+  margin: 10px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.agent-trace-steps li {
+  display: grid;
+  grid-template-columns: 14px 72px minmax(0, 1fr);
+  gap: 8px;
+  align-items: start;
+}
+
+.exploration-timeline {
+  position: relative;
+  gap: 10px;
+  margin-top: 0;
+}
+
+.exploration-timeline::before {
+  position: absolute;
+  top: 9px;
+  bottom: 9px;
+  left: 4px;
+  width: 1px;
+  background: linear-gradient(180deg, rgba(66, 102, 79, 0.18), rgba(214, 189, 130, 0.52));
+  content: '';
+}
+
+.exploration-stream {
+  padding: 2px 0 0;
+}
+
+.exploration-stream .agent-trace-step--running .agent-step-copy strong {
+  color: #8a622b;
+}
+
+.agent-step-dot {
+  width: 9px;
+  height: 9px;
+  margin-top: 5px;
+  border-radius: 999px;
+  background: #b8c4bc;
+  box-shadow: 0 0 0 4px rgba(184, 196, 188, 0.18);
+}
+
+.agent-trace-step--running .agent-step-dot {
+  background: #c98b35;
+  box-shadow: 0 0 0 4px rgba(201, 139, 53, 0.18);
+  animation: agentPulse 1.2s ease-in-out infinite;
+}
+
+.agent-trace-step--success .agent-step-dot {
+  background: #3f8f62;
+  box-shadow: 0 0 0 4px rgba(63, 143, 98, 0.16);
+}
+
+.agent-trace-step--failed .agent-step-dot {
+  background: #b94d43;
+  box-shadow: 0 0 0 4px rgba(185, 77, 67, 0.16);
+}
+
+.agent-step-copy {
+  display: grid;
+  gap: 2px;
+}
+
+.agent-step-copy strong {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  color: #35483f;
+  font-size: 12px;
+}
+
+.agent-step-copy small {
+  color: #718178;
+  font-size: 11px;
+  line-height: 1.45;
+  overflow-wrap: anywhere;
+}
+
+.exploration-step-time {
+  color: #8e7d55;
+  font-size: 11px;
+  font-weight: 800;
+  line-height: 1.8;
+}
+
+.exploration-step-icon {
+  font-size: 13px;
+}
+
+.exploration-discovery {
+  display: grid;
+  gap: 8px;
+  padding: 10px 11px;
+  background: rgba(255, 255, 255, 0.56);
+  border: 1px solid rgba(66, 102, 79, 0.12);
+  border-radius: 14px;
+}
+
+.exploration-discovery > strong {
+  color: var(--primary-dark);
+  font-size: 12px;
+  letter-spacing: 0.08em;
+}
+
+.exploration-entity-chain {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px 18px;
+}
+
+.exploration-entity-chain span {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  padding: 5px 9px;
+  color: #42664f;
+  font-size: 12px;
+  font-weight: 800;
+  background: rgba(233, 242, 235, 0.9);
+  border-radius: 999px;
+}
+
+.exploration-entity-chain span:not(:last-child)::after {
+  position: absolute;
+  right: -13px;
+  color: #9c8554;
+  content: '→';
+}
+
+.agent-trace-details {
+  margin-top: 9px;
+}
+
+.exploration-expert {
+  margin-top: 2px;
+  padding-top: 7px;
+  border-top: 1px dashed rgba(66, 102, 79, 0.18);
+}
+
+.exploration-archive {
+  display: grid;
+  gap: 8px;
+}
+
+.exploration-archive > summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  color: var(--primary-dark);
+  font-size: 12px;
+  font-weight: 900;
+  cursor: pointer;
+  list-style: none;
+}
+
+.exploration-archive > summary::-webkit-details-marker {
+  display: none;
+}
+
+.exploration-archive > summary::after {
+  color: #8e7d55;
+  font-size: 12px;
+  content: '展开';
+}
+
+.exploration-archive[open] > summary::after {
+  content: '收起';
+}
+
+.agent-trace-details summary {
+  color: #7a8b83;
+  font-size: 11px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+@keyframes agentPulse {
+  0%, 100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.28);
+  }
 }
 
 .message-agent-trace dl {
@@ -3029,7 +4139,8 @@ function getCurrentTime() {
   cursor: default;
 }
 
-.reference-copy strong {
+.reference-copy--button strong {
+  display: block;
   overflow: hidden;
   color: var(--primary-dark);
   font-size: 13px;
@@ -3038,13 +4149,33 @@ function getCurrentTime() {
   white-space: nowrap;
 }
 
-.reference-copy small {
+.reference-copy--button small {
+  display: block;
   overflow: hidden;
   color: var(--muted);
   font-size: 12px;
   line-height: 1.35;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.reference-expert {
+  margin-top: 3px;
+  color: #7b8a82;
+  font-size: 11px;
+}
+
+.reference-expert summary {
+  width: max-content;
+  color: #8e7d55;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.reference-expert span {
+  display: block;
+  margin-top: 3px;
+  overflow-wrap: anywhere;
 }
 
 .message-attachments {

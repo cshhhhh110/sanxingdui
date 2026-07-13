@@ -896,7 +896,7 @@ const TRAIL_ARTIFACT_PITS = {
 
 async function dispatchTrailControl(command) {
   return new Promise((resolve, reject) => {
-    const timer = window.setTimeout(() => reject(new Error('时空展线响应超时')), 3000)
+    const timer = window.setTimeout(() => reject(new Error('时空展线响应超时')), 10000)
     window.dispatchEvent(new CustomEvent('xuanmiao:trail-command', {
       detail: {
         command,
@@ -908,6 +908,20 @@ async function dispatchTrailControl(command) {
         }
       }
     }))
+  })
+}
+
+function waitTrailReadyFrames(count = 4) {
+  return new Promise((resolve) => {
+    const step = () => {
+      count -= 1
+      if (count <= 0) {
+        resolve()
+        return
+      }
+      window.requestAnimationFrame(step)
+    }
+    window.requestAnimationFrame(step)
   })
 }
 
@@ -941,15 +955,29 @@ const controlTrailTool = new MCPTool({
           pitCode: TRAIL_ARTIFACT_PITS[params.artifact_id]
         }
       })
-      return { message: '已进入时空展线并定位目标文物。' }
+      await waitTrailReadyFrames()
+      const payload = await dispatchTrailControl(params)
+      return {
+        silent: true,
+        trailStatus: payload.trailStatus,
+        message: payload.trailStatus?.status === 'arrived'
+          ? `已进入时空展线并到达${payload.trailStatus.artifactName || '目标文物'}。`
+          : '已进入时空展线，目标文物正在定位。'
+      }
     }
 
     if (!onTrail) {
       await context.router.push('/trail')
-      await new Promise((resolve) => window.requestAnimationFrame(() => window.requestAnimationFrame(resolve)))
+      await waitTrailReadyFrames()
     }
-    await dispatchTrailControl(params)
-    return { silent: true }
+    const payload = await dispatchTrailControl(params)
+    return {
+      silent: true,
+      trailStatus: payload.trailStatus,
+      message: payload.trailStatus?.status === 'arrived'
+        ? '展线状态已同步。'
+        : '展线动作已发送。'
+    }
   }
 })
 

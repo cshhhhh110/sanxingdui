@@ -1,26 +1,14 @@
-/**
- * MCP 主入口文件
- * 导出所有 MCP 相关功能
- */
-
-// 导出配置
 export { MCP_CONFIG, MCP_TOOL_CATEGORIES, INTENT_KEYWORDS, ROUTE_MAPPINGS, INTENT_CONFIRM } from './config'
-
-// 导出工具
 export { MCP_TOOLS, getToolList, MCPTool } from './tools'
-
-// 导出 API 客户端
 export { mcpApiClient } from './api'
 
-// 导入主要功能
 import { MCP_CONFIG } from './config'
 import { MCP_TOOLS } from './tools'
 import { mcpApiClient } from './api'
+import { getAgentToolNames } from '@/agent/toolSchemas'
 
-/**
- * MCP 核心类
- * 统一管理 MCP 客户端
- */
+const AGENT_DEMO_TOOLS = new Set(getAgentToolNames())
+
 class MCPClient {
   constructor() {
     this.config = MCP_CONFIG
@@ -29,9 +17,6 @@ class MCPClient {
     this.listeners = new Map()
   }
 
-  /**
-   * 初始化 MCP 客户端
-   */
   async initialize(options = {}) {
     if (this.isInitialized) {
       console.warn('[MCP] Client already initialized')
@@ -40,8 +25,7 @@ class MCPClient {
 
     this.config = { ...this.config, ...options }
     this.isInitialized = true
-    
-    // 如果配置了使用后端，先获取后端工具列表
+
     if (this.config.useBackend) {
       try {
         const status = await mcpApiClient.getStatus()
@@ -50,10 +34,11 @@ class MCPClient {
         console.warn('[MCP] Backend server not available, using local tools')
       }
     }
-    
+
     if (this.config.debug) {
       console.log('[MCP] Client initialized', this.config)
       console.log('[MCP] Available tools:', Object.keys(this.tools))
+      console.log('[MCP] Agent demo tools:', Array.from(AGENT_DEMO_TOOLS))
     }
   }
 
@@ -67,7 +52,7 @@ class MCPClient {
       return {
         success: false,
         tool: toolName,
-        message: '模型选择的工具在当前客户端不可用'
+        message: '\u6a21\u578b\u9009\u62e9\u7684\u5de5\u5177\u5728\u5f53\u524d\u5ba2\u6237\u7aef\u4e0d\u53ef\u7528\u3002'
       }
     }
 
@@ -77,26 +62,20 @@ class MCPClient {
       tool: toolName,
       data: execution.data,
       message: execution.success
-        ? execution.data?.message || '操作已执行'
-        : execution.error || '工具执行失败'
+        ? summarizeSuccessfulTool(toolName, arguments_, execution.data)
+        : execution.error || '\u5de5\u5177\u6267\u884c\u5931\u8d25\u3002'
     }
   }
 
-  /**
-   * 直接调用后端工具
-   */
   async callBackendTool(toolName, params = {}, userId = null) {
     if (!this.config.useBackend) {
       console.warn('[MCP] Backend mode is disabled')
       return null
     }
-    
+
     return await mcpApiClient.callTool(toolName, params, userId)
   }
 
-  /**
-   * 获取后端状态
-   */
   async getBackendStatus() {
     try {
       return await mcpApiClient.getStatus()
@@ -105,17 +84,11 @@ class MCPClient {
     }
   }
 
-  /**
-   * 触发事件
-   */
   emit(event, data) {
     const callbacks = this.listeners.get(event) || []
     callbacks.forEach(cb => cb(data))
   }
 
-  /**
-   * 监听事件
-   */
   on(event, callback) {
     if (!this.listeners.has(event)) {
       this.listeners.set(event, [])
@@ -123,9 +96,6 @@ class MCPClient {
     this.listeners.get(event).push(callback)
   }
 
-  /**
-   * 移除事件监听
-   */
   off(event, callback) {
     const callbacks = this.listeners.get(event) || []
     const index = callbacks.indexOf(callback)
@@ -135,8 +105,29 @@ class MCPClient {
   }
 }
 
-// 创建并导出单例
+function summarizeSuccessfulTool(toolName, args, data = {}) {
+  switch (toolName) {
+    case 'navigate_to':
+      return `\u5df2\u6253\u5f00 ${args.destination || data.path || '\u76ee\u6807\u9875\u9762'}\u3002`
+    case 'search_product':
+      return `\u5df2\u5728\u5546\u57ce\u641c\u7d22\u201c${args.keyword}\u201d\u3002`
+    case 'search_heritage':
+      return `\u5df2\u641c\u7d22\u201c${args.keyword}\u201d\u76f8\u5173\u6587\u7269\u3002`
+    case 'control_trail':
+      return data?.message || '\u5df2\u6267\u884c\u65f6\u7a7a\u5c55\u7ebf\u64cd\u4f5c\u3002'
+    case 'get_weather':
+      return data?.message || `\u5df2\u67e5\u8be2 ${args.city || ''} \u5929\u6c14\u3002`
+    case 'get_current_datetime':
+      return data?.message || '\u5df2\u83b7\u53d6\u5f53\u524d\u65e5\u671f\u548c\u65f6\u95f4\u3002'
+    case 'open_artifact_detail':
+      return '\u5df2\u6253\u5f00\u6587\u7269\u8be6\u60c5\u9875\u3002'
+    case 'play_voice_intro':
+      return '\u5df2\u5f00\u59cb\u64ad\u653e\u6587\u7269\u8bed\u97f3\u4ecb\u7ecd\u3002'
+    default:
+      return data?.message || '\u64cd\u4f5c\u5df2\u6267\u884c\u3002'
+  }
+}
+
 export const mcpClient = new MCPClient()
 
-// 默认导出
 export default mcpClient

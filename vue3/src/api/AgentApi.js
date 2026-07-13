@@ -7,6 +7,13 @@ export function routeAgentRequest({ message, attachments = [], context = {} }) {
   })
 }
 
+export function getAgentTools() {
+  return request.get('/agent/tools', null, {
+    showDefaultMsg: false,
+    enableRetry: false
+  })
+}
+
 export function getAgentWeather(city) {
   return request.get('/agent/tools/weather', { city }, {
     showDefaultMsg: false,

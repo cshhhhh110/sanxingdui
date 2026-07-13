@@ -6,7 +6,7 @@
     </div>
 
     <!-- 涓婚潰鏉?-->
-    <div class="live2d-panel" @mouseenter="cancelAutoHide" @mouseleave="startAutoHide()">
+    <div class="live2d-panel" @mouseenter="handlePanelMouseEnter" @mouseleave="handlePanelMouseLeave">
       <!-- AI瀵硅瘽姘旀场 -->
       <div
           id="ai-bubble"
@@ -31,6 +31,7 @@
             id="ai-content-wrapper"
             :class="{ 'scrollable': isScrollable }"
             ref="contentWrapper"
+            @wheel.passive="pauseBubbleHide"
         >
           <p id="ai-text">
             <span>{{ displayedText }}</span>
@@ -41,6 +42,10 @@
 
       <!-- Live2D鎸傝浇瀹瑰櫒 -->
       <div class="live2d-placeholder"></div>
+      <div v-if="showVoiceShortcutHint" class="voice-shortcut-hint">
+        <i class="fas fa-microphone"></i>
+        <span>按 V 键，和玄喵直接对话</span>
+      </div>
 
     </div>
 
@@ -102,13 +107,13 @@
           <button
               class="dialog-btn dialog-btn-voice"
               type="button"
-              :class="{ 'dialog-btn-voice--active': isListening || isVoiceInputStarting, 'dialog-btn-voice--unsupported': !voiceInputSupported }"
+              :class="{ 'dialog-btn-voice--active': isListening || isVoiceInputStarting || voiceInputStatus === 'processing', 'dialog-btn-voice--unsupported': !voiceInputSupported }"
               :disabled="trailCommandPending"
               :title="voiceInputButtonTitle"
               @click="toggleVoiceInput"
           >
-            <i :class="isListening ? 'fas fa-stop' : 'fas fa-microphone'"></i>
-            <span>{{ isListening ? '停止听写' : (isVoiceInputStarting ? '准备听写' : '语音提问') }}</span>
+            <i :class="voiceInputStatus === 'processing' ? 'fas fa-spinner fa-spin' : (isListening ? 'fas fa-stop' : 'fas fa-microphone')"></i>
+            <span>{{ isListening ? '停止提问' : (isVoiceInputStarting ? '准备听写' : (voiceInputStatus === 'processing' ? '识别中' : '语音提问')) }}</span>
           </button>
           <span class="char-count">{{ inputQuestion.length }}/200</span>
           <button class="dialog-btn dialog-btn-cancel" @click="closeInputDialog">取消</button>
@@ -125,17 +130,55 @@
 import { message } from 'ant-design-vue';
 import { fetchEventSource } from '@microsoft/fetch-event-source';
 import { matchFixedAnswer } from '../config/chatReplyConfig.js';
-import { createSession as createSessionApi, getChatStreamUrl } from '../api/AiChatApi.js';
+import { createSession as createSessionApi, getChatStreamUrl, transcribeSpeechInput } from '../api/AiChatApi.js';
 import { synthesizeSpeech, revokeSpeechUrl, getVoices } from '../api/TtsApi.js';
 import { buildDirectFallbackReply, buildFallbackReply, buildRagPrompt, searchKnowledge } from '../utils/knowledgeSearch.js';
-import { createBrowserSpeechRecognition, getBrowserSpeechRecognitionCtor } from '../utils/browserSpeech.js';
 import { useUserStore } from '../store/user.js';
-import { AgentRoute, agentOrchestrator } from '../agent/index.js';
+import {
+  AgentRoute,
+  agentOrchestrator,
+  buildActiveGuideContext,
+  discoverKnowledgeRelations,
+  createSpeechInputService,
+  createVoiceManager,
+  createVoicePolicySession,
+  getXuanmiaoBubbleReadTime,
+  getSpeechInputSupportMessage,
+  SpeechInputService,
+  SpeechInputStatus,
+  XUANMIAO_PLAYBACK_RATE,
+  selectAgentVoiceCue,
+  createVoiceTraceEvent
+} from '../agent/index.js';
 import { uploadTempFile } from '../api/FileApi.js';
 import { getProductPage } from '../api/ShopProductApi.js';
 import { getEnabledCategories } from '../api/ShopCategoryApi.js';
 import { createOrder } from '../api/OrderApi.js';
 import { getUserDefaultAddress } from '../api/AddressApi.js';
+import {
+  buildContextualQuestion,
+  getXuanmiaoContext,
+  getXuanmiaoContextPayload,
+  rememberXuanmiaoMessage,
+  setXuanmiaoPageContext,
+  updateXuanmiaoContext
+} from '../agent/context.js';
+import { buildFloatingExplorationLines } from '../agent/explorationTrace.js';
+import {
+  createErrorEvent,
+  createCompletedEvent,
+  createToolEvent,
+  createGeneratingEvent,
+  createGuideCompletedEvent,
+  createGuideContinueEvent,
+  createGuideFirstStopEvent,
+  createGuideRecommendationEvent,
+  createGuideRoutePlanningEvent,
+  createGuideStatusSyncedEvent,
+  createKnowledgeEvent,
+  createKnowledgeRelationEvent,
+  parseAgentStreamEvent
+} from '../agent/streamEvents.js';
 import xuanmiaoPeekImage from '../assets/sanxingdui-ai-chat/xuanmiao-peek-cutout.png';
 
 export default {
@@ -183,6 +226,10 @@ export default {
       // 鎵撳瓧鏈?璇煶鐩稿叧
       typewriterInterval: null,
       hideTimeout: null,
+      bubbleFadeTimeout: null,
+      bubbleHideStartedAt: 0,
+      bubbleHideRemainingMs: 0,
+      bubbleHidePaused: false,
       audioEl: null,
       audioCtx: null,
       audioSource: null,
@@ -200,6 +247,10 @@ export default {
       playDelayTimer: null,
       fullTextToSpeak: '',
       displayedText: '',
+      voiceManager: null,
+      voicePolicySession: null,
+      voiceAgentState: 'idle',
+      agentVoiceEvents: [],
       isSpeaking: false,
       isStopped: false,
       isHiding: false,
@@ -223,6 +274,9 @@ export default {
       // 闊宠壊
       voiceList: [],
       selectedVoice: 'default',
+      speechInputService: null,
+      voiceInputStatus: SpeechInputStatus.IDLE,
+      voiceShortcutHintDismissed: false,
       voiceInputSupported: false,
       voiceInputError: '',
       isListening: false,
@@ -231,7 +285,6 @@ export default {
       voiceInputStartToken: 0,
       voiceInputRetrying: false,
       voiceInputAttemptIsRetry: false,
-      speechRecognition: null,
       trailCommandSeq: 0,
       trailCommandPending: false,
       mcpEventHandlers: null,
@@ -270,13 +323,29 @@ export default {
     voiceInputButtonTitle() {
       if (this.isVoiceInputStarting) return '正在准备麦克风';
       if (this.isListening) return '停止语音输入';
+      if (this.voiceInputStatus === SpeechInputStatus.PROCESSING) return '正在识别语音';
       if (this.isSpeaking || this.isAnswering) return '停止玄喵当前讲解并开始语音输入';
       if (this.voiceInputSupported) return '开始语音输入';
       return this.voiceInputError || '当前浏览器不支持语音输入';
+    },
+    showVoiceShortcutHint() {
+      return this.isPanelOpen &&
+        !this.showInputDialog &&
+        !this.voiceShortcutHintDismissed &&
+        this.voiceInputSupported &&
+        !this.isSpeaking &&
+        !this.isAnswering;
+    }
+  },
+  watch: {
+    '$route.fullPath'() {
+      this.syncXuanmiaoRouteContext();
     }
   },
   mounted() {
+    this.syncXuanmiaoRouteContext();
     this.selectedVoice = localStorage.getItem('xuanmiao_voice') || 'default';
+    this.initVoiceManager();
     this.refreshVoiceInputSupport();
     this.loadVoices();
     this.loadL2DScript();
@@ -290,6 +359,7 @@ export default {
     window.addEventListener('xuanmiao:stop', this.handleExternalStop);
     window.addEventListener('resize', this.applyAvatarPosition);
     window.addEventListener('scroll', this.repositionInputDialog, true);
+    window.addEventListener('keydown', this.handleGlobalVoiceShortcut);
     window.visualViewport?.addEventListener('resize', this.applyAvatarPosition);
     window.visualViewport?.addEventListener('scroll', this.applyAvatarPosition);
     this.initMcpListeners();
@@ -485,6 +555,108 @@ export default {
       }
     },
 
+    syncXuanmiaoRouteContext() {
+      const path = this.$route?.fullPath || this.$route?.path || '';
+      setXuanmiaoPageContext({
+        currentPage: path,
+        currentScene: this.resolveCurrentSceneLabel(path)
+      });
+    },
+
+    resolveCurrentSceneLabel(path = '') {
+      if (path.includes('/trail')) return '时空展线';
+      if (path.includes('/ai-chat')) return 'AI文博助手';
+      if (path.includes('/shop')) return '文创商城';
+      if (path.includes('/heritage')) return '文物详情';
+      if (path.includes('/3d')) return '三维展馆';
+      return '青铜数元';
+    },
+
+    initVoiceManager() {
+      if (this.voiceManager) return this.voiceManager;
+      this.voiceManager = createVoiceManager({
+        synthesize: synthesizeSpeech,
+        revoke: revokeSpeechUrl,
+        getVoice: () => this.selectedVoice || 'default',
+        onStatus: (status) => {
+          this.voiceAgentState = status || 'idle';
+          if (status === 'completed') {
+            this.$nextTick(() => this.scheduleHide());
+          }
+        },
+        onVoiceEvent: (event) => this.recordVoiceEvent(event),
+        onError: (error) => {
+          console.warn('玄喵语音生成失败:', error);
+        },
+        play: ({ text, audioUrl, textOnly, displayPrefix, playOptions = {} }) => new Promise((resolve) => {
+          let settled = false;
+          const done = () => {
+            if (settled) return;
+            settled = true;
+            resolve();
+          };
+          const fallbackTimer = window.setTimeout(done, 45000);
+          this.startTypewriterAndSpeech(text, {
+            ...playOptions,
+            audioUrl: audioUrl || '',
+            disableTts: Boolean(textOnly),
+            playDelayMs: playOptions.playDelayMs ?? (displayPrefix ? 0 : 80),
+            queuePlayback: true,
+            displayPrefix: displayPrefix || '',
+            subtitleLead: playOptions.subtitleLead ?? 1.22,
+            onComplete: () => {
+              window.clearTimeout(fallbackTimer);
+              done();
+            }
+          });
+        })
+      });
+      return this.voiceManager;
+    },
+
+    startVoiceAgentInteraction(question, route = '') {
+      const manager = this.initVoiceManager();
+      this.agentVoiceEvents = [];
+      this.voicePolicySession = createVoicePolicySession({
+        question,
+        route,
+        context: getXuanmiaoContextPayload({
+          currentPage: this.$route?.fullPath || '',
+          surface: 'floating_avatar'
+        })
+      });
+      manager.beginInteraction();
+    },
+
+    ensureVoicePolicySession(question = '', route = '') {
+      if (!this.voicePolicySession) {
+        this.startVoiceAgentInteraction(question, route);
+      } else if (route && !this.voicePolicySession.route) {
+        this.voicePolicySession.route = route;
+      }
+    },
+
+    handleAgentVoiceEvent(event = {}) {
+      const cue = selectAgentVoiceCue(event, this.voicePolicySession);
+      if (!cue) return Promise.resolve({ status: 'skipped' });
+      const traceEvent = createVoiceTraceEvent(cue, event);
+      if (traceEvent) {
+        this.recordVoiceEvent(traceEvent);
+      }
+      return this.initVoiceManager().handleCue(cue);
+    },
+
+    recordVoiceEvent(event = {}) {
+      if (!event?.type) return;
+      this.agentVoiceEvents = [
+        ...this.agentVoiceEvents.slice(-11),
+        event
+      ];
+      if (event.type === 'tts_fallback') {
+        message.warning(event.text || '当前语音服务不可用，请查看文字讲解。');
+      }
+    },
+
     async searchProductsByCategory(categoryName) {
       try {
         const categories = await getEnabledCategories();
@@ -659,121 +831,72 @@ export default {
     },
 
     refreshVoiceInputSupport() {
-      this.voiceInputSupported = Boolean(getBrowserSpeechRecognitionCtor());
+      this.voiceInputSupported = SpeechInputService.isSupported();
       this.voiceInputError = this.voiceInputSupported ? '' : this.getVoiceInputUnavailableMessage();
       return this.voiceInputSupported;
     },
 
     getVoiceInputUnavailableMessage() {
-      if (typeof window === 'undefined') {
-        return '当前运行环境不支持语音输入。';
-      }
-      const host = window.location.hostname;
-      const isLocalhost = ['localhost', '127.0.0.1', '::1'].includes(host);
-      if (window.location.protocol !== 'https:' && !isLocalhost) {
-        return '语音输入需要 HTTPS 或 localhost 环境。';
-      }
-      if (!navigator.mediaDevices?.getUserMedia) {
-        return '当前浏览器没有开放麦克风能力，请换 Edge/Chrome 或检查浏览器权限。';
-      }
-      return '当前浏览器内核没有开放语音识别能力，建议用系统浏览器 Edge/Chrome 打开 localhost 页面。';
-    },
-
-    getSpeechRecognitionErrorMessage(error) {
-      const errorMap = {
-        'not-allowed': '麦克风权限被拒绝，请在浏览器地址栏允许麦克风后重试。',
-        'service-not-allowed': '浏览器语音识别服务不可用，请检查浏览器语音权限或换 Edge/Chrome。',
-        'audio-capture': '没有检测到可用麦克风，请检查系统输入设备。',
-        'no-speech': '没有听到声音，可以靠近麦克风后再试一次。',
-        network: '浏览器语音识别刚才没有连上，玄喵会自动再试一次。',
-        aborted: ''
-      };
-      return errorMap[error] || '语音输入暂时不可用，请改用文字输入。';
+      return getSpeechInputSupportMessage() || '当前浏览器暂不支持语音输入，请尝试Chrome或Edge。';
     },
 
     waitForVoiceInputRelease(ms = 520) {
       return new Promise((resolve) => setTimeout(resolve, ms));
     },
 
-    stopVoiceInput() {
-      this.voiceInputStartToken += 1;
-      this.isVoiceInputStarting = false;
-      this.voiceInputRetrying = false;
-      this.voiceInputStopRequested = true;
-      this.voiceInputAttemptIsRetry = false;
-      if (this.speechRecognition) {
-        try {
-          this.speechRecognition.abort();
-        } catch (error) {
-          console.warn('璇煶杈撳叆鍋滄澶辫触:', error);
-        }
+    ensureSpeechInputService() {
+      if (this.speechInputService) {
+        return this.speechInputService;
       }
-      this.speechRecognition = null;
-      this.isListening = false;
+      this.speechInputService = createSpeechInputService({
+        maxDurationMs: 60000,
+        transcribe: (file) => transcribeSpeechInput(file, {
+          showDefaultMsg: false,
+          errorMsg: '语音识别失败，请重试或改用文字输入。'
+        }),
+        onAutoStop: () => {
+          message.info('录音已达到 60 秒，正在自动识别。');
+          void this.finishVoiceInputToDraft();
+        },
+        onStatus: ({ status }) => this.updateVoiceInputStatus(status),
+        onError: (error) => {
+          this.voiceInputError = error?.message || '语音输入失败，可以继续使用文字提问。';
+        }
+      });
+      return this.speechInputService;
     },
 
-    ensureVoiceInput() {
-      if (this.speechRecognition) {
-        return this.speechRecognition;
+    updateVoiceInputStatus(status) {
+      this.voiceInputStatus = status || SpeechInputStatus.IDLE;
+      this.isVoiceInputStarting = status === SpeechInputStatus.REQUESTING;
+      this.isListening = status === SpeechInputStatus.LISTENING;
+      if (status === SpeechInputStatus.REQUESTING) {
+        this.voiceAgentState = 'voice_processing';
+        this.displayedText = '正在请求麦克风权限...';
+      } else if (status === SpeechInputStatus.LISTENING) {
+        this.voiceAgentState = 'voice_listening';
+        this.displayedText = '我在听，请说。再次按 V 或点击麦克风结束。';
+      } else if (status === SpeechInputStatus.PROCESSING) {
+        this.voiceAgentState = 'voice_processing';
+        this.displayedText = '正在识别语音...';
+      } else if (status === SpeechInputStatus.ERROR) {
+        this.voiceAgentState = 'error';
+      } else if (status === SpeechInputStatus.IDLE || status === SpeechInputStatus.SUCCESS) {
+        if (!this.isSpeaking && !this.isAnswering) {
+          this.voiceAgentState = 'idle';
+        }
       }
-
-      const recognition = createBrowserSpeechRecognition();
-      if (!recognition) {
-        return null;
+      if (
+        status === SpeechInputStatus.REQUESTING ||
+        status === SpeechInputStatus.LISTENING ||
+        status === SpeechInputStatus.PROCESSING
+      ) {
+        const bubbleEl = document.getElementById('ai-bubble');
+        if (bubbleEl) {
+          bubbleEl.style.display = 'block';
+          bubbleEl.classList.add('speaking');
+        }
       }
-
-      recognition.onstart = () => {
-        this.isListening = true;
-        this.isVoiceInputStarting = false;
-        this.voiceInputAttemptIsRetry = false;
-        this.voiceInputError = '';
-      };
-
-      recognition.onresult = (event) => {
-        let transcript = '';
-        for (let i = event.resultIndex; i < event.results.length; i += 1) {
-          transcript += event.results[i][0]?.transcript || '';
-        }
-
-        const text = transcript.trim();
-        if (text) {
-          this.inputQuestion = text;
-        }
-      };
-
-      recognition.onerror = async (event) => {
-        const errorType = event?.error || '';
-        this.isListening = false;
-        this.speechRecognition = null;
-        this.isVoiceInputStarting = false;
-        if ((errorType === 'network' || errorType === 'aborted') && !this.voiceInputRetrying && !this.voiceInputStopRequested && !this.voiceInputAttemptIsRetry) {
-          this.voiceInputRetrying = true;
-          await this.waitForVoiceInputRelease(720);
-          if (!this.isDestroyed && !this.isListening) {
-            await this.startVoiceInputRecognition({ retry: true, quiet: true });
-          }
-          this.voiceInputRetrying = false;
-          return;
-        }
-        const errorMessage = this.voiceInputAttemptIsRetry && errorType === 'network'
-          ? '浏览器语音识别网络服务不可用，请稍后再试或改用文字输入。'
-          : this.getSpeechRecognitionErrorMessage(errorType);
-        this.voiceInputAttemptIsRetry = false;
-        if (errorMessage) {
-          this.voiceInputError = errorMessage;
-          message.warning(errorMessage);
-        }
-      };
-
-      recognition.onend = () => {
-        this.isListening = false;
-        this.speechRecognition = null;
-        this.isVoiceInputStarting = false;
-        this.voiceInputAttemptIsRetry = false;
-      };
-
-      this.speechRecognition = recognition;
-      return this.speechRecognition;
     },
 
     async toggleVoiceInput() {
@@ -783,51 +906,80 @@ export default {
       }
 
       if (this.isListening || this.isVoiceInputStarting) {
-        this.stopVoiceInput();
+        await this.finishVoiceInputToDraft();
         return;
       }
 
       this.voiceInputStopRequested = false;
       await this.prepareForVoiceInput();
-      await this.startVoiceInputRecognition();
+      await this.startVoiceInputRecording();
     },
 
-    async startVoiceInputRecognition(options = {}) {
+    async startVoiceInputRecording() {
       const token = ++this.voiceInputStartToken;
-      this.isVoiceInputStarting = true;
+      this.voiceShortcutHintDismissed = true;
       this.voiceInputStopRequested = false;
-      this.voiceInputAttemptIsRetry = Boolean(options.retry);
       this.voiceInputError = '';
 
-      const recognition = this.ensureVoiceInput();
-      if (!recognition) {
-        this.isVoiceInputStarting = false;
-        message.warning(this.getVoiceInputUnavailableMessage());
-        return;
-      }
-
       try {
-        await this.waitForVoiceInputRelease(options.retry ? 360 : 120);
+        await this.waitForVoiceInputRelease(120);
         if (this.isDestroyed || token !== this.voiceInputStartToken) {
           return;
         }
-        recognition.start();
+        await this.ensureSpeechInputService().start();
       } catch (error) {
-        this.isListening = false;
-        this.isVoiceInputStarting = false;
-        this.speechRecognition = null;
-        console.warn('启动语音输入失败:', error);
-        if (!options.retry) {
-          await this.waitForVoiceInputRelease(620);
-          if (!this.isDestroyed && token === this.voiceInputStartToken) {
-            await this.startVoiceInputRecognition({ retry: true, quiet: true });
-            return;
-          }
-        }
-        if (!options.quiet) {
-          message.warning('语音输入启动失败，请稍后再试。');
-        }
+        console.warn('启动玄喵语音输入失败:', error);
+        this.voiceInputError = error?.message || '语音输入失败，可以继续使用文字提问。';
+        message.warning(this.voiceInputError);
       }
+    },
+
+    async finishVoiceInputToDraft() {
+      const token = ++this.voiceInputStartToken;
+      this.voiceInputStopRequested = true;
+      try {
+        const transcript = await this.ensureSpeechInputService().stopAndTranscribe();
+        if (this.isDestroyed || token !== this.voiceInputStartToken || !transcript) {
+          return;
+        }
+        this.inputQuestion = transcript;
+        this.showInputDialog = true;
+        this.displayedText = '我识别好了，请先确认输入框里的文字，没问题再点“提问”。';
+        message.success('语音已识别，请确认文字后再提问。');
+        this.$nextTick(() => {
+          this.$refs.dialogInput?.focus?.();
+        });
+      } catch (error) {
+        if (this.isDestroyed) return;
+        this.voiceInputError = error?.message || '语音输入失败，可以继续使用文字提问。';
+        message.warning(this.voiceInputError);
+      }
+    },
+
+    stopVoiceInput() {
+      this.voiceInputStartToken += 1;
+      this.voiceInputStopRequested = true;
+      this.ensureSpeechInputService().cancel();
+      this.isVoiceInputStarting = false;
+      this.isListening = false;
+      this.voiceInputStatus = SpeechInputStatus.IDLE;
+    },
+
+    async handleGlobalVoiceShortcut(event) {
+      if (event.key?.toLowerCase() !== 'v' || event.ctrlKey || event.metaKey || event.altKey) {
+        return;
+      }
+      if (SpeechInputService.isKeyboardEditableTarget(event.target)) {
+        return;
+      }
+      event.preventDefault();
+      if (!this.isPanelOpen) {
+        this.isPanelOpen = true;
+        this.hasPendingMsg = false;
+        this.userInteracted = true;
+        this.syncWidgetVisibility();
+      }
+      await this.toggleVoiceInput();
     },
 
     async prepareForVoiceInput() {
@@ -937,7 +1089,7 @@ export default {
     async playSpeechOnly(text) {
       return this.startTypewriterAndSpeech(text, {
         playDelayMs: 120,
-        charDelay: 110,
+        charDelay: 38,
         thinkingIntervalMs: 2000
       });
     },
@@ -957,13 +1109,13 @@ export default {
           continue;
         }
 
-        if (remainder.length >= 30) {
+        if (remainder.length >= 40) {
           const preferredCut = Math.max(
-            remainder.lastIndexOf('，', 30),
-            remainder.lastIndexOf(',', 30),
-            remainder.lastIndexOf('、', 30)
+            remainder.lastIndexOf('，', 40),
+            remainder.lastIndexOf(',', 40),
+            remainder.lastIndexOf('、', 40)
           );
-          const end = preferredCut >= 15 ? preferredCut + 1 : 30;
+          const end = preferredCut >= 18 ? preferredCut + 1 : 40;
           segments.push(remainder.slice(0, end).trim());
           remainder = remainder.slice(end);
           continue;
@@ -1039,7 +1191,7 @@ export default {
               playDelayMs: this.speechQueueTranscript ? 0 : 60,
               queuePlayback: true,
               displayPrefix: this.speechQueueTranscript,
-              subtitleLead: 1.15,
+              subtitleLead: 1.22,
               onComplete: resolve
             });
           });
@@ -1050,11 +1202,15 @@ export default {
       } finally {
         if (generation === this.speechQueueGeneration) {
           this.speechQueueActive = false;
+          this.$nextTick(() => this.scheduleHide());
         }
       }
     },
 
     cancelSpeechQueue() {
+      if (this.voiceManager) {
+        this.voiceManager.cancel('component_cancel');
+      }
       this.speechQueueGeneration += 1;
       this.speechQueueControllers.forEach((controller) => controller.abort());
       this.speechQueueControllers = [];
@@ -1082,9 +1238,8 @@ export default {
     },
 
     speakQueuedAnswer(text) {
-      this.cancelSpeechQueue();
-      const { segments } = this.splitSpeechSegments(text, true);
-      segments.forEach((segment) => this.queueSpeechSegment(segment));
+      this.initVoiceManager().beginAnswer();
+      this.voiceManager.appendAnswerText(text, { flush: true });
     },
 
     async handleExternalSpeech(event) {
@@ -1101,7 +1256,7 @@ export default {
       await this.startTypewriterAndSpeech(text, {
         audioUrl: detail.audioUrl || '',
         playDelayMs: detail.playDelayMs ?? 120,
-        charDelay: detail.charDelay ?? 68,
+        charDelay: detail.charDelay ?? 38,
         thinkingIntervalMs: detail.thinkingIntervalMs ?? 900,
         externalContext: {
           key: detail.key || '',
@@ -1150,30 +1305,100 @@ export default {
       return hasValidExtension || hasValidMimeType;
     },
 
+    renderAgentTraceStatus(trace = {}) {
+      if (!trace || this.isDestroyed) return;
+      this.ensureVoicePolicySession(this.inputQuestion || this.currentAnswer || '', trace.route || '');
+      if (trace.route === AgentRoute.TOOL_CALL || trace.route === 'TOOL_CALL') {
+        this.handleAgentVoiceEvent(createToolEvent(trace.toolName || trace.tool || '', 'prepare', trace.arguments || {}));
+      }
+      const traceWithVoice = this.attachVoiceTrace(trace);
+      const lines = buildFloatingExplorationLines(traceWithVoice, {
+        context: getXuanmiaoContextPayload({
+          surface: 'floating_avatar',
+          currentPage: this.$route?.fullPath || '',
+          currentPath: this.$route?.fullPath || '',
+          ...this.getRagContextPayload()
+        })
+      });
+
+      this.stopThinkingStatus();
+      this.displayedText = lines.slice(0, 5).join('\n');
+      this.checkScrollBar();
+      this.scrollToBottom();
+    },
+
+    attachVoiceTrace(trace = {}) {
+      const voiceEvents = this.agentVoiceEvents
+        .filter((event) => event.type === 'start' || event.type === 'clue' || event.type === 'completed' || event.type === 'error' || event.sourceEventType)
+        .map((event) => ({
+          id: event.id || '',
+          type: event.type || '',
+          text: event.text || '',
+          sourceEventType: event.sourceEventType || '',
+          timestamp: event.timestamp || ''
+        }));
+      return {
+        ...trace,
+        voiceUsed: voiceEvents.length > 0,
+        voiceEvents
+      };
+    },
+
+    renderAgentStreamEvent(event = {}) {
+      if (!event || this.isDestroyed) return Promise.resolve({ status: 'skipped' });
+      const voiceCompletion = this.handleAgentVoiceEvent(event);
+      const lines = ['玄喵正在探索'];
+      if (event.message) {
+        lines.push(`${event.icon || '🐱'} ${event.message}`);
+      }
+      this.stopThinkingStatus();
+      this.displayedText = lines.join('\n');
+      this.checkScrollBar();
+      this.scrollToBottom();
+      return voiceCompletion;
+    },
+
     async askWithRag(question, useRag = true, attachments = []) {
       try {
         // 智能化增强：根据问题内容触发表情
         this.triggerLive2DExpression(question);
 
         let docs = [];
-        let userMessage = question;
+        const contextualQuestion = buildContextualQuestion(question, getXuanmiaoContext());
+        let userMessage = contextualQuestion;
         const canUseRag = useRag && !this.hasUnsupportedFloatingAttachment(attachments);
+        this.ensureVoicePolicySession(contextualQuestion, canUseRag ? AgentRoute.RAG : AgentRoute.DIRECT_ANSWER);
+        this.showAnswerPending();
         if (canUseRag) {
-          docs = await searchKnowledge(question, 3);
-          // 智能化增强：添加上下文记忆
-          const contextPrompt = this.getArtifactContextPrompt();
-          userMessage = buildRagPrompt(question, docs, this.getRagContextPayload()) + contextPrompt;
+          this.renderAgentStreamEvent(createKnowledgeEvent(0, getXuanmiaoContext()));
+          docs = await searchKnowledge(contextualQuestion, 3);
+          this.renderAgentStreamEvent(createKnowledgeEvent(docs.length, getXuanmiaoContext()));
+          const knowledgeGraph = discoverKnowledgeRelations({
+            question: contextualQuestion,
+            context: this.getRagContextPayload(),
+            documents: docs
+          });
+          this.renderAgentStreamEvent(createKnowledgeRelationEvent(knowledgeGraph, getXuanmiaoContext()));
+          const activeGuide = buildActiveGuideContext(contextualQuestion, getXuanmiaoContext(), knowledgeGraph);
+          if (activeGuide.followups.length) {
+            this.renderAgentStreamEvent(createGuideRecommendationEvent(activeGuide, getXuanmiaoContext()));
+          }
+          userMessage = buildRagPrompt(contextualQuestion, docs, this.getRagContextPayload());
         }
+        this.renderAgentStreamEvent(createGeneratingEvent());
         const getFailureReply = () => canUseRag
           ? buildFallbackReply(question, docs, this.getRagContextPayload())
           : buildDirectFallbackReply();
         const sessionId = await this.ensureChatSession();
 
         if (!sessionId) {
-          await this.startTypewriterAndSpeech(getFailureReply(), {
-            playDelayMs: 700,
-            charDelay: 72,
-            thinkingIntervalMs: 1400
+          this.initVoiceManager().speakText(getFailureReply(), {
+            replace: false,
+            playOptions: {
+              playDelayMs: 700,
+              charDelay: 38,
+              thinkingIntervalMs: 1400
+            }
           });
           return;
         }
@@ -1209,12 +1434,7 @@ export default {
         this.ragAbortController = new AbortController();
 
         let streamText = '';
-        let speechBuffer = '';
-        const flushSpeechBuffer = (flush = false) => {
-          const result = this.splitSpeechSegments(speechBuffer, flush);
-          speechBuffer = result.remainder;
-          result.segments.forEach((segment) => this.queueSpeechSegment(segment));
-        };
+        this.initVoiceManager().beginAnswer();
         const headers = {
           'Content-Type': 'application/json'
         };
@@ -1232,24 +1452,35 @@ export default {
             body: JSON.stringify({
               sessionId,
               userMessage,
-              attachments
+              attachments,
+              context: getXuanmiaoContextPayload({
+                currentPage: this.$route?.fullPath || '',
+                surface: 'floating_avatar'
+              })
             }),
             signal: this.ragAbortController.signal,
             openWhenHidden: true,
             onmessage: (event) => {
+              const streamEvent = parseAgentStreamEvent(event.data);
+              if (streamEvent) {
+                this.renderAgentStreamEvent(streamEvent);
+                return;
+              }
+
               if (event.data === '[DONE]') {
-                flushSpeechBuffer(true);
+                this.voiceManager.flushAnswerBuffer(true);
+                this.renderAgentStreamEvent(createCompletedEvent());
                 return;
               }
 
               if (event.data.startsWith('[ERROR]')) {
+                this.renderAgentStreamEvent(createErrorEvent('当前智能生成服务暂时不可用，正在切换备用资料方案...'));
                 throw new Error(event.data.replace(/^\[ERROR\]/, '') || 'AI 鍝嶅簲鏆備笉鍙敤');
             }
 
             streamText += event.data;
-            speechBuffer += event.data;
             this.currentAnswer = streamText;
-            flushSpeechBuffer(false);
+            this.voiceManager.appendAnswerText(event.data);
           },
             onerror: (error) => {
               throw error;
@@ -1257,12 +1488,19 @@ export default {
           });
 
           if (streamText) {
-            flushSpeechBuffer(true);
+            this.voiceManager.flushAnswerBuffer(true);
+            rememberXuanmiaoMessage('assistant', streamText, {
+              topic: canUseRag ? '文物讲解' : ''
+            });
           } else {
-            await this.startTypewriterAndSpeech(getFailureReply(), {
-              playDelayMs: 700,
-              charDelay: 72,
-              thinkingIntervalMs: 1400
+            this.renderAgentStreamEvent(createErrorEvent('智能生成暂时不可用，玄喵正在切换备用资料方案...'));
+            this.voiceManager.speakText(getFailureReply(), {
+              replace: false,
+              playOptions: {
+                playDelayMs: 700,
+                charDelay: 38,
+                thinkingIntervalMs: 1400
+              }
             });
           }
         } catch (error) {
@@ -1270,10 +1508,14 @@ export default {
             return;
           }
           console.error('鐜勫柕 RAG 瀵硅瘽澶辫触:', error);
-          await this.startTypewriterAndSpeech(getFailureReply(), {
-            playDelayMs: 700,
-            charDelay: 72,
-            thinkingIntervalMs: 1400
+          this.renderAgentStreamEvent(createErrorEvent('连接中断，玄喵正在切换备用资料方案...'));
+          this.voiceManager.speakText(getFailureReply(), {
+            replace: false,
+            playOptions: {
+              playDelayMs: 700,
+              charDelay: 38,
+              thinkingIntervalMs: 1400
+            }
           });
         }
       } catch (error) {
@@ -1281,10 +1523,14 @@ export default {
           return;
         }
         console.error('鐜勫柕妫€绱㈡垨浼氳瘽鍒濆鍖栧け璐?', error);
-        await this.startTypewriterAndSpeech(useRag ? buildFallbackReply(question) : buildDirectFallbackReply(), {
-          playDelayMs: 700,
-          charDelay: 72,
-          thinkingIntervalMs: 1400
+        this.renderAgentStreamEvent(createErrorEvent('玄喵问答暂时不可用，正在切换备用资料方案...'));
+        this.initVoiceManager().speakText(useRag ? buildFallbackReply(question) : buildDirectFallbackReply(), {
+          replace: false,
+          playOptions: {
+            playDelayMs: 700,
+            charDelay: 38,
+            thinkingIntervalMs: 1400
+          }
         });
       } finally {
         this.isAnswering = false;
@@ -1540,6 +1786,16 @@ export default {
       clearTimeout(this.autoHideTimer);
     },
 
+    handlePanelMouseEnter() {
+      this.cancelAutoHide();
+      this.pauseBubbleHide();
+    },
+
+    handlePanelMouseLeave() {
+      this.startAutoHide();
+      this.resumeBubbleHide();
+    },
+
     resetAutoHide() {
       if (this.isPanelOpen && !this.isSpeaking && !this.showInputDialog) {
         this.startAutoHide();
@@ -1738,13 +1994,23 @@ export default {
       document.removeEventListener('mouseup', this.stopDrag);
     },
 
-    async submitQuestion() {
+    async submitQuestion(options = {}) {
       const submittedAttachments = [...this.pendingAttachments];
       const question = this.inputQuestion.trim() || (submittedAttachments.length ? '请分析我上传的文件。' : '');
       if (!question || this.isAnswering || this.trailCommandPending || this.isUploadingAttachment) return;
 
-      this.stopVoiceInput();
+      if (options?.source !== 'voice') {
+        this.stopVoiceInput();
+      }
       this.closeInputDialog();
+      const activeUserStore = useUserStore();
+      updateXuanmiaoContext({
+        currentPage: this.$route?.fullPath || '',
+        currentScene: this.resolveCurrentSceneLabel(this.$route?.fullPath || ''),
+        userId: activeUserStore.userInfo?.id || activeUserStore.user?.id || null
+      });
+      rememberXuanmiaoMessage('user', question);
+      this.startVoiceAgentInteraction(question);
 
       const fixedReply = submittedAttachments.length ? null : matchFixedAnswer(question);
       if (fixedReply) {
@@ -1753,6 +2019,7 @@ export default {
           fallbackToTtsOnAudioError: true,
           playDelayMs: 120
         });
+        rememberXuanmiaoMessage('assistant', fixedReply.reply);
         return;
       }
 
@@ -1775,7 +2042,7 @@ export default {
         const userStore = useUserStore();
         const context = {
           router: this.$router,
-          currentArtifact: this.getCurrentArtifactId(),
+          currentArtifact: this.getCurrentArtifactId() || getXuanmiaoContext().currentArtifactId,
           currentActivity: this.getCurrentActivityId(),
           currentProduct: this.getCurrentProductId(),
           isAuthenticated: userStore.isLoggedIn,
@@ -1791,11 +2058,15 @@ export default {
             filePath: filePath || '',
             mimeType: mimeType || ''
           })),
-          routingContext: {
+          routingContext: getXuanmiaoContextPayload({
             surface: 'floating_avatar',
+            currentPage: this.$route?.fullPath || '',
+            currentPath: this.$route?.fullPath || '',
             ...this.getRagContextPayload()
-          },
-          toolContext: context
+          }),
+          toolContext: context,
+          onTrace: (trace) => this.renderAgentTraceStatus(trace),
+          onExperienceEvent: (event) => this.renderAgentStreamEvent(event)
         });
         this.pendingAgentRoute = result.route;
         this.pendingAttachmentContext = result.attachmentContext || '';
@@ -1813,6 +2084,21 @@ export default {
         }
 
         const tool = result.tool;
+        if (result.data?.routePlan) {
+          this.renderAgentStreamEvent(createGuideRoutePlanningEvent(result.data.routePlan, getXuanmiaoContext()));
+          if (result.data?.guideAction === 'create_guide' || result.data?.guideAction === 'restart_guide') {
+            this.renderAgentStreamEvent(createGuideFirstStopEvent(result.data.routePlan));
+          }
+        }
+        if (result.data?.guideAction === 'continue_guide') {
+          this.renderAgentStreamEvent(createGuideContinueEvent(result.data.activeGuideState || getXuanmiaoContext().activeGuideState));
+        }
+        if (result.data?.trailStatus) {
+          this.renderAgentStreamEvent(createGuideStatusSyncedEvent(result.data.trailStatus));
+        }
+        if (result.data?.activeGuideState?.status === 'completed') {
+          this.renderAgentStreamEvent(createGuideCompletedEvent(result.data.activeGuideState));
+        }
         if (result.data?.needLogin) {
           this.startTypewriterAndSpeech('这个操作需要先登录，正在为您跳转登录页...', { playDelayMs: 500 });
           setTimeout(() => this.$router.push('/auth/login'), 1200);
@@ -2261,7 +2547,7 @@ export default {
 
       const isModelAnswer = options.playDelayMs === 3000;
       const playDelayMs = options.playDelayMs ?? 700;
-      const charDelayHint = options.charDelay ?? (isModelAnswer ? 110 : 72);
+      const charDelayHint = options.charDelay ?? 38;
       const thinkingIntervalMs = options.thinkingIntervalMs ?? (isModelAnswer ? 3000 : 1400);
       const displayPrefix = String(options.displayPrefix || '');
       const fullDisplayText = this.joinSpeechText(displayPrefix, finalText);
@@ -2299,6 +2585,43 @@ export default {
         this.startThinkingStatus(true, thinkingIntervalMs);
       }
 
+      if (options.disableTts) {
+        this.stopThinkingStatus();
+        clearInterval(this.typewriterInterval);
+        this.displayedText = displayPrefix;
+        const speed = Math.max(18, Math.min(Number(options.charDelay) || 38, 90));
+        await new Promise((resolve) => {
+          let index = 0;
+          this.typewriterInterval = setInterval(() => {
+            if (this.isDestroyed || this.speechPlaybackToken !== playbackToken) {
+              clearInterval(this.typewriterInterval);
+              this.typewriterInterval = null;
+              resolve();
+              return;
+            }
+            if (index < finalText.length) {
+              this.displayedText = this.joinSpeechText(displayPrefix, finalText.slice(0, index + 1));
+              index += 1;
+              this.checkScrollBar();
+              this.scrollToBottom();
+              return;
+            }
+            clearInterval(this.typewriterInterval);
+            this.typewriterInterval = null;
+            this.displayedText = fullDisplayText;
+            this.isSpeaking = false;
+            bubbleEl.classList.remove('speaking');
+            this.checkScrollBar();
+            this.scheduleHide();
+            this.startAutoHide();
+            this.notifyExternalSpeech('ended');
+            this.completeSpeechPlayback();
+            resolve();
+          }, speed);
+        });
+        return;
+      }
+
       try {
         let audioUrl = options.audioUrl || '';
         if (!audioUrl) {
@@ -2334,6 +2657,9 @@ export default {
 
         this.currentAudioUrl = audioUrl;
         const audioEl = new Audio(audioUrl);
+        audioEl.playbackRate = XUANMIAO_PLAYBACK_RATE;
+        audioEl.defaultPlaybackRate = XUANMIAO_PLAYBACK_RATE;
+        audioEl.preservesPitch = true;
         this.audioEl = audioEl;
 
         const finishSpeech = () => {
@@ -2361,9 +2687,12 @@ export default {
           this.displayedText = displayPrefix;
           clearInterval(this.typewriterInterval);
 
-          const duration = Number.isFinite(audioEl.duration) && audioEl.duration > 0
+          const mediaDuration = Number.isFinite(audioEl.duration) && audioEl.duration > 0
             ? audioEl.duration
             : Math.max(1, (charDelayHint * finalText.length) / 1000);
+          const duration = useAudioClock
+            ? mediaDuration
+            : mediaDuration / XUANMIAO_PLAYBACK_RATE;
           const startedAt = performance.now();
           this.typewriterInterval = setInterval(() => {
             if (!isCurrentSpeech() || this.audioEl !== audioEl) {
@@ -2467,7 +2796,7 @@ export default {
           this.typewriterInterval = null;
           this.scheduleHide();
         }
-      }, 50);
+      }, 38);
     },
 
     async primeAudioContext() {
@@ -2510,6 +2839,7 @@ export default {
         }
         const source = ctx.createBufferSource();
         source.buffer = audioBuffer;
+        source.playbackRate.value = XUANMIAO_PLAYBACK_RATE;
         source.connect(ctx.destination);
         this.audioSource = source;
         source.onended = () => {
@@ -2567,10 +2897,14 @@ export default {
     // ========== 宸ュ叿鏂规硶 ==========
     clearAllTimers() {
       clearTimeout(this.hideTimeout);
+      clearTimeout(this.bubbleFadeTimeout);
       clearTimeout(this.playDelayTimer);
       clearInterval(this.typewriterInterval);
       clearInterval(this.thinkingInterval);
       this.hideTimeout = null;
+      this.bubbleFadeTimeout = null;
+      this.bubbleHideStartedAt = 0;
+      this.bubbleHideRemainingMs = 0;
       this.playDelayTimer = null;
       this.typewriterInterval = null;
       this.thinkingInterval = null;
@@ -2593,26 +2927,82 @@ export default {
       });
     },
 
-    scheduleHide(delay = 3000) {
+    getBubbleReadTime(text = this.displayedText) {
+      return getXuanmiaoBubbleReadTime(text);
+    },
+
+    isBubbleHideBlocked() {
+      return Boolean(
+        this.isSpeaking ||
+        this.isAnswering ||
+        this.typewriterInterval ||
+        this.voiceManager?.active ||
+        this.voiceManager?.queue?.length ||
+        this.speechQueueActive ||
+        this.speechQueue.length
+      );
+    },
+
+    pauseBubbleHide() {
+      this.bubbleHidePaused = true;
+      if (this.bubbleFadeTimeout) {
+        clearTimeout(this.bubbleFadeTimeout);
+        this.bubbleFadeTimeout = null;
+        this.isHiding = false;
+      }
+      if (!this.hideTimeout) return;
+      const elapsed = Math.max(0, Date.now() - this.bubbleHideStartedAt);
+      this.bubbleHideRemainingMs = Math.max(0, this.bubbleHideRemainingMs - elapsed);
       clearTimeout(this.hideTimeout);
+      this.hideTimeout = null;
+      this.bubbleHideStartedAt = 0;
+    },
+
+    resumeBubbleHide() {
+      if (!this.bubbleHidePaused) return;
+      this.bubbleHidePaused = false;
+      this.scheduleHide(this.bubbleHideRemainingMs || undefined);
+    },
+
+    scheduleHide(delay) {
+      clearTimeout(this.hideTimeout);
+      clearTimeout(this.bubbleFadeTimeout);
+      this.hideTimeout = null;
+      this.bubbleFadeTimeout = null;
+      this.isHiding = false;
+
+      if (this.isBubbleHideBlocked()) return;
+      const readTime = Number.isFinite(delay) ? Math.max(0, delay) : this.getBubbleReadTime();
+      this.bubbleHideRemainingMs = readTime;
+      if (this.bubbleHidePaused) return;
+
+      this.bubbleHideStartedAt = Date.now();
       this.hideTimeout = setTimeout(() => {
+        if (this.isBubbleHideBlocked() || this.bubbleHidePaused) {
+          this.scheduleHide();
+          return;
+        }
         this.isHiding = true;
-        setTimeout(() => {
+        this.bubbleFadeTimeout = setTimeout(() => {
           const bubbleEl = document.getElementById('ai-bubble');
           if (bubbleEl) {
             bubbleEl.style.display = 'none';
           }
           this.hideTimeout = null;
+          this.bubbleFadeTimeout = null;
+          this.bubbleHideStartedAt = 0;
+          this.bubbleHideRemainingMs = 0;
           this.isHiding = false;
           this.isStopped = false;
           this.isScrollable = false;
         }, 500);
-      }, delay);
+      }, readTime);
     }
   },
   beforeUnmount() {
     this.isDestroyed = true;
     this.ragAbortController?.abort?.();
+    this.voiceManager?.cancel?.('component_unmount');
     this.stopVoiceInput();
     this.clearDemoCommandTimers();
     this.clearAllTimers();
@@ -2652,6 +3042,7 @@ export default {
     window.removeEventListener('xuanmiao:stop', this.handleExternalStop);
     window.removeEventListener('resize', this.applyAvatarPosition);
     window.removeEventListener('scroll', this.repositionInputDialog, true);
+    window.removeEventListener('keydown', this.handleGlobalVoiceShortcut);
     window.visualViewport?.removeEventListener('resize', this.applyAvatarPosition);
     window.visualViewport?.removeEventListener('scroll', this.applyAvatarPosition);
     this.cleanupMcpListeners();
@@ -2738,6 +3129,35 @@ export default {
   height: 360px;
   z-index: 8;
   pointer-events: none;
+}
+
+.voice-shortcut-hint {
+  position: fixed;
+  right: 104px;
+  bottom: 92px;
+  z-index: 100010;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  max-width: 240px;
+  padding: 10px 14px;
+  color: #6a3d1d;
+  background: rgba(255, 248, 232, 0.94);
+  border: 1px solid rgba(184, 126, 58, 0.42);
+  border-radius: 999px;
+  box-shadow: 0 10px 28px rgba(79, 45, 18, 0.16);
+  font-size: 13px;
+  pointer-events: none;
+  animation: voiceHintFloat 3.2s ease-in-out infinite;
+}
+
+.voice-shortcut-hint i {
+  color: #b66a25;
+}
+
+@keyframes voiceHintFloat {
+  0%, 100% { transform: translateY(0); opacity: 0.92; }
+  50% { transform: translateY(-4px); opacity: 1; }
 }
 
 #ai-bubble {

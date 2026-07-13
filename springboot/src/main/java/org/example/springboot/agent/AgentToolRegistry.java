@@ -3,6 +3,7 @@ package org.example.springboot.agent;
 import org.springframework.stereotype.Component;
 
 import java.util.HashMap;
+import java.util.List;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Set;
@@ -32,31 +33,92 @@ public class AgentToolRegistry {
     private final Map<String, ToolDefinition> enabledTools = new LinkedHashMap<>();
 
     public AgentToolRegistry() {
-        register(new ToolDefinition(
+        register(tool(
                 "search_product",
-                "搜索商城商品，keyword必填，quantity可选",
-                RiskLevel.SAFE
+                "Search shop products. Required: keyword. Optional: quantity.",
+                "shop",
+                objectSchema(Map.of(
+                        "keyword", stringParam("Shop product keyword."),
+                        "quantity", numberParam("Optional quantity, 1-99.")
+                ), "keyword")
         ));
-        register(new ToolDefinition(
+        register(tool(
                 "navigate_to",
-                "打开公开页面，destination可选home/heritage/inheritor/activity/course/shop/ai-chat/3dlist/trail/quiz",
-                RiskLevel.SAFE
+                "Open a public page. destination enum: home, heritage, inheritor, activity, course, shop, ai-chat, 3dlist, trail, quiz.",
+                "navigation",
+                objectSchema(Map.of(
+                        "destination", enumParam("Public page destination.", PUBLIC_DESTINATIONS)
+                ), "destination")
         ));
-        register(new ToolDefinition("view_cart", "查看当前用户购物车，无参数", RiskLevel.SAFE));
-        register(new ToolDefinition("view_orders", "查看当前用户订单，无参数", RiskLevel.SAFE));
-        register(new ToolDefinition("search_heritage", "搜索文物，keyword必填", RiskLevel.SAFE));
-        register(new ToolDefinition("open_artifact_detail", "打开文物详情，artifact_id必填", RiskLevel.SAFE));
-        register(new ToolDefinition("play_voice_intro", "播放当前文物语音介绍，artifact_id必填", RiskLevel.SAFE));
-        register(new ToolDefinition("start_quiz", "打开知识问答，可选topic和difficulty", RiskLevel.SAFE));
-        register(new ToolDefinition("search_activity", "搜索活动，keyword必填", RiskLevel.SAFE));
-        register(new ToolDefinition("view_courses", "打开在线课程页面，无参数", RiskLevel.SAFE));
-        register(new ToolDefinition("get_user_location", "获取用户当前位置（返回城市名称），无参数，直接调用即可", RiskLevel.SAFE));
-        register(new ToolDefinition("get_weather", "查询指定城市的实时天气和今日预报，参数={city:城市名}。若用户未指定城市（如'今天天气怎么样'），应先调用get_user_location获取城市，再用返回的城市名调用本工具", RiskLevel.SAFE));
-        register(new ToolDefinition("get_current_datetime", "查询当前北京时间和日期，无参数", RiskLevel.SAFE));
-        register(new ToolDefinition(
+        register(tool("view_cart", "Open the current user's shopping cart.", "shop", objectSchema(Map.of())));
+        register(tool("view_orders", "Open the current user's orders.", "shop", objectSchema(Map.of())));
+        register(tool(
+                "search_heritage",
+                "Search heritage artifacts. Required: keyword.",
+                "heritage",
+                objectSchema(Map.of(
+                        "keyword", stringParam("Heritage search keyword.")
+                ), "keyword")
+        ));
+        register(tool(
+                "open_artifact_detail",
+                "Open artifact detail page. Required: artifact_id. Optional: auto_explain.",
+                "heritage",
+                objectSchema(Map.of(
+                        "artifact_id", stringParam("Artifact identifier."),
+                        "auto_explain", booleanParam("Whether to auto-start AI explanation.")
+                ), "artifact_id")
+        ));
+        register(tool(
+                "play_voice_intro",
+                "Play voice introduction for an artifact. Required: artifact_id. Optional: voice_type.",
+                "audio",
+                objectSchema(Map.of(
+                        "artifact_id", stringParam("Artifact identifier."),
+                        "voice_type", enumParam("Voice type.", VOICE_TYPES)
+                ), "artifact_id")
+        ));
+        register(tool(
+                "start_quiz",
+                "Start a knowledge quiz. Optional: topic and difficulty.",
+                "quiz",
+                objectSchema(Map.of(
+                        "topic", enumParam("Quiz topic.", QUIZ_TOPICS),
+                        "difficulty", enumParam("Quiz difficulty.", QUIZ_DIFFICULTIES)
+                ))
+        ));
+        register(tool(
+                "search_activity",
+                "Search cultural activities. Required: keyword.",
+                "activity",
+                objectSchema(Map.of("keyword", stringParam("Activity keyword.")), "keyword")
+        ));
+        register(tool("view_courses", "Open the online course page.", "course", objectSchema(Map.of())));
+        register(tool("get_user_location", "Get the user's current city. No arguments.", "info", objectSchema(Map.of())));
+        register(tool(
+                "get_weather",
+                "Get real-time weather for a city. Required: city. Use only for weather questions.",
+                "info",
+                objectSchema(Map.of(
+                        "city", stringParam("City name.")
+                ), "city")
+        ));
+        register(tool(
+                "get_current_datetime",
+                "Get current Beijing date, weekday, and time. No arguments.",
+                "info",
+                objectSchema(Map.<String, Object>of())
+        ));
+        register(tool(
                 "control_trail",
                 "Control spacetime trail. action enum: open_artifact, select_pit, go_scene_one, go_artifact_list, open_stage, open_guide, focus_graph, start_quiz. Artifact mapping: golden mask=HI-2025-002, bronze eye mask=HI-2025-003, golden staff=HI-2025-004, standing figure=HI-2025-005, bronze tree=HI-2025-006. open_artifact requires artifact_id. select_pit requires pit_code. focus_graph may include graph_target.",
-                RiskLevel.SAFE
+                "trail",
+                objectSchema(Map.of(
+                        "action", enumParam("Trail action.", TRAIL_ACTIONS),
+                        "artifact_id", stringParam("Artifact identifier for open_artifact."),
+                        "pit_code", enumParam("Pit code for select_pit.", TRAIL_PITS),
+                        "graph_target", enumParam("Graph focus target.", TRAIL_GRAPH_TARGETS)
+                ), "action")
         ));
     }
 
@@ -98,7 +160,7 @@ public class AgentToolRegistry {
                 }
                 normalized.put("destination", destination);
             }
-            case "view_cart", "view_orders", "view_courses", "get_current_datetime", "view_profile" -> {
+            case "view_cart", "view_orders", "view_courses", "get_user_location", "get_current_datetime", "view_profile" -> {
                 return normalized;
             }
             case "search_product", "search_heritage", "search_activity" -> {
@@ -182,7 +244,56 @@ public class AgentToolRegistry {
         enabledTools.put(definition.name(), definition);
     }
 
-    public record ToolDefinition(String name, String description, RiskLevel riskLevel) {
+    private ToolDefinition tool(String name, String description, String category, Map<String, Object> inputSchema) {
+        return new ToolDefinition(
+                name,
+                description,
+                RiskLevel.SAFE,
+                category,
+                inputSchema,
+                objectSchema(Map.of(
+                        "success", booleanParam("Whether the tool completed successfully."),
+                        "message", stringParam("Human-readable execution result.")
+                ))
+        );
+    }
+
+    private Map<String, Object> objectSchema(Map<String, Object> properties, String... required) {
+        Map<String, Object> schema = new LinkedHashMap<>();
+        schema.put("type", "object");
+        schema.put("properties", properties);
+        schema.put("required", List.of(required));
+        return schema;
+    }
+
+    private Map<String, Object> stringParam(String description) {
+        return Map.of("type", "string", "description", description);
+    }
+
+    private Map<String, Object> numberParam(String description) {
+        return Map.of("type", "number", "description", description);
+    }
+
+    private Map<String, Object> booleanParam(String description) {
+        return Map.of("type", "boolean", "description", description);
+    }
+
+    private Map<String, Object> enumParam(String description, Set<String> values) {
+        return Map.of(
+                "type", "string",
+                "description", description,
+                "enum", values.stream().sorted().toList()
+        );
+    }
+
+    public record ToolDefinition(
+            String name,
+            String description,
+            RiskLevel riskLevel,
+            String category,
+            Map<String, Object> inputSchema,
+            Map<String, Object> outputSchema
+    ) {
     }
 
     public enum RiskLevel {
