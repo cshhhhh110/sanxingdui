@@ -78,7 +78,12 @@
               <div class="stat-label">{{ stat.label }}</div>
             </div>
           </div>
-          <button class="more-btn" @click="goToDetail(era.key)">查看详情 →</button>
+          <div class="action-group">
+            <button class="more-btn" @click="goToDetail(era.key)">查看详情 →</button>
+            <button class="archaeology-btn" @click="launchArchaeology(era.key)" title="考古全景漫游">
+              <i class="fas fa-search-location"></i> 考古发掘
+            </button>
+          </div>
         </div>
       </div>
 
@@ -286,6 +291,27 @@ const goToQuiz = () => {
     window.scrollTo({ top: 0, left: 0, behavior: 'auto' });
   });
 }
+
+// 考古发掘入口
+const launchArchaeology = (eraKey) => {
+  // 跳转到考古全景漫游页面
+  router.push({
+    name: 'archaeology-panorama',
+    query: { sceneId: getSceneIdByEraKey(eraKey) }
+  });
+}
+
+// 根据era key获取对应的场景ID
+const getSceneIdByEraKey = (eraKey) => {
+  const mapping = {
+    'baodun': 7,      // 宝墩遗址
+    'sanxing': 2,     // 三星堆祭祀坑（1号坑）
+    'jinsha': 6,      // 金沙遗址
+    'sanxing-3': 5    // 3号祭祀坑（2021新发现）
+  };
+  return mapping[eraKey] || 1; // 默认返回入口场景
+}
+
 
 const calculateCurrentStepPosition = async () => {
   await nextTick()
@@ -760,6 +786,12 @@ watch(guideStep, async () => {
   margin-top: 1px;
 }
 
+.action-group {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
 .more-btn {
   font-size: 12px;
   color: #42664f;
@@ -770,11 +802,48 @@ watch(guideStep, async () => {
   cursor: pointer;
   font-weight: 500;
   letter-spacing: 0.3px;
-  transition: opacity 0.15s;
+  transition: all 0.15s;
+}
+
+.more-btn:hover {
+  opacity: 0.85;
+  transform: translateY(-1px);
 }
 
 .more-btn:active {
   opacity: 0.75;
+  transform: translateY(0);
+}
+
+.archaeology-btn {
+  font-size: 12px;
+  color: #fff;
+  background: linear-gradient(135deg, #d6b35f 0%, #a89970 100%);
+  border: none;
+  padding: 7px 14px;
+  border-radius: 20px;
+  cursor: pointer;
+  font-weight: 500;
+  letter-spacing: 0.3px;
+  transition: all 0.15s;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  box-shadow: 0 2px 8px rgba(214, 179, 95, 0.3);
+}
+
+.archaeology-btn i {
+  font-size: 11px;
+}
+
+.archaeology-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(214, 179, 95, 0.4);
+}
+
+.archaeology-btn:active {
+  transform: translateY(0);
+  box-shadow: 0 2px 6px rgba(214, 179, 95, 0.3);
 }
 
 /* ── 3D 互动入口卡片 ────────────────────────────────────────────────────────── */

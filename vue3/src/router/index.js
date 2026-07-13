@@ -244,6 +244,13 @@ const frontendRoutes = [
       }
 ]
   },
+  // 考古全景漫游 - 独立全屏页面（无导航栏）
+  {
+    path: '/archaeology-panorama',
+    name: 'archaeology-panorama',
+    component: () => import('@/views/ArchaeologyPanorama.vue'),
+    meta: { title: '考古全景漫游', requiresAuth: false }
+  },
   // 认证相关路由使用专门的认证布局
   {
     path: '/auth',

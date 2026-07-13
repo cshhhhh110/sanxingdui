@@ -861,7 +861,7 @@ export default {
 <style scoped>
 .three-wrapper {
   width: 100%;
-  height: 100vh;
+  height: 93vh;
   position: relative;
   background:
     linear-gradient(120deg, rgba(16, 17, 13, 0.92), rgba(35, 37, 29, 0.82)),
