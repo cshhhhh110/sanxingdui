@@ -477,7 +477,6 @@ export default {
           this.syncWidgetVisibility();
           this.userInteracted = true;
           this.hasPlayedWelcome = true; // 跳过欢迎语，直接说上下文问候
-          void this.ensureChatSession();
         }
 
         // 确保DOM完全渲染后再播放
@@ -1548,7 +1547,6 @@ export default {
 
         // 先播放欢迎语
         this.playWelcomeOnce();
-        void this.ensureChatSession();
 
         // 智能化增强：如果有待播放的上下文问候，延迟触发
         if (!this.hasGreetedOnRoute) {

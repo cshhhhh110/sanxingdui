@@ -472,7 +472,6 @@ import { competitionActionLabels } from '@/data/competitionUi'
 import { getSpacetimeArtifactDetail } from '@/api/SpacetimeApi'
 import aiAvatar from '@/assets/sanxingdui-ai-chat/xuanmiao-avatar.png'
 import { getRecentArtifactTrail, pushCompetitionTrail } from '@/utils/competitionTrail'
-import { agentOrchestrator } from '@/agent/AgentOrchestrator'
 import { detectMediaIntent } from '@/utils/mediaIntent'
 import {
   buildContextualQuestion,
@@ -2732,54 +2731,6 @@ async function sendMessage(presetQuestion = '') {
         createErrorEvent('资料检索暂时不稳定，玄喵正在切换备用讲解方案...')
       )
     }
-  }
-
-  // 尝试Agent工具调用
-  try {
-    console.log('[AI Chat] Calling Agent Router...', question)
-    const agentResult = await agentOrchestrator.handle(question, {
-      attachments: uploadedAttachments.map(({ fileId, fileName, mediaType, fileSize }) => ({
-        fileId: String(fileId),
-        fileName,
-        mediaType,
-        size: fileSize || 0
-      })),
-      routingContext: {
-        surface: 'ai_chat_page',
-        contextTitle: contextTitle.value,
-        artifactId: artifactContext.value?.artifactId,
-        entityId: artifactContext.value?.entityId
-      },
-      toolContext: {
-        router,
-        isAuthenticated: userStore.isLoggedIn,
-        userId: userStore.userInfo?.id || null
-      }
-    })
-
-    console.log('[AI Chat] Agent Result:', agentResult)
-
-    // 如果Agent处理了请求（工具调用成功）
-    if (agentResult.handled && agentResult.success) {
-      // 显示工具执行结果
-      const resultMessage = agentResult.message || '操作已完成'
-      console.log('[AI Chat] Agent handled successfully, showing result')
-      await typeAssistantMessageById(assistantPlaceholderId, resultMessage)
-      return
-    }
-
-    // 如果Agent处理了但失败
-    if (agentResult.handled && !agentResult.success) {
-      console.log('[AI Chat] Agent handled but failed')
-      updateAssistantMessageById(assistantPlaceholderId, agentResult.message || '操作执行失败')
-      return
-    }
-
-    // 如果Agent没有处理（handled=false），继续走AI对话流程
-    console.log('[AI Chat] Agent not handled, continuing to AI chat')
-  } catch (error) {
-    console.warn('[AI Chat] Agent routing failed, falling back to AI chat:', error)
-    // 降级：继续走AI对话流程
   }
 
   if (!currentSessionId.value) {
