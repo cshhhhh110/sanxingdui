@@ -18,6 +18,8 @@
     "@antv/g6": "^5.1.1",
     "@fortawesome/fontawesome-free": "^7.1.0",
     "@microsoft/fetch-event-source": "^2.0.1",
+    "@photo-sphere-viewer/core": "^5.14.3",
+    "@photo-sphere-viewer/markers-plugin": "^5.14.3",
     "ant-design-vue": "^4.0.0",
     "axios": "^1.7.9",
     "core-js": "^3.8.3",

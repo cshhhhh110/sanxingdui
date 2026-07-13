@@ -2376,10 +2376,12 @@ function getCurrentTime() {
   background: transparent;
   border: 0;
   border-radius: 0;
+  transition: width 0.2s ease;
 }
 
 .quick-panel:hover,
 .quick-panel:focus-within {
+  width: 288px;
   background: transparent;
 }
 
