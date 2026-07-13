@@ -939,6 +939,18 @@ import { matchFixedAnswer } from '@/config/chatReplyConfig'
 import { buildFallbackReply, buildRagPrompt, searchKnowledge } from '@/utils/knowledgeSearch'
 import { formatYearRange } from '@/data/competitionArtifacts'
 import { pushCompetitionTrail, getRecentArtifactTrail } from '@/utils/competitionTrail'
+import {
+  buildContextualQuestion,
+  getXuanmiaoContext,
+  getXuanmiaoContextPayload,
+  rememberXuanmiaoMessage,
+  setXuanmiaoArtifactContext,
+  setXuanmiaoPageContext,
+  setXuanmiaoTrailStatus,
+  setXuanmiaoTrailNode,
+  updateXuanmiaoContext
+} from '@/agent/context'
+import { parseAgentStreamEvent } from '@/agent/streamEvents'
 import aiAvatar from '@/assets/sanxingdui-ai-chat/xuanmiao-avatar.png'
 
 const TYPE_LABELS = {
@@ -1771,6 +1783,7 @@ function hideVoiceGuidePanelIfNeeded() {
 }
 
 onMounted(async () => {
+  syncXuanmiaoTrailContext('open_trail')
   window.addEventListener('keydown', handleViewerKeydown)
   window.addEventListener('scroll', syncVoiceGuideCollapseState, { passive: true })
   window.addEventListener('xuanmiao:speech-ended', handleXuanmiaoSpeechEnded)
@@ -1781,6 +1794,7 @@ onMounted(async () => {
   hydrateQuizPromoState()
   void loadVoiceGuideManifest()
   await loadArtifacts()
+  syncXuanmiaoTrailContext('trail_ready')
   mountResizeObserver()
 })
 
@@ -1947,6 +1961,49 @@ function buildArtifactReason(item) {
   return `优先推荐理由：${reasons.join('、')}。`
 }
 
+function syncXuanmiaoTrailContext(action = '') {
+  const artifact = selectedArtifactDetail.value || selectedArtifact.value || null
+  const trailStatus = buildTrailStatus('arrived')
+  setXuanmiaoPageContext({
+    currentPage: route.fullPath,
+    currentScene: '时空展线'
+  })
+  if (artifact?.entityId) {
+    setXuanmiaoArtifactContext(artifact, {
+      currentPage: route.fullPath,
+      currentScene: '时空展线',
+      lastAction: action || 'trail_context_update'
+    })
+  }
+  setXuanmiaoTrailNode({
+    id: selectedNodeId.value || `scene-${activeScene.value}`,
+    label: getTrailSceneLabel(activeScene.value)
+  }, {
+    currentPage: route.fullPath,
+    currentScene: '时空展线'
+  })
+  setXuanmiaoTrailStatus(trailStatus)
+}
+
+function buildTrailStatus(status = 'arrived', overrides = {}) {
+  const artifact = selectedArtifactDetail.value || selectedArtifact.value || null
+  const artifactId = overrides.artifactId || artifact?.entityId || selectedArtifactId.value || ''
+  const artifactName = overrides.artifactName || artifact?.displayTitle || artifact?.title || artifact?.name || ''
+  return {
+    artifactId,
+    artifactName,
+    trailNodeId: overrides.trailNodeId || selectedNodeId.value || `scene-${activeScene.value}`,
+    scene: overrides.scene || '时空展线',
+    page: overrides.page || route.fullPath || '/trail',
+    status
+  }
+}
+
+function getTrailSceneLabel(sceneId) {
+  const item = sceneSteps.find((step) => step.id === sceneId)
+  return item?.title || `第${sceneId}幕`
+}
+
 async function selectArtifact(artifact, reason = '', options = {}) {
   if (!artifact?.entityId) return
 
@@ -1962,6 +2019,11 @@ async function selectArtifact(artifact, reason = '', options = {}) {
 
   selectedArtifactId.value = artifact.entityId
   selectedReason.value = reason || buildArtifactReason(artifact)
+  setXuanmiaoArtifactContext(artifact, {
+    currentPage: route.fullPath,
+    currentScene: '时空展线',
+    lastAction: 'select_artifact'
+  })
   if (!keepScene) {
     activeScene.value = 2
   }
@@ -1986,6 +2048,11 @@ async function loadSelectedArtifactExperience(entityId) {
   try {
     const detail = await getSpacetimeArtifactDetail({ entityId }, { showDefaultMsg: false })
     selectedArtifactDetail.value = detail
+    setXuanmiaoArtifactContext(detail, {
+      currentPage: route.fullPath,
+      currentScene: '时空展线',
+      lastAction: 'load_artifact_detail'
+    })
     pushCompetitionTrail({
       entityId: detail.entityId,
       title: detail.displayTitle,
@@ -2197,6 +2264,13 @@ function selectPitHotspot(spot) {
     suppressAutomaticVoiceGuideOnce()
   }
   activePitCode.value = spot.pitCode
+  setXuanmiaoTrailNode({
+    id: spot.pitCode,
+    label: spot.label || spot.pitCode
+  }, {
+    currentPage: route.fullPath,
+    currentScene: '时空展线'
+  })
   activeGuideClues.value = { ...activeGuideClues.value, pit: spot.pitCode }
   syncQueryState()
 
@@ -2359,7 +2433,7 @@ function sayTrailCommand(text, key = 'reply') {
       source: 'trail-command',
       interrupt: true,
       playDelayMs: 120,
-      charDelay: 68
+      charDelay: 38
     }
   }))
 }
@@ -2469,8 +2543,23 @@ function handleTrailCommandEvent(event) {
     return
   }
 
-  respond({ handled: true, action: command.action })
   void executeTrailCommand(command)
+    .then((trailStatus) => {
+      respond({
+        handled: true,
+        action: command.action,
+        trailStatus
+      })
+    })
+    .catch((error) => {
+      console.error('玄喵展线动作执行失败:', error)
+      respond({
+        handled: false,
+        action: command.action,
+        message: error?.message || '当前展线无法执行该操作',
+        trailStatus: buildTrailStatus('failed')
+      })
+    })
 }
 
 async function executeTrailCommand(command) {
@@ -2479,7 +2568,7 @@ async function executeTrailCommand(command) {
   try {
     if (command.action === 'ambiguous') {
       sayTrailCommand(command.message, 'ambiguous')
-      return
+      return buildTrailStatus('failed')
     }
 
     if (command.action === 'startQuiz') {
@@ -2487,7 +2576,7 @@ async function executeTrailCommand(command) {
       window.setTimeout(() => {
         void router.push('/quiz')
       }, 360)
-      return
+      return buildTrailStatus('arrived', { page: '/quiz', scene: '答题挑战', trailNodeId: 'quiz' })
     }
 
     if (command.action === 'goSceneOne') {
@@ -2496,42 +2585,46 @@ async function executeTrailCommand(command) {
       stageVisible.value = false
       guideExpanded.value = false
       sayTrailCommand('好，我们回到第一幕。你可以重新从祭祀坑地图、时代、遗址和工艺里定一个坐标。', 'scene-one')
-      return
+      syncXuanmiaoTrailContext('go_scene_one')
+      return buildTrailStatus('arrived', { trailNodeId: 'scene-1' })
     }
 
     if (command.action === 'goArtifactList') {
       scrollToArtifacts()
       sayTrailCommand('好，我把视线切回文物驻足。你可以先选一件文物，再进入 3D、图谱和讲解。', 'artifact-list')
-      return
+      syncXuanmiaoTrailContext('go_artifact_list')
+      return buildTrailStatus('arrived', { trailNodeId: 'artifact-list' })
     }
 
     if (command.action === 'goToArtifact') {
-      await executeTrailGoToArtifact(command.artifact)
-      return
+      return await executeTrailGoToArtifact(command.artifact)
     }
 
     if (command.action === 'selectPit') {
       executeTrailSelectPit(command.pit)
-      return
+      return buildTrailStatus('arrived', { trailNodeId: `pit-${command.pit.pitCode}` })
     }
 
     if (command.action === 'openStage') {
       await executeTrailOpenStage()
-      return
+      return buildTrailStatus('arrived', { trailNodeId: 'stage' })
     }
 
     if (command.action === 'openGuide') {
       await executeTrailOpenGuide()
-      return
+      return buildTrailStatus('arrived', { trailNodeId: 'guide' })
     }
 
     if (command.action === 'focusGraphNode') {
       await executeTrailFocusGraphNode(command.target, command.rawText)
+      return buildTrailStatus('arrived', { trailNodeId: selectedNodeId.value || 'graph' })
     }
+    return buildTrailStatus('failed')
   } catch (error) {
     console.error('玄喵展线动作执行失败:', error)
     hideTrailCommandTransition(180)
     sayTrailCommand('这一步我没能顺利带过去。你可以先手动点一下当前展线按钮，我再继续讲解。', 'error')
+    return buildTrailStatus('failed')
   }
 }
 
@@ -2597,7 +2690,11 @@ async function executeTrailGoToArtifact(artifactCommand) {
   if (!selectedArtifactDetail.value) {
     sayTrailCommand(`我找到了${artifactCommand.title}，但这件文物的详情暂时没载入完成。你可以稍等一下再让我打开展品现场。`, `artifact-${artifactCommand.entityId}-pending`)
     hideTrailCommandTransition(180)
-    return
+    return buildTrailStatus('failed', {
+      artifactId: artifactCommand.entityId,
+      artifactName: artifactCommand.title,
+      trailNodeId: `artifact-${artifactCommand.entityId}`
+    })
   }
 
   stageVisible.value = true
@@ -2612,6 +2709,12 @@ async function executeTrailGoToArtifact(artifactCommand) {
   await stagePromise
   hideTrailCommandTransition()
   sayTrailCommand(`到了，我们现在看${artifactCommand.title}。开场讲解已经在第四幕整理，想继续听可以直接进入玄喵讲解。`, `artifact-${artifactCommand.entityId}`)
+  syncXuanmiaoTrailContext('go_to_artifact')
+  return buildTrailStatus('arrived', {
+    artifactId: artifactCommand.entityId,
+    artifactName: artifactCommand.title,
+    trailNodeId: `artifact-${artifactCommand.entityId}`
+  })
 }
 
 function executeTrailSelectPit(pitCommand) {
@@ -2787,6 +2890,7 @@ function goToScene(sceneId) {
   if (sceneId === 1) {
     pushTrailViewSnapshot('nav-scene-1')
     activeScene.value = 1
+    syncXuanmiaoTrailContext('go_scene_one')
     return
   }
 
@@ -2794,6 +2898,7 @@ function goToScene(sceneId) {
     pushTrailViewSnapshot('nav-scene-2')
     trailLoopHintVisible.value = false
     activeScene.value = 2
+    syncXuanmiaoTrailContext('go_artifact_list')
     return
   }
 
@@ -2803,6 +2908,7 @@ function goToScene(sceneId) {
     trailLoopHintVisible.value = false
     stageVisible.value = true
     activeScene.value = 3
+    syncXuanmiaoTrailContext('open_stage')
     return
   }
 
@@ -2814,6 +2920,7 @@ function goToScene(sceneId) {
     stageVisible.value = true
     guideExpanded.value = true
     activeScene.value = 4
+    syncXuanmiaoTrailContext('open_guide')
   }
 }
 
@@ -2823,6 +2930,7 @@ function scrollToArtifacts() {
   }
   trailLoopHintVisible.value = false
   activeScene.value = 2
+  syncXuanmiaoTrailContext('go_artifact_list')
 }
 
 function scrollToStage() {
@@ -2833,6 +2941,7 @@ function scrollToStage() {
   trailLoopHintVisible.value = false
   stageVisible.value = true
   activeScene.value = 3
+  syncXuanmiaoTrailContext('open_stage')
 }
 
 function scrollToGuide() {
@@ -2845,6 +2954,7 @@ function scrollToGuide() {
   stageVisible.value = true
   guideExpanded.value = true
   activeScene.value = 4
+  syncXuanmiaoTrailContext('open_guide')
   scrollMessagesToBottom()
 }
 
@@ -2854,6 +2964,10 @@ function enableVoiceGuide() {
   voiceGuideError.value = ''
   voiceGuideLoading.value = false
   currentNarrationText.value = VOICE_GUIDE_START_TEXT
+  updateXuanmiaoContext({
+    lastAction: 'enable_voice_guide',
+    lastResult: VOICE_GUIDE_START_TEXT
+  })
   playVoiceGuideStartBridge()
 }
 
@@ -2985,6 +3099,10 @@ async function playVoiceGuideNarration(narration, force = false) {
   lastNarrationKey.value = narration.key
   lastNarrationIntent.value = narration.intent || ''
   currentNarrationText.value = narration.text
+  updateXuanmiaoContext({
+    lastAction: 'play_voice_guide',
+    lastResult: narration.text
+  })
   voiceGuideError.value = ''
   voiceGuideLoading.value = true
   pendingVoiceGuideNarration = null
@@ -3588,6 +3706,7 @@ function askXuanmiaoFromCompanion() {
   stageVisible.value = true
   guideExpanded.value = true
   activeScene.value = 4
+  syncXuanmiaoTrailContext('ask_xuanmiao_from_companion')
   scrollMessagesToBottom()
 }
 
@@ -3616,12 +3735,21 @@ function openGuideAndAsk(question) {
   stageVisible.value = true
   guideExpanded.value = true
   activeScene.value = 4
+  syncXuanmiaoTrailContext('quick_guide_question')
+  rememberXuanmiaoMessage('user', question, {
+    topic: '展线追问'
+  })
   nextTick(() => {
     void sendMessage(question)
   })
 }
 
 function openStandalone3D(artifact) {
+  setXuanmiaoArtifactContext(artifact, {
+    currentPage: route.fullPath,
+    currentScene: '三维展馆',
+    lastAction: 'open_standalone_3d'
+  })
   router.push({
     path: '/3d',
     query: {
@@ -4534,7 +4662,7 @@ async function typeAssistantMessageById(messageId, text, options = {}) {
   if (!finalText) return
 
   const thinkingMs = options.thinkingMs ?? 650
-  const charDelay = options.charDelay ?? 24
+  const charDelay = options.charDelay ?? 18
   isThinking.value = true
   showThinkingBubble.value = true
   scrollMessagesToBottom()
@@ -4550,6 +4678,12 @@ async function typeAssistantMessageById(messageId, text, options = {}) {
     updateAssistantMessageById(messageId, displayed)
     await wait(charDelay)
   }
+}
+
+function renderTrailAgentStatus(messageId, event, hasAnswer = false) {
+  if (hasAnswer || !event?.message) return
+  const icon = event.icon || '🐱'
+  updateAssistantMessageById(messageId, `${icon} ${event.message}`)
 }
 
 function appendAssistantPlaceholder(content = '...') {
@@ -4632,8 +4766,16 @@ async function requestAutoGuide(expectedEntityId) {
         if (controller.signal.aborted || getCurrentArtifactEntityId() !== expectedEntityId) {
           return
         }
+        const streamEvent = parseAgentStreamEvent(event.data)
+        if (streamEvent) {
+          renderTrailAgentStatus(placeholderId, streamEvent, Boolean(aiResponse))
+          return
+        }
         if (event.data === '[DONE]') {
           isThinking.value = false
+          if (!aiResponse) {
+            updateAssistantMessageById(placeholderId, getMockReply(question, docs))
+          }
           return
         }
         if (event.data.startsWith('[ERROR]')) {
@@ -4688,8 +4830,10 @@ async function createSession() {
 }
 
 function getCurrentContextPayload() {
-  if (!selectedArtifactDetail.value) return null
+  const sharedContext = getXuanmiaoContext()
+  if (!selectedArtifactDetail.value) return sharedContext
   return {
+    ...sharedContext,
     title: selectedArtifactDetail.value.displayTitle,
     entityId: selectedArtifactDetail.value.entityId,
     site: selectedArtifactDetail.value.siteLabel,
@@ -4723,6 +4867,10 @@ async function sendMessage(presetQuestion = '') {
   }
 
   const fixedAnswer = matchFixedAnswer(question)
+  syncXuanmiaoTrailContext('guide_question')
+  rememberXuanmiaoMessage('user', question, {
+    topic: '展线追问'
+  })
   messages.value.push({
     id: Date.now(),
     role: 'user',
@@ -4742,15 +4890,17 @@ async function sendMessage(presetQuestion = '') {
 
   if (fixedAnswer) {
     await typeAssistantMessageById(assistantPlaceholderId, fixedAnswer.reply)
+    rememberXuanmiaoMessage('assistant', fixedAnswer.reply)
     revealQuizPromoOnce()
     return
   }
 
   let docs = []
-  let userMessage = question
+  const contextualQuestion = buildContextualQuestion(question, getXuanmiaoContext())
+  let userMessage = contextualQuestion
   try {
-    docs = await searchKnowledge(question, 1)
-    userMessage = buildPromptWithContext(question, docs)
+    docs = await searchKnowledge(contextualQuestion, 1)
+    userMessage = buildPromptWithContext(contextualQuestion, docs)
   } catch (error) {
     console.warn('本地知识检索失败，降级为原始问题。', error)
   }
@@ -4782,15 +4932,29 @@ async function sendMessage(presetQuestion = '') {
       headers,
       body: JSON.stringify({
         sessionId: currentSessionId.value,
-        userMessage
+        userMessage,
+        context: getXuanmiaoContextPayload({
+          currentPage: route.fullPath,
+          surface: 'time_space_trail'
+        })
       }),
       signal: chatAbortController.signal,
       openWhenHidden: true,
       onmessage(event) {
+        const streamEvent = parseAgentStreamEvent(event.data)
+        if (streamEvent) {
+          renderTrailAgentStatus(assistantPlaceholderId, streamEvent, Boolean(aiResponse))
+          return
+        }
         if (event.data === '[DONE]') {
           isThinking.value = false
           if (!aiResponse) {
             updateAssistantMessageById(assistantPlaceholderId, getMockReply(question, docs))
+          }
+          if (aiResponse) {
+            rememberXuanmiaoMessage('assistant', aiResponse, {
+              topic: '展线讲解'
+            })
           }
           revealQuizPromoOnce()
           return

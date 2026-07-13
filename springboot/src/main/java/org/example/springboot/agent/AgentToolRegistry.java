@@ -3,6 +3,7 @@ package org.example.springboot.agent;
 import org.springframework.stereotype.Component;
 
 import java.util.HashMap;
+import java.util.List;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Set;
@@ -32,17 +33,73 @@ public class AgentToolRegistry {
     private final Map<String, ToolDefinition> enabledTools = new LinkedHashMap<>();
 
     public AgentToolRegistry() {
-        register(new ToolDefinition("search_product", "Search shop products. Required: keyword. Optional: quantity.", RiskLevel.SAFE));
-        register(new ToolDefinition("navigate_to", "Open a public page. destination enum: home, heritage, inheritor, activity, course, shop, ai-chat, 3dlist, trail, quiz.", RiskLevel.SAFE));
-        register(new ToolDefinition("search_heritage", "Search heritage artifacts. Required: keyword.", RiskLevel.SAFE));
-        register(new ToolDefinition("open_artifact_detail", "Open artifact detail page. Required: artifact_id. Optional: auto_explain.", RiskLevel.SAFE));
-        register(new ToolDefinition("play_voice_intro", "Play voice introduction for an artifact. Required: artifact_id. Optional: voice_type.", RiskLevel.SAFE));
-        register(new ToolDefinition("get_weather", "Get real-time weather for a city. Required: city. Use only for weather questions.", RiskLevel.SAFE));
-        register(new ToolDefinition("get_current_datetime", "Get current Beijing date, weekday, and time. No arguments.", RiskLevel.SAFE));
-        register(new ToolDefinition(
+        register(tool(
+                "search_product",
+                "Search shop products. Required: keyword. Optional: quantity.",
+                "shop",
+                objectSchema(Map.of(
+                        "keyword", stringParam("Shop product keyword."),
+                        "quantity", numberParam("Optional quantity, 1-99.")
+                ), "keyword")
+        ));
+        register(tool(
+                "navigate_to",
+                "Open a public page. destination enum: home, heritage, inheritor, activity, course, shop, ai-chat, 3dlist, trail, quiz.",
+                "navigation",
+                objectSchema(Map.of(
+                        "destination", enumParam("Public page destination.", PUBLIC_DESTINATIONS)
+                ), "destination")
+        ));
+        register(tool(
+                "search_heritage",
+                "Search heritage artifacts. Required: keyword.",
+                "heritage",
+                objectSchema(Map.of(
+                        "keyword", stringParam("Heritage search keyword.")
+                ), "keyword")
+        ));
+        register(tool(
+                "open_artifact_detail",
+                "Open artifact detail page. Required: artifact_id. Optional: auto_explain.",
+                "heritage",
+                objectSchema(Map.of(
+                        "artifact_id", stringParam("Artifact identifier."),
+                        "auto_explain", booleanParam("Whether to auto-start AI explanation.")
+                ), "artifact_id")
+        ));
+        register(tool(
+                "play_voice_intro",
+                "Play voice introduction for an artifact. Required: artifact_id. Optional: voice_type.",
+                "audio",
+                objectSchema(Map.of(
+                        "artifact_id", stringParam("Artifact identifier."),
+                        "voice_type", enumParam("Voice type.", VOICE_TYPES)
+                ), "artifact_id")
+        ));
+        register(tool(
+                "get_weather",
+                "Get real-time weather for a city. Required: city. Use only for weather questions.",
+                "info",
+                objectSchema(Map.of(
+                        "city", stringParam("City name.")
+                ), "city")
+        ));
+        register(tool(
+                "get_current_datetime",
+                "Get current Beijing date, weekday, and time. No arguments.",
+                "info",
+                objectSchema(Map.<String, Object>of())
+        ));
+        register(tool(
                 "control_trail",
                 "Control spacetime trail. action enum: open_artifact, select_pit, go_scene_one, go_artifact_list, open_stage, open_guide, focus_graph, start_quiz. Artifact mapping: golden mask=HI-2025-002, bronze eye mask=HI-2025-003, golden staff=HI-2025-004, standing figure=HI-2025-005, bronze tree=HI-2025-006. open_artifact requires artifact_id. select_pit requires pit_code. focus_graph may include graph_target.",
-                RiskLevel.SAFE
+                "trail",
+                objectSchema(Map.of(
+                        "action", enumParam("Trail action.", TRAIL_ACTIONS),
+                        "artifact_id", stringParam("Artifact identifier for open_artifact."),
+                        "pit_code", enumParam("Pit code for select_pit.", TRAIL_PITS),
+                        "graph_target", enumParam("Graph focus target.", TRAIL_GRAPH_TARGETS)
+                ), "action")
         ));
     }
 
@@ -168,7 +225,56 @@ public class AgentToolRegistry {
         enabledTools.put(definition.name(), definition);
     }
 
-    public record ToolDefinition(String name, String description, RiskLevel riskLevel) {
+    private ToolDefinition tool(String name, String description, String category, Map<String, Object> inputSchema) {
+        return new ToolDefinition(
+                name,
+                description,
+                RiskLevel.SAFE,
+                category,
+                inputSchema,
+                objectSchema(Map.of(
+                        "success", booleanParam("Whether the tool completed successfully."),
+                        "message", stringParam("Human-readable execution result.")
+                ))
+        );
+    }
+
+    private Map<String, Object> objectSchema(Map<String, Object> properties, String... required) {
+        Map<String, Object> schema = new LinkedHashMap<>();
+        schema.put("type", "object");
+        schema.put("properties", properties);
+        schema.put("required", List.of(required));
+        return schema;
+    }
+
+    private Map<String, Object> stringParam(String description) {
+        return Map.of("type", "string", "description", description);
+    }
+
+    private Map<String, Object> numberParam(String description) {
+        return Map.of("type", "number", "description", description);
+    }
+
+    private Map<String, Object> booleanParam(String description) {
+        return Map.of("type", "boolean", "description", description);
+    }
+
+    private Map<String, Object> enumParam(String description, Set<String> values) {
+        return Map.of(
+                "type", "string",
+                "description", description,
+                "enum", values.stream().sorted().toList()
+        );
+    }
+
+    public record ToolDefinition(
+            String name,
+            String description,
+            RiskLevel riskLevel,
+            String category,
+            Map<String, Object> inputSchema,
+            Map<String, Object> outputSchema
+    ) {
     }
 
     public enum RiskLevel {

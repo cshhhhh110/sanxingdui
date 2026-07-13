@@ -29,8 +29,12 @@ public class AgentToolController {
                 .map(tool -> {
                     Map<String, Object> item = new LinkedHashMap<>();
                     item.put("name", tool.name());
+                    item.put("toolName", tool.name());
+                    item.put("category", tool.category());
                     item.put("description", tool.description());
                     item.put("riskLevel", tool.riskLevel());
+                    item.put("inputSchema", tool.inputSchema());
+                    item.put("outputSchema", tool.outputSchema());
                     return item;
                 })
                 .toList();

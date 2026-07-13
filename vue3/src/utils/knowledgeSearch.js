@@ -1,4 +1,8 @@
 /* eslint-disable no-useless-escape */
+import {
+  buildKnowledgePromptContext,
+  discoverKnowledgeRelations
+} from '@/agent/knowledgeGraph'
 import { searchAgentKnowledge } from '@/api/AgentApi'
 
 const DOC_FILES = [
@@ -73,6 +77,11 @@ export async function searchKnowledge(question, topK = 1) {
 
 export function buildRagPrompt(question, docs = [], context = {}) {
   const contextSection = buildContextSection(context)
+  const knowledgeGraphSection = buildKnowledgePromptContext(discoverKnowledgeRelations({
+    question,
+    context,
+    documents: docs
+  }))
   const knowledgeSection = docs.length
     ? docs
         .map((doc) => {
@@ -82,7 +91,7 @@ export function buildRagPrompt(question, docs = [], context = {}) {
         .join('\n\n')
     : '当前未检索到足够相关的本地资料，请如实说明，不要编造。'
 
-  return `
+  const basePrompt = `
 你是“三星堆数字展馆”的专业讲解助手。请只回答简短版。
 要求：
 1. 优先依据【当前解说上下文】和【检索资料】。
@@ -99,6 +108,9 @@ ${knowledgeSection}
 
 【用户问题】${question}
 `.trim()
+  return knowledgeGraphSection
+    ? `${basePrompt}\n\n【知识关系线索】\n${knowledgeGraphSection}`
+    : basePrompt
 }
 
 export function buildFallbackReply(question, docs = [], context = {}) {

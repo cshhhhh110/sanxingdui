@@ -34,7 +34,9 @@ import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 import reactor.core.publisher.Flux;
 
+import java.time.Duration;
 import java.util.List;
+import java.util.Map;
 
 /**
  * AI chat controller.
@@ -133,10 +135,15 @@ public class AiChatController {
         log.info("Start AI chat stream, sessionId: {}, userId: {}, attachments: {}",
                 dto.getSessionId(), userId, dto.getAttachments() == null ? 0 : dto.getAttachments().size());
 
-        return aiService.chatStream(dto.getSessionId(), dto.getUserMessage(), dto.getAttachments())
+        Flux<String> statusEvents = buildStreamStatusEvents(dto);
+
+        return statusEvents.concatWith(aiService.chatStream(dto.getSessionId(), dto.getUserMessage(), dto.getAttachments()))
                 .concatWith(Flux.just("[DONE]"))
                 .doOnError(error -> log.error("AI chat stream failed", error))
-                .onErrorResume(error -> Flux.just("[ERROR]" + error.getMessage()));
+                .onErrorResume(error -> Flux.just(
+                        agentEvent("error", "failed", "当前智能生成服务暂时不可用，正在切换备用资料方案...", Map.of()),
+                        "[ERROR]" + error.getMessage()
+                ));
     }
 
     @PostMapping("/chat")
@@ -227,6 +234,78 @@ public class AiChatController {
         if (!hasText && !hasAttachments) {
             throw new BusinessException("消息内容和附件不能同时为空");
         }
+    }
+
+    private Flux<String> buildStreamStatusEvents(AiChatCommandDTO dto) {
+        String artifact = getContextText(dto.getContext(), "currentArtifact");
+        boolean hasAttachments = dto.getAttachments() != null && !dto.getAttachments().isEmpty();
+
+        String startMessage = artifact == null || artifact.isBlank()
+                ? "玄喵正在理解你的问题..."
+                : "正在结合你当前查看的" + artifact + "资料...";
+        String prepareMessage = hasAttachments
+                ? "正在读取你上传的材料..."
+                : "正在整理相关线索...";
+
+        return Flux.just(
+                        agentEvent("thinking_status", "running", startMessage, Map.of("artifact", artifact == null ? "" : artifact)),
+                        agentEvent("relation_discovery", "running", prepareMessage, Map.of("hasAttachments", hasAttachments)),
+                        agentEvent("generating", "running", "正在生成讲解...", Map.of())
+                )
+                .delayElements(Duration.ofMillis(80));
+    }
+
+    private String getContextText(Map<String, Object> context, String key) {
+        if (context == null || !context.containsKey(key) || context.get(key) == null) {
+            return "";
+        }
+        return String.valueOf(context.get(key));
+    }
+
+    private String agentEvent(String type, String status, String message, Map<String, ?> metadata) {
+        StringBuilder builder = new StringBuilder("[AGENT_EVENT]{");
+        builder.append("\"id\":\"").append(jsonEscape(type)).append("-").append(System.currentTimeMillis()).append("\",");
+        builder.append("\"type\":\"").append(jsonEscape(type)).append("\",");
+        builder.append("\"status\":\"").append(jsonEscape(status)).append("\",");
+        builder.append("\"message\":\"").append(jsonEscape(message)).append("\",");
+        builder.append("\"timestamp\":\"").append(java.time.Instant.now()).append("\",");
+        builder.append("\"metadata\":").append(toJsonObject(metadata));
+        builder.append("}");
+        return builder.toString();
+    }
+
+    private String toJsonObject(Map<String, ?> metadata) {
+        if (metadata == null || metadata.isEmpty()) {
+            return "{}";
+        }
+        StringBuilder builder = new StringBuilder("{");
+        boolean first = true;
+        for (Map.Entry<String, ?> entry : metadata.entrySet()) {
+            if (!first) {
+                builder.append(",");
+            }
+            first = false;
+            builder.append("\"").append(jsonEscape(entry.getKey())).append("\":");
+            Object value = entry.getValue();
+            if (value instanceof Boolean || value instanceof Number) {
+                builder.append(value);
+            } else {
+                builder.append("\"").append(jsonEscape(value == null ? "" : String.valueOf(value))).append("\"");
+            }
+        }
+        builder.append("}");
+        return builder.toString();
+    }
+
+    private String jsonEscape(String value) {
+        if (value == null) {
+            return "";
+        }
+        return value
+                .replace("\\", "\\\\")
+                .replace("\"", "\\\"")
+                .replace("\r", "\\r")
+                .replace("\n", "\\n");
     }
 
     private AiChatMessageResponseDTO toMessageResponse(AiChatMessage msg) {

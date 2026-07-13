@@ -34,7 +34,7 @@ public class AgentRouteParser {
                         confidence,
                         reason,
                         root.path("requiredCapability").asText("unknown"),
-                        root.path("message").asText("当前暂不支持这项能力。")
+                        root.path("message").asText("\u5f53\u524d\u6682\u4e0d\u652f\u6301\u8fd9\u9879\u80fd\u529b\u3002")
                 );
             }
             AgentRouteResponseDTO response = AgentRouteResponseDTO.route(route, confidence, reason);
@@ -58,7 +58,7 @@ public class AgentRouteParser {
                     confidence,
                     "Tool is disabled or route confidence is too low",
                     "tool:" + tool,
-                    "这个操作目前还不能安全执行。"
+                    "\u8fd9\u4e2a\u64cd\u4f5c\u76ee\u524d\u8fd8\u4e0d\u80fd\u5b89\u5168\u6267\u884c\u3002"
             );
         }
 
@@ -71,7 +71,7 @@ public class AgentRouteParser {
                     confidence,
                     "Tool arguments are incomplete or invalid",
                     "tool_arguments:" + tool,
-                    "我还缺少执行这个操作所需的信息。"
+                    "\u6211\u8fd8\u7f3a\u5c11\u6267\u884c\u8fd9\u4e2a\u64cd\u4f5c\u6240\u9700\u7684\u4fe1\u606f\u3002"
             );
         }
 
