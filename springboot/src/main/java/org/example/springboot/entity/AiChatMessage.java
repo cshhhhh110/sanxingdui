@@ -50,6 +50,19 @@ public class AiChatMessage {
     @Schema(description = "Model-readable content")
     private String processedContent;
 
+    @TableField("client_message_id")
+    @Schema(description = "Stable frontend message id")
+    private String clientMessageId;
+
+    @TableField("trace_json")
+    private String traceJson;
+
+    @TableField("references_json")
+    private String referencesJson;
+
+    @TableField("ui_payload")
+    private String uiPayload;
+
     @TableField(value = "create_time", fill = FieldFill.INSERT)
     @Schema(description = "Create time")
     private LocalDateTime createTime;

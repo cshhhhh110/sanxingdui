@@ -11,6 +11,7 @@ import {
 import {
   getXuanmiaoContextPayload,
   recordXuanmiaoExploration,
+  rememberVisualAidTask,
   rememberXuanmiaoTool
 } from './context'
 import { discoverKnowledgeRelations } from './knowledgeGraph'
@@ -224,6 +225,9 @@ class AgentOrchestrator {
           lastAction: toolName,
           routePlan: activeGuide.routePlan
         })
+        if (toolName === 'generate_visual_aid' && normalizedExecution?.success) {
+          rememberVisualAidTask(normalizedExecution.data, baseRoutingContext.pendingVisualAidProposal)
+        }
         recordXuanmiaoExploration({
           route: activeGuide.routePlan,
           suggestions: activeGuide.followups

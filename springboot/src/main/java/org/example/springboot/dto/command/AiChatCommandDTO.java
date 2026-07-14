@@ -24,4 +24,10 @@ public class AiChatCommandDTO {
 
     @Schema(description = "Short-term Xuanmiao context")
     private Map<String, Object> context;
+
+    @Schema(description = "Stable frontend user message id")
+    private String clientUserMessageId;
+
+    @Schema(description = "Stable frontend assistant message id")
+    private String clientAssistantMessageId;
 }

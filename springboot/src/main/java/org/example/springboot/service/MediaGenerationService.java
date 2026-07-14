@@ -29,6 +29,8 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.dao.DuplicateKeyException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 import java.time.LocalDateTime;
 import java.nio.file.Files;
@@ -39,6 +41,7 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.Locale;
 import java.util.concurrent.Executor;
+import java.util.concurrent.ConcurrentHashMap;
 import java.time.Duration;
 import java.util.HashMap;
 import java.util.List;
@@ -62,6 +65,7 @@ public class MediaGenerationService {
     private final AiChatSessionService chatSessionService;
     private final ObjectMapper objectMapper;
     private final ImageGenerationProfileProperties imageProfileProperties;
+    private final Set<String> activeExecutions = ConcurrentHashMap.newKeySet();
     @Resource(name = "mediaGenerationExecutor")
     private Executor executor;
 
@@ -120,7 +124,7 @@ public class MediaGenerationService {
                     task.getSessionId(), task.getPromptRaw(), task.getTaskId()).getId());
             taskMapper.updateById(task);
         }
-        executor.execute(() -> processImage(task.getTaskId()));
+        submitAfterCommit("IMAGE:" + task.getTaskId(), () -> processImage(task.getTaskId()));
         return toVO(task);
     }
 
@@ -148,12 +152,14 @@ public class MediaGenerationService {
                 "cameraMotion", value(command.getCameraMotion())
         )));
         taskMapper.insert(task);
-        executor.execute(() -> submitVideo(task.getTaskId()));
+        submitAfterCommit("VIDEO:" + task.getTaskId(), () -> submitVideo(task.getTaskId()));
         return toVO(task);
     }
 
     public MediaGenerationTaskVO getTask(String taskId, Long userId) {
-        return toVO(requireOwnedTask(taskId, userId));
+        AiMediaGenerationTask task = requireOwnedTask(taskId, userId);
+        recoverStalePendingTask(task);
+        return toVO(task);
     }
 
     @Transactional
@@ -252,9 +258,51 @@ public class MediaGenerationService {
         task.setRequestParams(old.getRequestParams());
         task.setRetryCount(old.getRetryCount() == null ? 1 : old.getRetryCount() + 1);
         taskMapper.insert(task);
-        if ("VIDEO".equals(task.getMediaType())) executor.execute(() -> submitVideo(task.getTaskId()));
-        else executor.execute(() -> processImage(task.getTaskId()));
+        if ("VIDEO".equals(task.getMediaType())) {
+            submitAfterCommit("VIDEO:" + task.getTaskId(), () -> submitVideo(task.getTaskId()));
+        } else {
+            submitAfterCommit("IMAGE:" + task.getTaskId(), () -> processImage(task.getTaskId()));
+        }
         return toVO(task);
+    }
+
+    private void submitAfterCommit(String executionKey, Runnable task) {
+        Runnable submit = () -> {
+            if (!activeExecutions.add(executionKey)) return;
+            try {
+                executor.execute(() -> {
+                    try {
+                        task.run();
+                    } finally {
+                        activeExecutions.remove(executionKey);
+                    }
+                });
+            } catch (RuntimeException error) {
+                activeExecutions.remove(executionKey);
+                throw error;
+            }
+        };
+        if (!TransactionSynchronizationManager.isSynchronizationActive()) {
+            submit.run();
+            return;
+        }
+        TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+            @Override
+            public void afterCommit() {
+                submit.run();
+            }
+        });
+    }
+
+    private void recoverStalePendingTask(AiMediaGenerationTask task) {
+        if (!"PENDING".equals(task.getStatus())) return;
+        LocalDateTime createdAt = task.getCreateTime();
+        if (createdAt != null && Duration.between(createdAt, LocalDateTime.now()).toSeconds() < 8) return;
+        if ("VIDEO".equals(task.getMediaType())) {
+            submitAfterCommit("VIDEO:" + task.getTaskId(), () -> submitVideo(task.getTaskId()));
+        } else if ("IMAGE".equals(task.getMediaType())) {
+            submitAfterCommit("IMAGE:" + task.getTaskId(), () -> processImage(task.getTaskId()));
+        }
     }
 
     void processImage(String taskId) {
@@ -460,14 +508,23 @@ public class MediaGenerationService {
         vo.setFinishedTime(task.getFinishedTime());
         vo.setStageUpdatedTime(task.getStageUpdatedTime());
         if ("SUCCEEDED".equals(task.getStatus()) && task.getResultUrl() != null) {
+            boolean visualAid = vo.getExperienceContext() != null
+                    && "GUIDE_SUPPORT".equals(vo.getExperienceContext().getPurpose());
             vo.setExperienceEvent(new MediaGenerationExperienceEvent(
-                    "MEDIA_GENERATION_COMPLETED",
+                    visualAid ? "VISUAL_AID_COMPLETED" : "MEDIA_GENERATION_COMPLETED",
                     task.getMediaType(),
                     task.getTaskId(),
-                    "USER",
+                    visualAid ? "AGENT_TOOL" : "USER",
                     vo.getExperienceContext(),
                     new MediaGenerationExperienceEvent.Result(task.getResultUrl(), task.getContentLabel()),
                     task.getFinishedTime()));
+        } else if ("FAILED".equals(task.getStatus()) && vo.getExperienceContext() != null
+                && "GUIDE_SUPPORT".equals(vo.getExperienceContext().getPurpose())) {
+            vo.setExperienceEvent(new MediaGenerationExperienceEvent(
+                    "VISUAL_AID_FAILED", task.getMediaType(), task.getTaskId(), "AGENT_TOOL",
+                    vo.getExperienceContext(), null, task.getFinishedTime()));
+            vo.getExperienceEvent().getPayload().put("errorCode", task.getErrorCode());
+            vo.getExperienceEvent().getPayload().put("errorMessage", task.getErrorMessage());
         }
         return vo;
     }

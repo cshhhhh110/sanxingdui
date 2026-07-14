@@ -36,6 +36,27 @@ public class AiChatSession {
     @Schema(description = "会话标题")
     private String title;
 
+    @Schema(description = "探索摘要")
+    private String summary;
+
+    @Schema(description = "探索状态")
+    private String status;
+
+    @TableField("current_artifact")
+    private String currentArtifact;
+
+    @TableField("current_trail_node")
+    private String currentTrailNode;
+
+    @TableField("active_guide_state")
+    private String activeGuideState;
+
+    @TableField("context_json")
+    private String contextJson;
+
+    @TableField("last_visual_aid_task")
+    private String lastVisualAidTask;
+
     @Schema(description = "创建时间")
     @TableField(value = "create_time", fill = FieldFill.INSERT)
     private LocalDateTime createTime;

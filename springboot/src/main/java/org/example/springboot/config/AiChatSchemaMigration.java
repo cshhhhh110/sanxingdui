@@ -19,6 +19,7 @@ public class AiChatSchemaMigration implements ApplicationRunner {
         ensureSessionTable();
         ensureMessageTable();
         ensureAttachmentTable();
+        ensureVisualAidProposalTable();
         log.info("AI chat schema migration checked");
     }
 
@@ -36,6 +37,20 @@ public class AiChatSchemaMigration implements ApplicationRunner {
                   KEY idx_ai_chat_session_user_update (user_id, update_time)
                 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
                 """);
+        addColumnIfMissing("ai_chat_session", "summary",
+                "ALTER TABLE ai_chat_session ADD COLUMN summary VARCHAR(1000) NULL AFTER title");
+        addColumnIfMissing("ai_chat_session", "status",
+                "ALTER TABLE ai_chat_session ADD COLUMN status VARCHAR(32) NOT NULL DEFAULT 'ACTIVE' AFTER summary");
+        addColumnIfMissing("ai_chat_session", "current_artifact",
+                "ALTER TABLE ai_chat_session ADD COLUMN current_artifact VARCHAR(255) NULL AFTER status");
+        addColumnIfMissing("ai_chat_session", "current_trail_node",
+                "ALTER TABLE ai_chat_session ADD COLUMN current_trail_node VARCHAR(255) NULL AFTER current_artifact");
+        addColumnIfMissing("ai_chat_session", "active_guide_state",
+                "ALTER TABLE ai_chat_session ADD COLUMN active_guide_state LONGTEXT NULL AFTER current_trail_node");
+        addColumnIfMissing("ai_chat_session", "context_json",
+                "ALTER TABLE ai_chat_session ADD COLUMN context_json LONGTEXT NULL AFTER active_guide_state");
+        addColumnIfMissing("ai_chat_session", "last_visual_aid_task",
+                "ALTER TABLE ai_chat_session ADD COLUMN last_visual_aid_task VARCHAR(64) NULL AFTER context_json");
     }
 
     private void ensureMessageTable() {
@@ -57,6 +72,47 @@ public class AiChatSchemaMigration implements ApplicationRunner {
                 "ALTER TABLE ai_chat_message ADD COLUMN raw_content LONGTEXT NULL AFTER message_type");
         addColumnIfMissing("ai_chat_message", "processed_content",
                 "ALTER TABLE ai_chat_message ADD COLUMN processed_content LONGTEXT NULL AFTER raw_content");
+        addColumnIfMissing("ai_chat_message", "client_message_id",
+                "ALTER TABLE ai_chat_message ADD COLUMN client_message_id VARCHAR(100) NULL AFTER processed_content");
+        addColumnIfMissing("ai_chat_message", "trace_json",
+                "ALTER TABLE ai_chat_message ADD COLUMN trace_json LONGTEXT NULL AFTER client_message_id");
+        addColumnIfMissing("ai_chat_message", "references_json",
+                "ALTER TABLE ai_chat_message ADD COLUMN references_json LONGTEXT NULL AFTER trace_json");
+        addColumnIfMissing("ai_chat_message", "ui_payload",
+                "ALTER TABLE ai_chat_message ADD COLUMN ui_payload LONGTEXT NULL AFTER references_json");
+        addIndexIfMissing("ai_chat_message", "uk_ai_chat_message_client",
+                "CREATE UNIQUE INDEX uk_ai_chat_message_client ON ai_chat_message(session_id, client_message_id)");
+    }
+
+    private void ensureVisualAidProposalTable() {
+        jdbcTemplate.execute("""
+                CREATE TABLE IF NOT EXISTS ai_visual_aid_proposal (
+                  id BIGINT NOT NULL AUTO_INCREMENT,
+                  proposal_id VARCHAR(64) NOT NULL,
+                  user_id BIGINT NOT NULL,
+                  session_id VARCHAR(64) NOT NULL,
+                  message_id VARCHAR(100) NOT NULL,
+                  artifact_id VARCHAR(100) DEFAULT NULL,
+                  artifact_name VARCHAR(100) DEFAULT NULL,
+                  title VARCHAR(255) NOT NULL,
+                  reason VARCHAR(1000) NOT NULL,
+                  prompt LONGTEXT NOT NULL,
+                  purpose VARCHAR(40) DEFAULT 'GUIDE_SUPPORT',
+                  content_label VARCHAR(40) DEFAULT 'AI_ILLUSTRATION',
+                  knowledge_focus LONGTEXT,
+                  source_references LONGTEXT,
+                  status VARCHAR(32) NOT NULL DEFAULT 'PROPOSED',
+                  generation_task_id VARCHAR(64) DEFAULT NULL,
+                  client_request_id VARCHAR(64) DEFAULT NULL,
+                  expires_at DATETIME DEFAULT NULL,
+                  create_time DATETIME DEFAULT CURRENT_TIMESTAMP,
+                  update_time DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                  PRIMARY KEY (id),
+                  UNIQUE KEY uk_visual_aid_proposal_id (proposal_id),
+                  KEY idx_visual_aid_session_message (session_id, message_id),
+                  KEY idx_visual_aid_user_status (user_id, status)
+                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+                """);
     }
 
     private void ensureAttachmentTable() {
@@ -92,6 +148,20 @@ public class AiChatSchemaMigration implements ApplicationRunner {
         if (count == null || count == 0) {
             jdbcTemplate.execute(ddl);
             log.info("Added missing AI chat column {}.{}", tableName, columnName);
+        }
+    }
+
+    private void addIndexIfMissing(String tableName, String indexName, String ddl) {
+        Integer count = jdbcTemplate.queryForObject("""
+                SELECT COUNT(*)
+                FROM information_schema.STATISTICS
+                WHERE TABLE_SCHEMA = DATABASE()
+                  AND TABLE_NAME = ?
+                  AND INDEX_NAME = ?
+                """, Integer.class, tableName, indexName);
+        if (count == null || count == 0) {
+            jdbcTemplate.execute(ddl);
+            log.info("Added missing AI chat index {}.{}", tableName, indexName);
         }
     }
 }

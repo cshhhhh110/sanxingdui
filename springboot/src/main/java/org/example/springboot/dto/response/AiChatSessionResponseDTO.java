@@ -7,6 +7,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.time.LocalDateTime;
+import java.util.Map;
 
 /**
  * AI聊天会话响应DTO
@@ -24,6 +25,20 @@ public class AiChatSessionResponseDTO {
 
     @Schema(description = "会话标题")
     private String title;
+
+    private String summary;
+
+    private String status;
+
+    private String currentArtifact;
+
+    private String currentTrailNode;
+
+    private Map<String, Object> activeGuideState;
+
+    private Map<String, Object> context;
+
+    private String lastVisualAidTask;
 
     @Schema(description = "创建时间")
     private LocalDateTime createTime;

@@ -80,6 +80,8 @@ try {
       userType: 'USER'
     }))
   })
+  await page.route('**/api/ai-chat/session/list**', (route) => json(route, []))
+  await page.route('**/api/ai-chat/session/*/state', (route) => json(route, null))
 
   for (const testCase of cases) {
     await runCase(page, testCase)
@@ -96,12 +98,15 @@ try {
   await runFloatingVoiceShortcutCase(page)
 
   console.log('Agent UI regression: PASS')
-} finally {
-  await browser.close()
-}
+  } finally {
+    await page.unroute('**/api/ai-chat/session/list**')
+    await page.unroute('**/api/ai-chat/session/*/state')
+    await browser.close()
+  }
 
 async function runCase(page, testCase) {
   try {
+    await page.route('**/api/ai-chat/session/start**', (route) => json(route, `tool-${Date.now()}`))
     await page.route('**/api/agent/tools', async (route) => {
       await route.fulfill({
         status: 200,
@@ -149,6 +154,7 @@ async function runCase(page, testCase) {
     assert(testCase.verify(currentUrl), `Case "${testCase.name}" reached unexpected URL: ${page.url()}`)
     console.log(`- ${testCase.name}: ${page.url()}`)
   } finally {
+    await page.unroute('**/api/ai-chat/session/start**')
     await page.unroute('**/api/agent/tools')
     await page.unroute('**/api/agent/route')
   }
@@ -217,7 +223,7 @@ async function runDirectAnswerCase(page) {
 
     await page.getByText('\u4f60\u53ef\u4ee5\u76f4\u63a5\u8fd9\u6837\u7406\u89e3\uff1a\u8fd9\u662f\u4e00\u6761\u666e\u901a\u95ee\u7b54\u3002').waitFor({ timeout: 45000 })
     assert(knowledgeSearchCalls === 0, `Direct answer should not call knowledge search, got ${knowledgeSearchCalls}`)
-    assert(sessionStartCalls === 0, `Direct answer should not start chat session, got ${sessionStartCalls}`)
+    assert(sessionStartCalls === 1, `Direct answer should persist one exploration session, got ${sessionStartCalls}`)
     assert(streamCalls === 0, `Direct answer should not call chat stream, got ${streamCalls}`)
     console.log('- direct answer without RAG or SSE: PASS')
   } finally {
@@ -292,7 +298,7 @@ async function runUnsupportedCase(page) {
 
     await page.getByText('\u5f53\u524d\u8fd8\u6ca1\u6709\u63a5\u5165\u95e8\u7968\u9884\u8ba2\u5de5\u5177\u3002').waitFor({ timeout: 45000 })
     assert(knowledgeSearchCalls === 0, `Unsupported route should not call knowledge search, got ${knowledgeSearchCalls}`)
-    assert(sessionStartCalls === 0, `Unsupported route should not start chat session, got ${sessionStartCalls}`)
+    assert(sessionStartCalls === 1, `Unsupported route should persist one exploration session, got ${sessionStartCalls}`)
     assert(streamCalls === 0, `Unsupported route should not call chat stream, got ${streamCalls}`)
     console.log('- unsupported route with clear message: PASS')
   } finally {
@@ -368,7 +374,7 @@ async function runUnknownToolCase(page) {
       hasText: '\u6a21\u578b\u9009\u62e9\u7684\u5de5\u5177\u5728\u5f53\u524d\u5ba2\u6237\u7aef\u4e0d\u53ef\u7528\u3002'
     }).waitFor({ timeout: 45000 })
     assert(knowledgeSearchCalls === 0, `Unknown tool should not call knowledge search, got ${knowledgeSearchCalls}`)
-    assert(sessionStartCalls === 0, `Unknown tool should not start chat session, got ${sessionStartCalls}`)
+    assert(sessionStartCalls === 1, `Unknown tool should persist one exploration session, got ${sessionStartCalls}`)
     assert(streamCalls === 0, `Unknown tool should not call chat stream, got ${streamCalls}`)
     console.log('- unknown tool failure message: PASS')
   } finally {
@@ -383,6 +389,7 @@ async function runWeatherToolCase(page) {
   let knowledgeSearchCalls = 0
 
   try {
+    await page.route('**/api/ai-chat/session/start**', (route) => json(route, 'agent-ui-weather-session'))
     await page.route('**/api/agent/route', async (route) => {
       await route.fulfill({
         status: 200,
@@ -446,6 +453,7 @@ async function runWeatherToolCase(page) {
     assert(knowledgeSearchCalls === 0, `Weather tool should not call knowledge search, got ${knowledgeSearchCalls}`)
     console.log('- visitor/expert exploration trace for weather tool: PASS')
   } finally {
+    await page.unroute('**/api/ai-chat/session/start**')
     await page.unroute('**/api/agent/route')
     await page.unroute('**/api/agent/tools/weather**')
     await page.unroute('**/api/agent/knowledge/search**')
@@ -934,6 +942,7 @@ async function runFloatingVoiceShortcutCase(page) {
   let routeSawVoiceQuestion = false
 
   try {
+    await page.route('**/api/ai-chat/session/start**', (route) => json(route, 'agent-ui-voice-session'))
     await page.addInitScript(() => {
       window.__xuanmiaoVoiceStarts = 0
       window.__xuanmiaoVoiceStops = 0
@@ -1038,6 +1047,35 @@ async function runFloatingVoiceShortcutCase(page) {
     const textarea = page.locator('.composer textarea')
     await textarea.waitFor({ state: 'visible' })
 
+    const hintStateReady = await page.evaluate(() => {
+      const root = document.querySelector('.live2d-wrapper')
+      const component = root?.__vueParentComponent?.proxy
+      if (!component) return false
+      component.isPanelOpen = true
+      component.syncWidgetVisibility()
+      component.voiceShortcutHintVisible = true
+      const bubble = document.getElementById('ai-bubble')
+      if (bubble) bubble.style.display = 'none'
+      return true
+    })
+    assert(hintStateReady, 'Floating Xuanmiao component should expose idle hint state')
+    const voiceHint = page.locator('.voice-shortcut-hint')
+    await voiceHint.waitFor({ state: 'visible', timeout: 5000 })
+    assert(await voiceHint.getByText('按 V 键，和玄喵直接对话').isVisible(),
+      'Idle shortcut hint should use a lightweight conversational bubble')
+    await page.evaluate(() => {
+      const component = document.querySelector('.live2d-wrapper')?.__vueParentComponent?.proxy
+      if (component) component.isAnswering = true
+    })
+    await voiceHint.waitFor({ state: 'hidden', timeout: 5000 })
+    await page.evaluate(() => {
+      const component = document.querySelector('.live2d-wrapper')?.__vueParentComponent?.proxy
+      if (component) {
+        component.isAnswering = false
+        component.voiceShortcutHintVisible = false
+      }
+    })
+
     await textarea.focus()
     await page.keyboard.press('v')
     await page.waitForTimeout(250)
@@ -1057,6 +1095,29 @@ async function runFloatingVoiceShortcutCase(page) {
       const input = document.querySelector('.input-dialog .dialog-input')
       return input && input.value === '\u4ecb\u7ecd\u9752\u94dc\u795e\u6811'
     }, null, { timeout: 10000 })
+    const dialogPlacement = await page.evaluate(() => {
+      const dialog = document.querySelector('.input-dialog')?.getBoundingClientRect()
+      const avatar = document.querySelector('#live2d-widget canvas')?.getBoundingClientRect()
+      if (!dialog) return null
+      const dialogCenter = { x: dialog.left + dialog.width / 2, y: dialog.top + dialog.height / 2 }
+      const avatarCenter = avatar
+        ? { x: avatar.left + avatar.width / 2, y: avatar.top + avatar.height / 2 }
+        : null
+      return {
+        left: dialog.left,
+        top: dialog.top,
+        distance: avatarCenter
+          ? Math.hypot(dialogCenter.x - avatarCenter.x, dialogCenter.y - avatarCenter.y)
+          : null
+      }
+    })
+    assert(dialogPlacement, 'Voice transcript preview dialog should be rendered')
+    assert(dialogPlacement.left > 8 && dialogPlacement.top >= 70,
+      `Voice transcript preview must not initialize at the top-left corner: ${JSON.stringify(dialogPlacement)}`)
+    if (dialogPlacement.distance !== null) {
+      assert(dialogPlacement.distance < 620,
+        `Voice transcript preview should follow Xuanmiao: ${JSON.stringify(dialogPlacement)}`)
+    }
     assert(routeCalls === 0, `Voice transcript should wait for user confirmation before routing, got ${routeCalls}`)
 
     await page.locator('.input-dialog .dialog-btn-submit').click()
@@ -1073,6 +1134,7 @@ async function runFloatingVoiceShortcutCase(page) {
     assert(routeSawVoiceQuestion, 'Voice transcript should enter the existing floating Agent route with context')
     console.log('- floating Xuanmiao V voice shortcut and input guard: PASS')
   } finally {
+    await page.unroute('**/api/ai-chat/session/start**')
     await page.unroute('**/api/tts/voices')
     await page.unroute('**/api/tts/speech')
     await page.unroute('**/api/ai-chat/speech-input')
@@ -1089,6 +1151,14 @@ function agentEventFrame(type, message, status = 'running') {
     timestamp: new Date().toISOString(),
     metadata: {}
   })}`
+}
+
+async function json(route, data) {
+  await route.fulfill({
+    status: 200,
+    contentType: 'application/json',
+    body: JSON.stringify({ code: '200', msg: 'ok', data })
+  })
 }
 
 async function launchBrowser() {

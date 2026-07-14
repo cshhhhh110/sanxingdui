@@ -1,19 +1,26 @@
 package org.example.springboot.service;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.example.springboot.dto.command.AiChatAttachmentDTO;
+import org.example.springboot.dto.command.AiChatConversationStateDTO;
+import org.example.springboot.dto.command.AiChatMessageSnapshotDTO;
 import org.example.springboot.entity.AiChatMessage;
 import org.example.springboot.entity.AiChatMessageAttachment;
 import org.example.springboot.entity.AiChatSession;
+import org.example.springboot.entity.VisualAidProposal;
 import org.example.springboot.mapper.AiChatMessageAttachmentMapper;
 import org.example.springboot.mapper.AiChatMessageMapper;
 import org.example.springboot.mapper.AiChatSessionMapper;
+import org.example.springboot.mapper.VisualAidProposalMapper;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 /**
@@ -27,6 +34,8 @@ public class AiChatSessionService {
     private final AiChatSessionMapper sessionMapper;
     private final AiChatMessageMapper messageMapper;
     private final AiChatMessageAttachmentMapper attachmentMapper;
+    private final VisualAidProposalMapper visualAidProposalMapper;
+    private final ObjectMapper objectMapper;
 
     @Transactional
     public String createSession(Long userId, String title) {
@@ -36,6 +45,7 @@ public class AiChatSessionService {
                 .sessionId(sessionId)
                 .userId(userId)
                 .title(title != null ? title : "新对话")
+                .status("ACTIVE")
                 .build();
 
         sessionMapper.insert(session);
@@ -74,6 +84,11 @@ public class AiChatSessionService {
 
     @Transactional
     public void saveMessage(String sessionId, String role, String content) {
+        saveMessage(sessionId, role, content, null);
+    }
+
+    @Transactional
+    public AiChatMessage saveMessage(String sessionId, String role, String content, String clientMessageId) {
         AiChatMessage message = AiChatMessage.builder()
                 .sessionId(sessionId)
                 .role(role)
@@ -81,10 +96,12 @@ public class AiChatSessionService {
                 .messageType("TEXT")
                 .rawContent(content)
                 .processedContent(content)
+                .clientMessageId(clientMessageId)
                 .build();
 
         messageMapper.insert(message);
         log.debug("Saved AI chat message, sessionId: {}, role: {}", sessionId, role);
+        return message;
     }
 
     @Transactional
@@ -153,6 +170,19 @@ public class AiChatSessionService {
             String messageType,
             List<AiChatAttachmentDTO> attachments
     ) {
+        return saveUserMessage(sessionId, displayContent, rawContent, processedContent, messageType, attachments, null);
+    }
+
+    @Transactional
+    public AiChatMessage saveUserMessage(
+            String sessionId,
+            String displayContent,
+            String rawContent,
+            String processedContent,
+            String messageType,
+            List<AiChatAttachmentDTO> attachments,
+            String clientMessageId
+    ) {
         AiChatMessage message = AiChatMessage.builder()
                 .sessionId(sessionId)
                 .role("user")
@@ -160,6 +190,7 @@ public class AiChatSessionService {
                 .messageType(messageType)
                 .rawContent(rawContent)
                 .processedContent(processedContent)
+                .clientMessageId(clientMessageId)
                 .build();
 
         messageMapper.insert(message);
@@ -208,6 +239,92 @@ public class AiChatSessionService {
     }
 
     @Transactional
+    public void syncConversationState(String sessionId, AiChatConversationStateDTO state) {
+        AiChatSession session = getSessionById(sessionId);
+        if (session == null) return;
+        if (state.getTitle() != null && !state.getTitle().isBlank()) session.setTitle(state.getTitle().trim());
+        session.setSummary(blankToNull(state.getSummary()));
+        session.setStatus(blankToDefault(state.getStatus(), "ACTIVE"));
+        session.setCurrentArtifact(blankToNull(state.getCurrentArtifact()));
+        session.setCurrentTrailNode(blankToNull(state.getCurrentTrailNode()));
+        session.setActiveGuideState(writeJson(state.getActiveGuideState()));
+        session.setContextJson(writeJson(state.getContext()));
+        session.setLastVisualAidTask(blankToNull(state.getLastVisualAidTask()));
+        sessionMapper.updateById(session);
+
+        if (state.getMessages() != null) {
+            for (AiChatMessageSnapshotDTO snapshot : state.getMessages()) {
+                upsertMessageSnapshot(sessionId, snapshot);
+            }
+        }
+    }
+
+    @Transactional
+    public AiChatMessage upsertMessageSnapshot(String sessionId, AiChatMessageSnapshotDTO snapshot) {
+        AiChatMessage message = findMessageByClientId(sessionId, snapshot.getClientMessageId());
+        if (message == null && snapshot.getGenerationTaskId() != null && !snapshot.getGenerationTaskId().isBlank()) {
+            message = messageMapper.selectOne(new LambdaQueryWrapper<AiChatMessage>()
+                    .eq(AiChatMessage::getSessionId, sessionId)
+                    .eq(AiChatMessage::getProcessedContent, snapshot.getGenerationTaskId())
+                    .last("LIMIT 1"));
+        }
+        if (message == null && "MEDIA_GENERATION_REQUEST".equals(snapshot.getMessageType())) {
+            message = messageMapper.selectOne(new LambdaQueryWrapper<AiChatMessage>()
+                    .eq(AiChatMessage::getSessionId, sessionId)
+                    .eq(AiChatMessage::getRole, "user")
+                    .eq(AiChatMessage::getMessageType, "MEDIA_GENERATION_REQUEST")
+                    .eq(AiChatMessage::getContent, snapshot.getContent())
+                    .isNull(AiChatMessage::getClientMessageId)
+                    .orderByDesc(AiChatMessage::getCreateTime)
+                    .last("LIMIT 1"));
+        }
+        boolean insert = message == null;
+        if (insert) {
+            message = new AiChatMessage();
+            message.setSessionId(sessionId);
+        }
+        message.setClientMessageId(snapshot.getClientMessageId());
+        message.setRole(snapshot.getRole());
+        message.setContent(snapshot.getContent());
+        message.setMessageType(blankToDefault(snapshot.getMessageType(), "TEXT"));
+        message.setRawContent(snapshot.getContent());
+        message.setProcessedContent(snapshot.getGenerationTaskId() == null
+                ? snapshot.getContent() : snapshot.getGenerationTaskId());
+        message.setTraceJson(writeJson(snapshot.getTrace()));
+        message.setReferencesJson(writeJson(snapshot.getReferences()));
+        message.setUiPayload(writeJson(snapshot.getUiPayload()));
+        if (insert) messageMapper.insert(message);
+        else messageMapper.updateById(message);
+        return message;
+    }
+
+    public AiChatMessage findMessageByClientId(String sessionId, String clientMessageId) {
+        if (clientMessageId == null || clientMessageId.isBlank()) return null;
+        return messageMapper.selectOne(new LambdaQueryWrapper<AiChatMessage>()
+                .eq(AiChatMessage::getSessionId, sessionId)
+                .eq(AiChatMessage::getClientMessageId, clientMessageId)
+                .last("LIMIT 1"));
+    }
+
+    public Map<String, Object> readMap(String json) {
+        if (json == null || json.isBlank()) return null;
+        try {
+            return objectMapper.readValue(json, new TypeReference<>() {});
+        } catch (Exception ignored) {
+            return null;
+        }
+    }
+
+    public List<Map<String, Object>> readList(String json) {
+        if (json == null || json.isBlank()) return List.of();
+        try {
+            return objectMapper.readValue(json, new TypeReference<>() {});
+        } catch (Exception ignored) {
+            return List.of();
+        }
+    }
+
+    @Transactional
     public void deleteSession(String sessionId) {
         LambdaQueryWrapper<AiChatSession> sessionWrapper = new LambdaQueryWrapper<>();
         sessionWrapper.eq(AiChatSession::getSessionId, sessionId);
@@ -223,11 +340,31 @@ public class AiChatSessionService {
         }
         messageMapper.delete(messageWrapper);
 
+        visualAidProposalMapper.delete(new LambdaQueryWrapper<VisualAidProposal>()
+                .eq(VisualAidProposal::getSessionId, sessionId));
+
         log.info("Deleted AI chat session, sessionId: {}", sessionId);
     }
 
     public boolean isSessionOwnedByUser(String sessionId, Long userId) {
         AiChatSession session = getSessionById(sessionId);
-        return session != null && session.getUserId().equals(userId);
+        return session != null && session.getUserId() != null && session.getUserId().equals(userId);
+    }
+
+    private String writeJson(Object value) {
+        if (value == null) return null;
+        try {
+            return objectMapper.writeValueAsString(value);
+        } catch (Exception error) {
+            throw new IllegalArgumentException("会话状态序列化失败", error);
+        }
+    }
+
+    private String blankToNull(String value) {
+        return value == null || value.isBlank() ? null : value.trim();
+    }
+
+    private String blankToDefault(String value, String fallback) {
+        return value == null || value.isBlank() ? fallback : value.trim().toUpperCase();
     }
 }

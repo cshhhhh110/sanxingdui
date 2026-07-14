@@ -42,7 +42,12 @@
 
       <!-- Live2D鎸傝浇瀹瑰櫒 -->
       <div class="live2d-placeholder"></div>
-      <div v-if="showVoiceShortcutHint" class="voice-shortcut-hint">
+      <div
+        v-if="showVoiceShortcutHint"
+        class="voice-shortcut-hint"
+        :class="`voice-shortcut-hint--${voiceShortcutHintPlacement.side}`"
+        :style="voiceShortcutHintPlacement.style"
+      >
         <i class="fas fa-microphone"></i>
         <span>按 V 键，和玄喵直接对话</span>
       </div>
@@ -276,7 +281,9 @@ export default {
       selectedVoice: 'default',
       speechInputService: null,
       voiceInputStatus: SpeechInputStatus.IDLE,
-      voiceShortcutHintDismissed: false,
+      voiceShortcutHintVisible: false,
+      voiceShortcutHintTimer: null,
+      voiceShortcutHintHideTimer: null,
       voiceInputSupported: false,
       voiceInputError: '',
       isListening: false,
@@ -328,13 +335,48 @@ export default {
       if (this.voiceInputSupported) return '开始语音输入';
       return this.voiceInputError || '当前浏览器不支持语音输入';
     },
+    voiceShortcutHintPlacement() {
+      const viewport = this.getViewportBox();
+      const avatar = this.getSafeAvatarPosition();
+      const avatarSize = this.getAvatarSize();
+      const width = Math.min(236, viewport.width - 28);
+      const gap = 18;
+      const margin = 14;
+      const canFitLeft = avatar.x - width - gap >= viewport.left + margin;
+      const side = canFitLeft ? 'left' : 'right';
+      const rawX = canFitLeft
+        ? avatar.x - width - gap
+        : avatar.x + avatarSize.width + gap;
+      const x = Math.max(
+        viewport.left + margin,
+        Math.min(viewport.left + viewport.width - width - margin, rawX)
+      );
+      const y = Math.max(
+        viewport.top + 82,
+        Math.min(viewport.top + viewport.height - 62, avatar.y + Math.min(82, avatarSize.height * 0.24))
+      );
+      return {
+        side,
+        style: {
+          left: `${x}px`,
+          top: `${y}px`,
+          right: 'auto',
+          bottom: 'auto',
+          width: `${width}px`
+        }
+      };
+    },
     showVoiceShortcutHint() {
-      return this.isPanelOpen &&
+      return this.voiceShortcutHintVisible &&
+        this.isPanelOpen &&
         !this.showInputDialog &&
-        !this.voiceShortcutHintDismissed &&
         this.voiceInputSupported &&
         !this.isSpeaking &&
-        !this.isAnswering;
+        !this.isAnswering &&
+        !this.isListening &&
+        !this.isVoiceInputStarting &&
+        this.voiceInputStatus !== SpeechInputStatus.PROCESSING &&
+        !this.trailCommandPending;
     }
   },
   watch: {
@@ -363,6 +405,7 @@ export default {
     window.visualViewport?.addEventListener('resize', this.applyAvatarPosition);
     window.visualViewport?.addEventListener('scroll', this.applyAvatarPosition);
     this.initMcpListeners();
+    this.scheduleVoiceShortcutHint(8000);
 
     // 智能化增强：监听路由变化
     this.setupRouteWatcher();
@@ -839,6 +882,47 @@ export default {
       return getSpeechInputSupportMessage() || '当前浏览器暂不支持语音输入，请尝试Chrome或Edge。';
     },
 
+    isVoiceShortcutIdle() {
+      const bubble = document.getElementById('ai-bubble');
+      const bubbleVisible = bubble && window.getComputedStyle(bubble).display !== 'none';
+      return this.isPanelOpen &&
+        this.voiceInputSupported &&
+        !this.showInputDialog &&
+        !this.isSpeaking &&
+        !this.isAnswering &&
+        !this.isListening &&
+        !this.isVoiceInputStarting &&
+        this.voiceInputStatus !== SpeechInputStatus.PROCESSING &&
+        !this.trailCommandPending &&
+        !bubbleVisible;
+    },
+
+    scheduleVoiceShortcutHint(delay = 18000 + Math.floor(Math.random() * 14000)) {
+      clearTimeout(this.voiceShortcutHintTimer);
+      this.voiceShortcutHintTimer = setTimeout(() => {
+        this.voiceShortcutHintTimer = null;
+        if (this.isDestroyed) return;
+        if (!this.isVoiceShortcutIdle()) {
+          this.scheduleVoiceShortcutHint(9000);
+          return;
+        }
+        this.voiceShortcutHintVisible = true;
+        clearTimeout(this.voiceShortcutHintHideTimer);
+        this.voiceShortcutHintHideTimer = setTimeout(() => {
+          this.voiceShortcutHintVisible = false;
+          this.voiceShortcutHintHideTimer = null;
+          this.scheduleVoiceShortcutHint(28000 + Math.floor(Math.random() * 18000));
+        }, 6500);
+      }, Math.max(1000, delay));
+    },
+
+    hideVoiceShortcutHint(nextDelay = 0) {
+      this.voiceShortcutHintVisible = false;
+      clearTimeout(this.voiceShortcutHintHideTimer);
+      this.voiceShortcutHintHideTimer = null;
+      if (nextDelay > 0) this.scheduleVoiceShortcutHint(nextDelay);
+    },
+
     waitForVoiceInputRelease(ms = 520) {
       return new Promise((resolve) => setTimeout(resolve, ms));
     },
@@ -916,7 +1000,7 @@ export default {
 
     async startVoiceInputRecording() {
       const token = ++this.voiceInputStartToken;
-      this.voiceShortcutHintDismissed = true;
+      this.hideVoiceShortcutHint(45000);
       this.voiceInputStopRequested = false;
       this.voiceInputError = '';
 
@@ -942,12 +1026,9 @@ export default {
           return;
         }
         this.inputQuestion = transcript;
-        this.showInputDialog = true;
+        this.openQuestionDialog();
         this.displayedText = '我识别好了，请先确认输入框里的文字，没问题再点“提问”。';
         message.success('语音已识别，请确认文字后再提问。');
-        this.$nextTick(() => {
-          this.$refs.dialogInput?.focus?.();
-        });
       } catch (error) {
         if (this.isDestroyed) return;
         this.voiceInputError = error?.message || '语音输入失败，可以继续使用文字提问。';
@@ -1555,8 +1636,10 @@ export default {
             this.contextualGreeting();
           }, this.hasPlayedWelcome ? 500 : 8000); // 如果已播放过欢迎语则快速触发，否则等欢迎语播完
         }
+        this.scheduleVoiceShortcutHint(8000);
       } else {
         this.cancelAutoHide();
+        this.hideVoiceShortcutHint();
       }
       this.syncWidgetVisibility();
     },
@@ -1931,14 +2014,19 @@ export default {
         }, 150);
       }
 
-      this.inputQuestion = '';
-      this.showInputDialog = true;
+      this.openQuestionDialog({ resetDraft: true });
+    },
 
+    openQuestionDialog(options = {}) {
+      if (options.resetDraft) this.inputQuestion = '';
+      this.hideVoiceShortcutHint();
+      if (this.live2dCanvas) this.syncAvatarPosition();
+      this.dialogPosition = this.getDialogPositionNearAvatar(340, 320);
+      this.showInputDialog = true;
       this.$nextTick(() => {
-        this.repositionInputDialog();
-        if (this.$refs.dialogInput) {
-          this.$refs.dialogInput.focus();
-        }
+        const { width, height } = this.getDialogElementSize();
+        this.dialogPosition = this.getDialogPositionNearAvatar(width, height);
+        this.$refs.dialogInput?.focus?.();
       });
     },
 
@@ -3004,6 +3092,10 @@ export default {
     this.stopVoiceInput();
     this.clearDemoCommandTimers();
     this.clearAllTimers();
+    clearTimeout(this.voiceShortcutHintTimer);
+    clearTimeout(this.voiceShortcutHintHideTimer);
+    this.voiceShortcutHintTimer = null;
+    this.voiceShortcutHintHideTimer = null;
     this.stopAudio();
 
     // 智能化增强：清理问候定时器
@@ -3131,31 +3223,51 @@ export default {
 
 .voice-shortcut-hint {
   position: fixed;
-  right: 104px;
-  bottom: 92px;
   z-index: 100010;
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  max-width: 240px;
-  padding: 10px 14px;
-  color: #6a3d1d;
-  background: rgba(255, 248, 232, 0.94);
-  border: 1px solid rgba(184, 126, 58, 0.42);
-  border-radius: 999px;
-  box-shadow: 0 10px 28px rgba(79, 45, 18, 0.16);
+  max-width: calc(100vw - 28px);
+  padding: 11px 15px;
+  color: #5b3a24;
+  background: rgba(255, 250, 239, 0.97);
+  border: 1px solid rgba(180, 126, 63, 0.48);
+  border-radius: 16px;
+  box-shadow: 0 12px 30px rgba(79, 45, 18, 0.18);
   font-size: 13px;
   pointer-events: none;
-  animation: voiceHintFloat 3.2s ease-in-out infinite;
+  animation: voiceHintArrive 0.32s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+  box-sizing: border-box;
 }
 
 .voice-shortcut-hint i {
   color: #b66a25;
 }
 
-@keyframes voiceHintFloat {
-  0%, 100% { transform: translateY(0); opacity: 0.92; }
-  50% { transform: translateY(-4px); opacity: 1; }
+.voice-shortcut-hint::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  width: 12px;
+  height: 12px;
+  background: rgba(255, 250, 239, 0.97);
+  border: solid rgba(180, 126, 63, 0.48);
+  transform: translateY(-50%) rotate(45deg);
+}
+
+.voice-shortcut-hint--left::after {
+  right: -7px;
+  border-width: 1px 1px 0 0;
+}
+
+.voice-shortcut-hint--right::after {
+  left: -7px;
+  border-width: 0 0 1px 1px;
+}
+
+@keyframes voiceHintArrive {
+  from { transform: translateY(8px) scale(0.96); opacity: 0; }
+  to { transform: translateY(0) scale(1); opacity: 1; }
 }
 
 #ai-bubble {

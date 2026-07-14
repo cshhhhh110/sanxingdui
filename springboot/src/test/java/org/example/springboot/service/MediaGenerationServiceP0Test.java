@@ -13,6 +13,8 @@ import org.example.springboot.service.provider.ImageGenerationProvider;
 import org.example.springboot.service.provider.VideoGenerationProvider;
 import org.junit.jupiter.api.Test;
 import org.springframework.test.util.ReflectionTestUtils;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -30,6 +32,59 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 class MediaGenerationServiceP0Test {
+
+    @Test
+    void imageProcessingStartsOnlyAfterOuterTransactionCommits() {
+        AiMediaGenerationTaskMapper taskMapper = mock(AiMediaGenerationTaskMapper.class);
+        AtomicReference<Runnable> submittedTask = new AtomicReference<>();
+        when(taskMapper.insert(any(AiMediaGenerationTask.class))).thenAnswer(invocation -> {
+            AiMediaGenerationTask task = invocation.getArgument(0);
+            task.setId(1L);
+            task.setCreateTime(LocalDateTime.now());
+            return 1;
+        });
+
+        GenerationPromptService promptService = mock(GenerationPromptService.class);
+        when(promptService.enhance(anyString(), anyString(), anyString())).thenReturn("增强后的视觉辅助图");
+        ImageGenerationProvider imageProvider = mock(ImageGenerationProvider.class);
+        when(imageProvider.getProviderName()).thenReturn("siliconflow");
+        ImageGenerationProfileProperties profiles = new ImageGenerationProfileProperties();
+        profiles.setDefaultProfile("FAST");
+        MediaGenerationService service = new MediaGenerationService(
+                taskMapper,
+                mock(SysFileInfoMapper.class),
+                promptService,
+                mock(GenerationContentSafetyService.class),
+                mock(GeneratedMediaService.class),
+                imageProvider,
+                mock(VideoGenerationProvider.class),
+                mock(AiChatSessionService.class),
+                new ObjectMapper(),
+                profiles);
+        ReflectionTestUtils.setField(service, "executor", (Executor) submittedTask::set);
+        ReflectionTestUtils.setField(service, "enabled", true);
+
+        CreateImageGenerationDTO command = new CreateImageGenerationDTO();
+        command.setPrompt("青铜神树祭祀场景示意图");
+        command.setStyle("MUSEUM_POSTER");
+        command.setAspectRatio("1:1");
+        command.setClientRequestId("transactional-visual-aid");
+
+        TransactionSynchronizationManager.initSynchronization();
+        try {
+            MediaGenerationTaskVO task = service.createImageTask(command, 7L);
+            assertThat(task.getStatus()).isEqualTo("PENDING");
+            assertThat(submittedTask.get()).isNull();
+
+            for (TransactionSynchronization synchronization :
+                    TransactionSynchronizationManager.getSynchronizations()) {
+                synchronization.afterCommit();
+            }
+            assertThat(submittedTask.get()).isNotNull();
+        } finally {
+            TransactionSynchronizationManager.clearSynchronization();
+        }
+    }
 
     @Test
     void sameClientRequestCreatesOneTaskAndPreservesProductMetadata() {

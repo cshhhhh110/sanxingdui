@@ -8,6 +8,7 @@ import lombok.NoArgsConstructor;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Map;
 
 /**
  * AI chat message response DTO.
@@ -22,6 +23,8 @@ public class AiChatMessageResponseDTO {
     @Schema(description = "Message id")
     private Long id;
 
+    private String clientMessageId;
+
     @Schema(description = "Role: user or assistant")
     private String role;
 
@@ -33,6 +36,12 @@ public class AiChatMessageResponseDTO {
 
     @Schema(description = "Media generation task id")
     private String generationTaskId;
+
+    private Map<String, Object> trace;
+
+    private List<Map<String, Object>> references;
+
+    private Map<String, Object> uiPayload;
 
     @Schema(description = "Attachments")
     private List<AiChatMessageAttachmentResponseDTO> attachments;

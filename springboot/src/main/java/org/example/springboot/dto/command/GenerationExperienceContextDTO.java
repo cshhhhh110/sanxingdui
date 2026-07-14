@@ -15,6 +15,8 @@ public class GenerationExperienceContextDTO {
     @Size(max = 64)
     private String messageId;
     @Size(max = 64)
+    private String proposalId;
+    @Size(max = 64)
     private String artifactId;
     @Size(max = 40)
     private String purpose;

@@ -5,6 +5,7 @@
 
 import { ROUTE_MAPPINGS, MCP_TOOL_CATEGORIES } from './config'
 import { getAgentCurrentDateTime, getAgentWeather } from '@/api/AgentApi'
+import { confirmVisualAidProposal } from '@/api/VisualAidApi'
 
 /**
  * MCP 工具基类
@@ -1053,6 +1054,31 @@ const getUserLocationTool = new MCPTool({
   }
 })
 
+const generateVisualAidTool = new MCPTool({
+  name: 'generate_visual_aid',
+  description: '确认当前视觉辅助建议并创建一条图片生成任务',
+  category: MCP_TOOL_CATEGORIES.INTERACTION,
+  requireAuth: false,
+  inputSchema: {
+    type: 'object',
+    properties: {
+      proposal_id: { type: 'string', description: '已存在的视觉辅助建议ID' },
+      client_request_id: { type: 'string', description: '幂等请求ID' }
+    },
+    required: ['proposal_id', 'client_request_id']
+  },
+  handler: async (params) => {
+    if (!params.proposal_id || !params.client_request_id) {
+      throw new Error('视觉辅助建议尚未确认')
+    }
+    const task = await confirmVisualAidProposal(params.proposal_id, params.client_request_id)
+    return {
+      ...task,
+      message: '视觉辅助图已进入创作队列'
+    }
+  }
+})
+
 // 导出所有工具
 export const MCP_TOOLS = {
   navigate_to: navigateTool,
@@ -1081,6 +1107,7 @@ export const MCP_TOOLS = {
   get_weather: getWeatherTool,
   get_current_datetime: getCurrentDateTimeTool,
   control_trail: controlTrailTool,
+  generate_visual_aid: generateVisualAidTool,
   view_profile: viewProfileTool,
   // 账户
   logout: logoutTool,

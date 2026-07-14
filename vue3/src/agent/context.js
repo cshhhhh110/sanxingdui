@@ -53,6 +53,30 @@ export function updateXuanmiaoContext(patch = {}) {
   return getXuanmiaoContext()
 }
 
+export function restoreXuanmiaoConversationContext(conversationId, savedContext = {}) {
+  const restored = normalizeContext({
+    ...savedContext,
+    conversationId: conversationId || savedContext.conversationId || ''
+  })
+  Object.keys(state).forEach((key) => delete state[key])
+  Object.assign(state, restored)
+  persist()
+  notify()
+  return getXuanmiaoContext()
+}
+
+export function setPendingVisualAidProposal(proposal = null) {
+  return updateXuanmiaoContext({ pendingVisualAidProposal: proposal })
+}
+
+export function rememberVisualAidTask(task = null, proposal = null) {
+  return updateXuanmiaoContext({
+    pendingVisualAidProposal: null,
+    lastVisualAidTask: task?.taskId || '',
+    lastVisualAidArtifact: proposal?.artifactName || state.currentArtifact || ''
+  })
+}
+
 export function setXuanmiaoTrailStatus(trailStatus = {}) {
   const status = normalizeTrailStatus(trailStatus)
   const patch = {
@@ -253,6 +277,7 @@ export function recordXuanmiaoExploration(input = {}) {
 function createDefaultContext() {
   return {
     sessionId: createSessionId(),
+    conversationId: '',
     userId: null,
     currentPage: '',
     currentScene: '',
@@ -285,6 +310,9 @@ function createDefaultContext() {
     lastTopic: '',
     lastAction: '',
     lastResult: '',
+    pendingVisualAidProposal: null,
+    lastVisualAidTask: '',
+    lastVisualAidArtifact: '',
     explorationHistory: {
       viewedArtifacts: [],
       completedRoutes: [],
@@ -317,6 +345,7 @@ function normalizeContext(value = {}) {
     ...defaults,
     ...value,
     sessionId: value.sessionId || defaults.sessionId,
+    conversationId: value.conversationId || '',
     recentMessages: Array.isArray(value.recentMessages)
       ? value.recentMessages.slice(-RECENT_MESSAGE_LIMIT)
       : [],
@@ -389,6 +418,7 @@ function applyToolResultToPatch(toolName, args = {}, result = {}, patch = {}) {
 function compactContext(context = {}) {
   return {
     sessionId: context.sessionId || '',
+    conversationId: context.conversationId || '',
     userId: context.userId || null,
     currentPage: context.currentPage || '',
     currentScene: context.currentScene || '',
@@ -403,6 +433,9 @@ function compactContext(context = {}) {
     lastTopic: context.lastTopic || '',
     lastAction: context.lastAction || '',
     lastResult: context.lastResult || '',
+    pendingVisualAidProposal: context.pendingVisualAidProposal || null,
+    lastVisualAidTask: context.lastVisualAidTask || '',
+    lastVisualAidArtifact: context.lastVisualAidArtifact || '',
     explorationHistory: normalizeGuideHistory(context.explorationHistory || {}),
     updatedAt: context.updatedAt || Date.now()
   }

@@ -14,6 +14,8 @@
     "test:agent-speech-input": "node scripts/agent-speech-input-regression.mjs",
     "test:browser-media": "node scripts/browser-media-recorder-matrix.mjs",
     "test:media-generation-p0": "node scripts/media-generation-p0-ui-regression.mjs",
+    "test:agent-visual-aid": "node scripts/agent-visual-aid-regression.mjs",
+    "test:agent-continuous-exploration-ui": "node scripts/agent-continuous-exploration-ui-regression.mjs",
     "preview": "vite preview",
     "lint": "eslint . --ext .vue,.js,.jsx,.cjs,.mjs --fix --ignore-path .gitignore",
     "voice-guide:generate": "node scripts/generate-trail-voice-guide.mjs",

@@ -43,13 +43,15 @@ const ENTITY_CATALOG = [
     id: 'artifact.bronze_sacred_tree',
     name: '青铜神树',
     type: '文物实体',
-    aliases: ['青铜神树', '神树', '通天神树', '神鸟树']
+    aliases: ['青铜神树', '神树', '通天神树', '神鸟树'],
+    visualPotential: ['祭祀场景', '天地连接', '太阳崇拜']
   },
   {
     id: 'artifact.gold_mask',
     name: '金面具',
     type: '文物实体',
-    aliases: ['金面具', '黄金面具', '黄金面罩', '金箔面具']
+    aliases: ['金面具', '黄金面具', '黄金面罩', '金箔面具'],
+    visualPotential: ['佩戴方式', '祭祀身份', '黄金礼仪']
   },
   {
     id: 'artifact.vertical_eye_mask',
@@ -61,13 +63,15 @@ const ENTITY_CATALOG = [
     id: 'artifact.standing_figure',
     name: '青铜大立人',
     type: '文物实体',
-    aliases: ['青铜大立人', '大立人', '大立人像', '青铜大立人像']
+    aliases: ['青铜大立人', '大立人', '大立人像', '青铜大立人像'],
+    visualPotential: ['人物姿态', '祭祀身份', '服饰结构']
   },
   {
     id: 'artifact.gold_scepter',
     name: '金杖',
     type: '文物实体',
-    aliases: ['金杖', '黄金权杖', '权杖']
+    aliases: ['金杖', '黄金权杖', '权杖'],
+    visualPotential: ['权力象征', '鱼鸟纹样', '礼仪使用']
   },
   {
     id: 'concept.sacrifice',
@@ -163,6 +167,7 @@ export function extractKnowledgeEntities(input = {}) {
         name: entity.name,
         shortName: entity.shortName || entity.name,
         type: entity.type,
+        visualPotential: entity.visualPotential || [],
         matchedAliases,
         score: matchedAliases.length
       })
@@ -183,6 +188,7 @@ export function extractKnowledgeEntities(input = {}) {
         name: contextualEntity.name,
         shortName: contextualEntity.shortName || contextualEntity.name,
         type: contextualEntity.type,
+        visualPotential: contextualEntity.visualPotential || [],
         matchedAliases: [context.currentArtifact],
         score: 10,
         fromContext: true

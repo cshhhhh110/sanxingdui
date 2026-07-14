@@ -120,6 +120,20 @@ public class AgentToolRegistry {
                         "graph_target", enumParam("Graph focus target.", TRAIL_GRAPH_TARGETS)
                 ), "action")
         ));
+        register(new ToolDefinition(
+                "generate_visual_aid",
+                "Confirm an existing visual-aid proposal and create exactly one image task. Never call without a proposal_id from current context.",
+                RiskLevel.CONFIRMATION_REQUIRED,
+                "media",
+                objectSchema(Map.of(
+                        "proposal_id", stringParam("Existing visual-aid proposal id."),
+                        "client_request_id", stringParam("Idempotency request id.")
+                ), "proposal_id", "client_request_id"),
+                objectSchema(Map.of(
+                        "success", booleanParam("Whether the task was created."),
+                        "taskId", stringParam("Generation task id.")
+                ))
+        ));
     }
 
     public boolean isEnabled(String toolName) {
@@ -219,6 +233,13 @@ public class AgentToolRegistry {
                     if (!graphTarget.isEmpty() && !TRAIL_GRAPH_TARGETS.contains(graphTarget)) return null;
                     if (!graphTarget.isEmpty()) normalized.put("graph_target", graphTarget);
                 }
+            }
+            case "generate_visual_aid" -> {
+                String proposalId = normalizedIdentifier(arguments.get("proposal_id"));
+                String clientRequestId = normalizedIdentifier(arguments.get("client_request_id"));
+                if (proposalId.isEmpty() || clientRequestId.isEmpty()) return null;
+                normalized.put("proposal_id", proposalId);
+                normalized.put("client_request_id", clientRequestId);
             }
             default -> {
                 return null;

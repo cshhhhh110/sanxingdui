@@ -67,6 +67,35 @@
         <div class="quick-panel-tab" aria-hidden="true">
           <i class="fas fa-list-ul"></i>
         </div>
+        <section class="exploration-library" aria-label="玄喵探索记录">
+          <header>
+            <div>
+              <small>连续参观记忆</small>
+              <strong>玄喵探索</strong>
+            </div>
+            <button type="button" title="新建探索" @click="startNewExploration">
+              <i class="fas fa-plus"></i>
+            </button>
+          </header>
+          <div v-if="explorationSessionsLoading" class="exploration-library-empty">正在整理足迹...</div>
+          <div v-else-if="!explorationSessions.length" class="exploration-library-empty">从一次提问开始新的探索</div>
+          <ul v-else>
+            <li v-for="session in explorationSessions.slice(0, 5)" :key="session.sessionId">
+              <button
+                type="button"
+                class="exploration-session-main"
+                :class="{ active: currentSessionId === session.sessionId }"
+                @click="restoreExploration(session)"
+              >
+                <strong>{{ session.title || '未命名探索' }}</strong>
+                <small>{{ session.currentArtifact || session.summary || '等待继续探索' }}</small>
+              </button>
+              <button type="button" class="exploration-session-delete" title="删除探索" @click.stop="removeExploration(session)">
+                <i class="fas fa-trash-can"></i>
+              </button>
+            </li>
+          </ul>
+        </section>
         <button
           v-for="card in quickCards"
           :key="card.key"
@@ -187,6 +216,26 @@
                   </div>
                 </div>
               </div>
+              <section
+                v-if="messageItem.visualAidProposal"
+                class="visual-aid-proposal"
+                :class="`visual-aid-proposal--${String(messageItem.visualAidProposal.status || 'PROPOSED').toLowerCase()}`"
+              >
+                <div class="visual-aid-proposal-mark"><i class="fas fa-image"></i></div>
+                <div class="visual-aid-proposal-copy">
+                  <small>玄喵的视觉辅助建议</small>
+                  <strong>{{ messageItem.visualAidProposal.title }}</strong>
+                  <p>{{ messageItem.visualAidProposal.reason }}</p>
+                  <div v-if="messageItem.visualAidProposal.status === 'PROPOSED'" class="visual-aid-proposal-actions">
+                    <button type="button" :disabled="generationSubmitting" @click="confirmVisualAid(messageItem)">
+                      <i class="fas fa-wand-magic-sparkles"></i> 生成辅助示意图
+                    </button>
+                    <button type="button" class="secondary" @click="dismissVisualAid(messageItem)">暂不需要</button>
+                  </div>
+                  <span v-else-if="messageItem.visualAidProposal.status === 'DISMISSED'">已跳过本次视觉辅助</span>
+                  <span v-else-if="messageItem.visualAidProposal.status === 'CONFIRMED'">已确认，作品会回到这段讲解中</span>
+                </div>
+              </section>
               <details v-if="messageItem.references?.length" class="message-references">
                 <summary class="references-title">
                   <span>
@@ -220,7 +269,7 @@
                 </ul>
               </details>
               <GenerationWorkCard
-                v-if="messageItem.messageType === 'MEDIA_GENERATION'"
+                v-if="messageItem.generationTask"
                 :task="messageItem.generationTask"
                 @preview="openImagePreview"
                 @retry="retryGenerationWork(messageItem, $event)"
@@ -420,7 +469,16 @@ import { message } from 'ant-design-vue'
 import { fetchEventSource } from '@microsoft/fetch-event-source'
 import { useRoute, useRouter } from 'vue-router'
 import { useUserStore } from '@/store/user'
-import { createSession as createSessionApi, getChatStreamUrl, transcribeSpeechInput } from '@/api/AiChatApi'
+import {
+  createSession as createSessionApi,
+  deleteSession as deleteSessionApi,
+  getChatStreamUrl,
+  getSessionList,
+  getSessionMessages,
+  transcribeSpeechInput,
+  updateConversationState
+} from '@/api/AiChatApi'
+import { createVisualAidProposal, dismissVisualAidProposal } from '@/api/VisualAidApi'
 import {
   createImageGeneration,
   createVideoGeneration,
@@ -429,6 +487,7 @@ import {
   retryGenerationTask
 } from '@/api/MediaGenerationApi'
 import { uploadTempFile } from '@/api/FileApi'
+import { mcpClient } from '@/mcp'
 import { matchFixedAnswer } from '@/config/chatReplyConfig'
 import { buildRagPrompt, searchKnowledge } from '@/utils/knowledgeSearch'
 import {
@@ -437,6 +496,7 @@ import {
   buildActiveGuideContext,
   buildActiveGuideFollowups,
   buildKnowledgeFollowupSuggestions,
+  decideVisualAid,
   discoverKnowledgeRelations,
   createSpeechInputService,
   getSpeechInputSupportMessage,
@@ -478,7 +538,10 @@ import {
   buildContextualQuestion,
   getXuanmiaoContext,
   getXuanmiaoContextPayload,
+  rememberVisualAidTask,
   rememberXuanmiaoMessage,
+  restoreXuanmiaoConversationContext,
+  setPendingVisualAidProposal,
   setXuanmiaoArtifactContext,
   setXuanmiaoPageContext,
   updateXuanmiaoContext
@@ -500,6 +563,8 @@ const isListening = ref(false)
 const isTranscribingVoice = ref(false)
 const voiceInputStatus = ref(SpeechInputStatus.IDLE)
 const currentSessionId = ref(null)
+const explorationSessions = ref([])
+const explorationSessionsLoading = ref(false)
 const activeQuickCard = ref('hot')
 const artifactContext = ref(null)
 const lastAutoAskedEntityId = ref('')
@@ -511,6 +576,8 @@ const generationWorksOpen = ref(false)
 const generationWorksLoading = ref(false)
 const generationWorks = ref([])
 const generationPollers = new Map()
+let conversationSyncTimer = null
+let isRestoringConversation = false
 
 const HERITAGE_KNOWLEDGE_KEYWORDS = [
   '三星堆',
@@ -757,6 +824,8 @@ onBeforeUnmount(() => {
   })
   generationPollers.forEach((timer) => window.clearTimeout(timer))
   generationPollers.clear()
+  if (conversationSyncTimer) window.clearTimeout(conversationSyncTimer)
+  void syncConversationState()
   closeImagePreview()
 })
 
@@ -789,15 +858,119 @@ async function initializeConversation() {
   draft.value = ''
   isThinking.value = false
   showThinkingBubble.value = false
-  window.localStorage.removeItem('ai-chat-current-session')
   setXuanmiaoPageContext({
     currentPage: route.fullPath,
     currentScene: 'AI文博助手'
   })
   await loadArtifactContext()
-  resetMessages()
+  await loadExplorationSessions()
+  const preferredSessionId = window.localStorage.getItem('ai-chat-current-session')
+  const preferredSession = explorationSessions.value.find((item) => item.sessionId === preferredSessionId)
+  if (preferredSession) {
+    await restoreExploration(preferredSession, { quiet: true })
+  } else {
+    resetMessages()
+  }
   await loadGenerationWorks({ restore: true })
   void maybeAutoStartGuide()
+}
+
+async function loadExplorationSessions() {
+  explorationSessionsLoading.value = true
+  try {
+    explorationSessions.value = (await getSessionList({ showDefaultMsg: false })) || []
+  } catch (error) {
+    console.warn('玄喵探索列表加载失败:', error)
+    explorationSessions.value = []
+  } finally {
+    explorationSessionsLoading.value = false
+  }
+}
+
+async function restoreExploration(session, options = {}) {
+  if (!session?.sessionId || isRestoringConversation) return
+  isRestoringConversation = true
+  try {
+    const storedMessages = await getSessionMessages(session.sessionId, { showDefaultMsg: false })
+    currentSessionId.value = session.sessionId
+    window.localStorage.setItem('ai-chat-current-session', session.sessionId)
+    restoreXuanmiaoConversationContext(session.sessionId, {
+      ...(session.context || {}),
+      conversationId: session.sessionId,
+      currentArtifact: session.currentArtifact || session.context?.currentArtifact || '',
+      currentTrailNode: session.currentTrailNode || session.context?.currentTrailNode || '',
+      activeGuideState: session.activeGuideState || session.context?.activeGuideState || {},
+      lastVisualAidTask: session.lastVisualAidTask || session.context?.lastVisualAidTask || ''
+    })
+    messages.value = (storedMessages || []).map(restoreStoredMessage).filter(Boolean)
+    if (!messages.value.length) messages.value = createInitialMessages()
+    for (const item of messages.value) {
+      if (item.generationTaskId) {
+        try {
+          item.generationTask = await getGenerationTask(item.generationTaskId)
+          if (['PENDING', 'PROCESSING'].includes(item.generationTask?.status)) pollGenerationMessage(item)
+        } catch (error) {
+          console.warn('恢复作品任务失败:', item.generationTaskId, error)
+        }
+      }
+    }
+    setXuanmiaoPageContext({ currentPage: route.fullPath, currentScene: 'AI文博助手' })
+    scrollToBottom()
+    if (!options.quiet) message.success(`已继续「${session.title || '玄喵探索'}」`)
+  } catch (error) {
+    console.error('恢复玄喵探索失败:', error)
+    if (!options.quiet) message.error('探索记录暂时无法恢复')
+  } finally {
+    isRestoringConversation = false
+  }
+}
+
+function restoreStoredMessage(item = {}) {
+  const payload = item.uiPayload || {}
+  const content = payload.content || item.content || ''
+  return {
+    ...payload,
+    id: item.clientMessageId || `stored-${item.id}`,
+    role: item.role,
+    content: Array.isArray(content) ? content : String(content).split(/\n\n+/).filter(Boolean),
+    messageType: item.messageType || payload.messageType || 'TEXT',
+    generationTaskId: item.generationTaskId || payload.generationTaskId || '',
+    agentTrace: item.trace || payload.agentTrace || null,
+    references: item.references || payload.references || [],
+    attachments: item.attachments || payload.attachments || [],
+    visualAidProposal: payload.visualAidProposal || null,
+    streamArchived: payload.streamArchived !== false,
+    time: payload.time || formatStoredTime(item.createTime)
+  }
+}
+
+function formatStoredTime(value) {
+  if (!value) return getCurrentTime()
+  const date = new Date(value)
+  if (Number.isNaN(date.getTime())) return getCurrentTime()
+  return `${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`
+}
+
+async function startNewExploration() {
+  if (isThinking.value || generationSubmitting.value) return
+  resetMessages()
+  await createSession('新的玄喵探索')
+  await loadExplorationSessions()
+  scheduleConversationSync()
+}
+
+async function removeExploration(session) {
+  if (!session?.sessionId || !window.confirm(`删除「${session.title || '这次探索'}」？`)) return
+  try {
+    await deleteSessionApi(session.sessionId)
+    if (currentSessionId.value === session.sessionId) {
+      window.localStorage.removeItem('ai-chat-current-session')
+      resetMessages()
+    }
+    await loadExplorationSessions()
+  } catch (error) {
+    message.error(error?.message || '删除探索失败')
+  }
 }
 
 async function loadArtifactContext() {
@@ -901,8 +1074,10 @@ function createInitialMessages() {
   ]
 }
 
-function resetMessages() {
-  currentSessionId.value = null
+function resetMessages(options = {}) {
+  if (!options.keepSession) {
+    currentSessionId.value = null
+  }
   messages.value = createInitialMessages()
   scrollToBottom()
 }
@@ -1261,6 +1436,7 @@ function archiveAssistantStreamById(messageId, finalMessage = '探索完成') {
     updateAssistantExplorationTraceById(messageId, targetMessage.agentTrace)
   }
   scrollToBottom()
+  scheduleConversationSync()
 }
 
 function getExplorationSummaryStatus(messageItem = {}) {
@@ -2028,19 +2204,101 @@ function appendAssistantMessage(content) {
   scrollToBottom()
 }
 
-async function createSession() {
+async function createSession(titleOverride = '') {
   try {
-    const title = hasArtifactContext.value
+    const title = titleOverride || (hasArtifactContext.value
       ? `三星堆解说 - ${contextTitle.value}`
-      : '三星堆智能助手'
+      : '新的玄喵探索')
     const sessionId = await createSessionApi(title, {
       showDefaultMsg: false
     })
     currentSessionId.value = sessionId
+    window.localStorage.setItem('ai-chat-current-session', sessionId)
+    updateXuanmiaoContext({ conversationId: sessionId })
+    if (!explorationSessions.value.some((item) => item.sessionId === sessionId)) {
+      explorationSessions.value.unshift({ sessionId, title, status: 'ACTIVE' })
+    }
   } catch (error) {
     currentSessionId.value = null
     console.error('创建 AI 会话失败:', error)
   }
+}
+
+function scheduleConversationSync(delay = 500) {
+  if (isRestoringConversation || !currentSessionId.value) return
+  if (conversationSyncTimer) window.clearTimeout(conversationSyncTimer)
+  conversationSyncTimer = window.setTimeout(() => {
+    conversationSyncTimer = null
+    void syncConversationState()
+  }, delay)
+}
+
+async function syncConversationState() {
+  if (isRestoringConversation || !currentSessionId.value) return
+  const context = getXuanmiaoContext()
+  const userMessages = messages.value.filter((item) => item.role === 'user')
+  const latestUserText = userMessages[userMessages.length - 1]?.content?.join(' ') || ''
+  const existing = explorationSessions.value.find((item) => item.sessionId === currentSessionId.value)
+  const title = existing?.title && existing.title !== '新的玄喵探索'
+    ? existing.title
+    : buildExplorationTitle(userMessages[0]?.content?.join(' ') || context.currentArtifact || '新的玄喵探索')
+  const payload = {
+    title,
+    summary: latestUserText.slice(0, 160),
+    status: 'ACTIVE',
+    currentArtifact: context.currentArtifact || '',
+    currentTrailNode: context.currentTrailNode || '',
+    activeGuideState: context.activeGuideState || {},
+    context: { ...context, conversationId: currentSessionId.value },
+    lastVisualAidTask: context.lastVisualAidTask || '',
+    messages: messages.value.map(toMessageSnapshot)
+  }
+  try {
+    await updateConversationState(currentSessionId.value, payload)
+    if (existing) Object.assign(existing, {
+      title,
+      summary: payload.summary,
+      currentArtifact: payload.currentArtifact,
+      currentTrailNode: payload.currentTrailNode,
+      context: payload.context,
+      activeGuideState: payload.activeGuideState,
+      lastVisualAidTask: payload.lastVisualAidTask
+    })
+  } catch (error) {
+    console.warn('玄喵探索状态保存失败:', error)
+  }
+}
+
+function toMessageSnapshot(item = {}) {
+  return {
+    clientMessageId: String(item.id),
+    role: item.role || 'assistant',
+    content: Array.isArray(item.content) ? item.content.join('\n\n') : String(item.content || ''),
+    messageType: item.messageType || 'TEXT',
+    generationTaskId: item.generationTaskId || item.generationTask?.taskId || '',
+    trace: item.agentTrace || null,
+    references: item.references || [],
+    uiPayload: {
+      content: item.content || [],
+      time: item.time || '',
+      messageType: item.messageType || 'TEXT',
+      attachments: item.attachments || [],
+      streamEvents: item.streamEvents || [],
+      streamArchived: Boolean(item.streamArchived),
+      explorationTrace: item.explorationTrace || null,
+      agentTrace: item.agentTrace || null,
+      knowledgeGraph: item.knowledgeGraph || null,
+      activeGuide: item.activeGuide || null,
+      followupSuggestions: item.followupSuggestions || [],
+      visualAidProposal: item.visualAidProposal || null,
+      generationTaskId: item.generationTaskId || item.generationTask?.taskId || ''
+    }
+  }
+}
+
+function buildExplorationTitle(text = '') {
+  const normalized = String(text).replace(/[？?。！!\n]/g, ' ').trim()
+  return normalized ? `${normalized.slice(0, 18)}${normalized.length > 18 ? '…' : ''}` : '新的玄喵探索'
 }
 
 function getCurrentContextPayload() {
@@ -2382,17 +2640,92 @@ function detectGenerationPurpose(question) {
   return 'CREATIVE_DESIGN'
 }
 
-function buildGenerationExperienceContext(question) {
+function buildGenerationExperienceContext(question, messageId = '') {
   const context = getXuanmiaoContext()
   return {
     schemaVersion: 1,
     surface: 'AI_CHAT',
     scene: 'HERITAGE_CHAT',
     sessionId: currentSessionId.value || '',
-    messageId: '',
+    messageId: String(messageId || ''),
     artifactId: String(getCurrentArtifactEntityId() || context.currentArtifact || ''),
     purpose: detectGenerationPurpose(question)
   }
+}
+
+async function maybeCreateVisualAidProposal(input = {}) {
+  const targetMessage = messages.value.find((item) => item.id === input.messageId)
+  if (!targetMessage || targetMessage.visualAidProposal) return
+  const candidate = decideVisualAid({
+    ...input,
+    context: getXuanmiaoContext()
+  })
+  if (!candidate) return
+  try {
+    const proposal = await createVisualAidProposal({
+      ...candidate,
+      sessionId: currentSessionId.value,
+      messageId: String(input.messageId)
+    })
+    targetMessage.visualAidProposal = proposal
+    setPendingVisualAidProposal(proposal)
+    scheduleConversationSync(0)
+    scrollToBottom()
+  } catch (error) {
+    console.warn('视觉辅助建议保存失败:', error)
+  }
+}
+
+async function confirmVisualAid(messageItem) {
+  const proposal = messageItem?.visualAidProposal
+  if (!proposal?.proposalId || proposal.status !== 'PROPOSED' || generationSubmitting.value) return
+  generationSubmitting.value = true
+  try {
+    const execution = await mcpClient.executeTool('generate_visual_aid', {
+      proposal_id: proposal.proposalId,
+      client_request_id: createGenerationRequestId()
+    }, { router, isAuthenticated: Boolean(userStore.token) })
+    if (!execution.success || !execution.data?.taskId) {
+      throw new Error(execution.message || '视觉辅助任务创建失败')
+    }
+    proposal.status = 'CONFIRMED'
+    attachVisualAidTask(execution.data, proposal)
+  } catch (error) {
+    message.error(error?.message || '视觉辅助任务创建失败')
+  } finally {
+    generationSubmitting.value = false
+  }
+}
+
+async function dismissVisualAid(messageItem) {
+  const proposal = messageItem?.visualAidProposal
+  if (!proposal?.proposalId || proposal.status !== 'PROPOSED') return
+  try {
+    const dismissed = await dismissVisualAidProposal(proposal.proposalId)
+    messageItem.visualAidProposal = dismissed
+    setPendingVisualAidProposal(null)
+    scheduleConversationSync(0)
+  } catch (error) {
+    message.error(error?.message || '暂时无法关闭这条建议')
+  }
+}
+
+function attachVisualAidTask(task, proposal = null) {
+  const proposalId = proposal?.proposalId || task?.experienceContext?.proposalId || ''
+  const targetMessage = messages.value.find((item) =>
+    item.visualAidProposal?.proposalId === proposalId
+  ) || messages.value.find((item) => item.visualAidProposal?.status === 'PROPOSED')
+  if (!targetMessage || !task?.taskId) return
+  targetMessage.visualAidProposal.status = 'CONFIRMED'
+  targetMessage.visualAidProposal.generationTaskId = task.taskId
+  targetMessage.generationTaskId = task.taskId
+  targetMessage.generationTask = task
+  targetMessage.generationMediaType = 'IMAGE'
+  rememberVisualAidTask(task, targetMessage.visualAidProposal)
+  upsertGenerationWork(task)
+  pollGenerationMessage(targetMessage)
+  scheduleConversationSync(0)
+  scrollToBottom()
 }
 
 function generationPollDelay(task) {
@@ -2415,6 +2748,7 @@ async function loadGenerationWorks(options = {}) {
     if (options.restore) {
       generationWorks.value
         .filter((task) => ['PENDING', 'PROCESSING'].includes(task.status))
+        .filter((task) => !currentSessionId.value || task.experienceContext?.sessionId === currentSessionId.value)
         .forEach((task) => {
           const existing = messages.value.find((item) => item.generationTaskId === task.taskId)
           if (existing) {
@@ -2582,7 +2916,7 @@ async function sendMediaGeneration(question, mediaType) {
       count: 1,
       modelProfile: generationProfile.value,
       clientRequestId,
-      experienceContext: buildGenerationExperienceContext(question)
+      experienceContext: buildGenerationExperienceContext(question, localMessage.id)
     }
     if (mediaType === 'IMAGE') localMessage.retryPayload = imagePayload
     const task = mediaType === 'VIDEO'
@@ -2599,6 +2933,7 @@ async function sendMediaGeneration(question, mediaType) {
     localMessage.generationTask = task
     upsertGenerationWork(task)
     pollGenerationMessage(localMessage)
+    scheduleConversationSync(0)
   } catch (error) {
     localMessage.content = [`${mediaLabel}生成任务创建失败`]
     localMessage.generationTask = {
@@ -2610,6 +2945,7 @@ async function sendMediaGeneration(question, mediaType) {
     pendingAttachments.value = referenceAttachments
   } finally {
     generationSubmitting.value = false
+    scheduleConversationSync()
   }
 }
 
@@ -2624,11 +2960,23 @@ async function pollGenerationMessage(messageItem) {
       if (task.status === 'SUCCEEDED') {
         const mediaType = getGenerationMediaType(messageItem)
         const mediaLabel = mediaType === 'VIDEO' ? '视频' : '图片'
-        messageItem.content = [`${mediaLabel}已生成`]
+        if (messageItem.messageType === 'MEDIA_GENERATION') {
+          messageItem.content = [`${mediaLabel}已生成`]
+        } else if (messageItem.visualAidProposal) {
+          messageItem.visualAidCompleted = true
+          window.dispatchEvent(new CustomEvent('xuanmiao:visual-aid-ready', {
+            detail: {
+              taskId: task.taskId,
+              artifactName: messageItem.visualAidProposal.artifactName,
+              message: '视觉辅助示意图已经生成。该画面为AI辅助理解内容，并非考古原貌。'
+            }
+          }))
+        }
         messageItem.attachments = []
         generationPollers.delete(taskId)
         void loadGenerationWorks()
         scrollToBottom()
+        scheduleConversationSync(0)
         return
       }
       if (['FAILED', 'CANCELED'].includes(task.status)) {
@@ -2636,6 +2984,7 @@ async function pollGenerationMessage(messageItem) {
         messageItem.content = [task.status === 'FAILED' ? `${mediaLabel}生成失败` : `${mediaLabel}生成已取消`]
         generationPollers.delete(taskId)
         void loadGenerationWorks()
+        scheduleConversationSync(0)
         return
       }
       const timer = window.setTimeout(poll, generationPollDelay(task))
@@ -2671,6 +3020,12 @@ async function sendMessage(presetQuestion = '') {
     topic: hasArtifactContext.value || getXuanmiaoContext().currentArtifact ? '文物追问' : ''
   })
 
+  if (!currentSessionId.value) await createSession()
+  if (!currentSessionId.value) {
+    message.error('创建探索会话失败')
+    return
+  }
+
   const mediaIntent = detectMediaIntent(question)
   if (mediaIntent === 'IMAGE' || mediaIntent === 'VIDEO') {
     await sendMediaGeneration(question, mediaIntent)
@@ -2679,8 +3034,9 @@ async function sendMessage(presetQuestion = '') {
 
   const fixedAnswer = pendingAttachments.value.length ? null : matchFixedAnswer(question)
 
+  const userMessageId = Date.now()
   messages.value.push({
-    id: Date.now(),
+    id: userMessageId,
     role: 'user',
     content: [question || '[附件消息]'],
     attachments: pendingAttachments.value.map(toDisplayAttachment),
@@ -2800,6 +3156,9 @@ async function sendMessage(presetQuestion = '') {
         assistantPlaceholderId,
         createGuideCompletedEvent(agentResult.data.activeGuideState)
       )
+    }
+    if (agentResult.toolName === 'generate_visual_aid' && agentResult.success && agentResult.data?.taskId) {
+      attachVisualAidTask(agentResult.data)
     }
     updateAssistantMessageById(
       assistantPlaceholderId,
@@ -2923,11 +3282,13 @@ async function sendMessage(presetQuestion = '') {
         context: getXuanmiaoContextPayload({
           currentPage: route.fullPath,
           surface: 'ai_chat'
-        })
+        }),
+        clientUserMessageId: String(userMessageId),
+        clientAssistantMessageId: String(assistantPlaceholderId)
       }),
       signal: chatAbortController.signal,
       openWhenHidden: true,
-      onmessage(event) {
+      async onmessage(event) {
         const streamEvent = parseAgentStreamEvent(event.data)
         if (streamEvent) {
           appendAssistantStreamEventById(assistantPlaceholderId, streamEvent)
@@ -2950,6 +3311,17 @@ async function sendMessage(presetQuestion = '') {
             })
           }
           archiveAssistantStreamById(assistantPlaceholderId, aiResponse ? '讲解已生成' : '已使用备用资料')
+          if (aiResponse) {
+            await maybeCreateVisualAidProposal({
+              messageId: assistantPlaceholderId,
+              question,
+              answer: aiResponse,
+              route: agentResult?.route,
+              attachments: uploadedAttachments,
+              knowledgeGraph: pendingKnowledgeGraph,
+              references: pendingReferences
+            })
+          }
           return
         }
 
@@ -3552,6 +3924,132 @@ function getCurrentTime() {
   font-size: 16px;
 }
 
+.exploration-library {
+  display: grid;
+  gap: 10px;
+  width: 260px;
+  max-height: min(380px, calc(100vh - 280px));
+  padding: 14px;
+  margin-left: 0;
+  overflow: hidden auto;
+  color: #294b3b;
+  pointer-events: none;
+  background:
+    linear-gradient(145deg, rgba(255, 253, 247, 0.98), rgba(241, 247, 241, 0.96)),
+    repeating-linear-gradient(0deg, transparent 0 22px, rgba(66, 102, 79, 0.03) 23px);
+  border: 1px solid rgba(214, 189, 130, 0.58);
+  border-radius: 0 18px 18px 0;
+  opacity: 0;
+  box-shadow: 0 18px 38px rgba(43, 72, 56, 0.18);
+  transform: translateX(-280px);
+  transition: opacity 0.2s ease, transform 0.28s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+.quick-panel:hover .exploration-library,
+.quick-panel:focus-within .exploration-library {
+  pointer-events: auto;
+  opacity: 1;
+  transform: translateX(56px);
+}
+
+.exploration-library header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid rgba(66, 102, 79, 0.12);
+}
+
+.exploration-library header div {
+  display: grid;
+  gap: 2px;
+}
+
+.exploration-library header small {
+  color: #a17b31;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+}
+
+.exploration-library header strong {
+  font-family: 'STKaiti', 'KaiTi', serif;
+  font-size: 20px;
+}
+
+.exploration-library header button {
+  display: grid;
+  width: 32px;
+  height: 32px;
+  place-items: center;
+  color: #fff;
+  cursor: pointer;
+  background: #3d674f;
+  border: 0;
+  border-radius: 50%;
+}
+
+.exploration-library ul {
+  display: grid;
+  gap: 7px;
+  padding: 0;
+  margin: 0;
+  list-style: none;
+}
+
+.exploration-library li {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 28px;
+  gap: 4px;
+  align-items: center;
+}
+
+.exploration-session-main {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+  padding: 9px 10px;
+  color: #41584d;
+  text-align: left;
+  cursor: pointer;
+  background: rgba(255, 255, 255, 0.62);
+  border: 1px solid transparent;
+  border-radius: 11px;
+}
+
+.exploration-session-main.active {
+  color: #254b38;
+  background: rgba(222, 236, 225, 0.82);
+  border-color: rgba(66, 102, 79, 0.2);
+}
+
+.exploration-session-main strong,
+.exploration-session-main small {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.exploration-session-main small,
+.exploration-library-empty {
+  color: #7b8a82;
+  font-size: 11px;
+}
+
+.exploration-session-delete {
+  color: #9b8a73;
+  cursor: pointer;
+  background: transparent;
+  border: 0;
+  opacity: 0.55;
+}
+
+.exploration-session-delete:hover {
+  color: #9b4e3b;
+  opacity: 1;
+}
+
 .quick-card {
   display: grid;
   grid-template-columns: 34px minmax(0, 1fr);
@@ -3892,6 +4390,83 @@ function getCurrentTime() {
 .message-stack time {
   color: #8e9b96;
   font-size: 13px;
+}
+
+.visual-aid-proposal {
+  display: grid;
+  grid-template-columns: 42px minmax(0, 1fr);
+  gap: 12px;
+  max-width: 620px;
+  padding: 13px 14px;
+  color: #365344;
+  background:
+    radial-gradient(circle at 92% 12%, rgba(214, 189, 130, 0.2), transparent 90px),
+    linear-gradient(135deg, rgba(247, 251, 246, 0.98), rgba(255, 250, 238, 0.94));
+  border: 1px solid rgba(137, 155, 104, 0.34);
+  border-radius: 16px;
+  box-shadow: 0 10px 24px rgba(66, 102, 79, 0.08);
+}
+
+.visual-aid-proposal-mark {
+  display: grid;
+  width: 42px;
+  height: 42px;
+  place-items: center;
+  color: #fff;
+  background: linear-gradient(145deg, #52745f, #b18a3a);
+  border-radius: 13px;
+}
+
+.visual-aid-proposal-copy {
+  display: grid;
+  gap: 5px;
+}
+
+.visual-aid-proposal-copy > small {
+  color: #9a7631;
+  font-size: 10px;
+  font-weight: 900;
+  letter-spacing: 0.1em;
+}
+
+.visual-aid-proposal-copy > strong {
+  font-size: 14px;
+}
+
+.visual-aid-proposal-copy p,
+.visual-aid-proposal-copy > span {
+  margin: 0;
+  color: #6a796f;
+  font-size: 12px;
+  line-height: 1.6;
+}
+
+.visual-aid-proposal-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 3px;
+}
+
+.visual-aid-proposal-actions button {
+  padding: 7px 12px;
+  color: #fff;
+  font-size: 12px;
+  font-weight: 800;
+  cursor: pointer;
+  background: #3f674f;
+  border: 1px solid #3f674f;
+  border-radius: 999px;
+}
+
+.visual-aid-proposal-actions button.secondary {
+  color: #607268;
+  background: transparent;
+  border-color: rgba(66, 102, 79, 0.2);
+}
+
+.visual-aid-proposal--dismissed {
+  opacity: 0.68;
 }
 
 .message-references {

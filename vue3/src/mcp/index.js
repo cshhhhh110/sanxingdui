@@ -123,6 +123,8 @@ function summarizeSuccessfulTool(toolName, args, data = {}) {
       return '\u5df2\u6253\u5f00\u6587\u7269\u8be6\u60c5\u9875\u3002'
     case 'play_voice_intro':
       return '\u5df2\u5f00\u59cb\u64ad\u653e\u6587\u7269\u8bed\u97f3\u4ecb\u7ecd\u3002'
+    case 'generate_visual_aid':
+      return data?.message || '\u89c6\u89c9\u8f85\u52a9\u56fe\u5df2\u8fdb\u5165\u521b\u4f5c\u961f\u5217\u3002'
     default:
       return data?.message || '\u64cd\u4f5c\u5df2\u6267\u884c\u3002'
   }

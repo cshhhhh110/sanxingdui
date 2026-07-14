@@ -41,6 +41,11 @@ public class HeritageAssistantService {
     }
 
     public Flux<String> chatStream(String sessionId, String userMessage, List<AiChatAttachmentDTO> attachments) {
+        return chatStream(sessionId, userMessage, attachments, null, null);
+    }
+
+    public Flux<String> chatStream(String sessionId, String userMessage, List<AiChatAttachmentDTO> attachments,
+                                   String clientUserMessageId, String clientAssistantMessageId) {
         MultimodalContentService.MultimodalPrompt prompt =
                 multimodalContentService.buildPrompt(userMessage, attachments);
 
@@ -52,7 +57,8 @@ public class HeritageAssistantService {
                 prompt.getRawContent(),
                 prompt.getModelText(),
                 prompt.getMessageType(),
-                prompt.getAttachments()
+                prompt.getAttachments(),
+                clientUserMessageId
         );
 
         String modelInput = buildModelInputWithKnowledge(prompt);
@@ -68,7 +74,7 @@ public class HeritageAssistantService {
                 .doOnNext(fullResponse::append)
                 .doOnComplete(() -> {
                     String assistantMessage = fullResponse.toString();
-                    sessionService.saveMessage(sessionId, "assistant", assistantMessage);
+                    sessionService.saveMessage(sessionId, "assistant", assistantMessage, clientAssistantMessageId);
                     log.info("AI chat stream completed, sessionId: {}, responseLength: {}",
                             sessionId, assistantMessage.length());
                 })

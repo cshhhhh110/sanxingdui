@@ -38,6 +38,7 @@ export {
   XUANMIAO_PLAYBACK_RATE
 } from './voiceManager'
 export { createVoicePolicySession, selectAgentVoiceCue, createVoiceTraceEvent } from './voicePolicy'
+export { decideVisualAid } from './visualAid'
 export {
   buildGuideExperienceContext,
   buildDestinationIntroMessage,

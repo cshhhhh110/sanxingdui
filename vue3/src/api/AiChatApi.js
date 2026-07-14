@@ -17,8 +17,8 @@ export function createSession(title = '新对话', config = {}) {
  * 获取会话列表
  * @returns {Promise}
  */
-export function getSessionList() {
-  return request.get('/ai-chat/session/list');
+export function getSessionList(config = {}) {
+  return request.get('/ai-chat/session/list', null, config);
 }
 
 /**
@@ -50,6 +50,13 @@ export function updateSessionTitle(sessionId, title) {
  */
 export function deleteSession(sessionId) {
   return request.delete(`/ai-chat/session/${sessionId}`);
+}
+
+export function updateConversationState(sessionId, data, config = {}) {
+  return request.put(`/ai-chat/session/${sessionId}/state`, data, {
+    showDefaultMsg: false,
+    ...config
+  });
 }
 
 /**

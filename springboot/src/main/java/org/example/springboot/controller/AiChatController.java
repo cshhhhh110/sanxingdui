@@ -10,6 +10,7 @@ import org.example.springboot.common.ResultCode;
 import org.example.springboot.dto.FileInfoDTO;
 import org.example.springboot.dto.command.AiChatAttachmentDTO;
 import org.example.springboot.dto.command.AiChatCommandDTO;
+import org.example.springboot.dto.command.AiChatConversationStateDTO;
 import org.example.springboot.dto.response.AiChatMessageAttachmentResponseDTO;
 import org.example.springboot.dto.response.AiChatMessageResponseDTO;
 import org.example.springboot.dto.response.AiChatSessionResponseDTO;
@@ -31,6 +32,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import jakarta.validation.Valid;
 import org.springframework.web.multipart.MultipartFile;
 import reactor.core.publisher.Flux;
 
@@ -84,12 +86,7 @@ public class AiChatController {
         }
 
         List<AiChatSessionResponseDTO> dtoList = sessionService.getUserSessions(userId).stream()
-                .map(session -> AiChatSessionResponseDTO.builder()
-                        .sessionId(session.getSessionId())
-                        .title(session.getTitle())
-                        .createTime(session.getCreateTime())
-                        .updateTime(session.getUpdateTime())
-                        .build())
+                .map(this::toSessionResponse)
                 .toList();
 
         return Result.success(dtoList);
@@ -137,7 +134,9 @@ public class AiChatController {
 
         Flux<String> statusEvents = buildStreamStatusEvents(dto);
 
-        return statusEvents.concatWith(aiService.chatStream(dto.getSessionId(), dto.getUserMessage(), dto.getAttachments()))
+        return statusEvents.concatWith(aiService.chatStream(
+                        dto.getSessionId(), dto.getUserMessage(), dto.getAttachments(),
+                        dto.getClientUserMessageId(), dto.getClientAssistantMessageId()))
                 .concatWith(Flux.just("[DONE]"))
                 .doOnError(error -> log.error("AI chat stream failed", error))
                 .onErrorResume(error -> Flux.just(
@@ -205,6 +204,21 @@ public class AiChatController {
         }
 
         sessionService.updateSessionTitle(sessionId, title);
+        return Result.success();
+    }
+
+    @PutMapping("/session/{sessionId}/state")
+    @Operation(summary = "保存玄喵探索状态")
+    public Result<Void> updateConversationState(
+            @PathVariable String sessionId,
+            @Valid @RequestBody AiChatConversationStateDTO state
+    ) {
+        Long userId = getCurrentUserId();
+        if (userId == null) return unauthorized();
+        if (!sessionService.isSessionOwnedByUser(sessionId, userId)) {
+            return Result.error("无权访问此会话");
+        }
+        sessionService.syncConversationState(sessionId, state);
         return Result.success();
     }
 
@@ -315,12 +329,32 @@ public class AiChatController {
 
         return AiChatMessageResponseDTO.builder()
                 .id(msg.getId())
+                .clientMessageId(msg.getClientMessageId())
                 .role(msg.getRole())
                 .content(msg.getContent())
                 .messageType(msg.getMessageType())
                 .generationTaskId("MEDIA_GENERATION".equals(msg.getMessageType()) ? msg.getProcessedContent() : null)
+                .trace(sessionService.readMap(msg.getTraceJson()))
+                .references(sessionService.readList(msg.getReferencesJson()))
+                .uiPayload(sessionService.readMap(msg.getUiPayload()))
                 .attachments(attachments)
                 .createTime(msg.getCreateTime())
+                .build();
+    }
+
+    private AiChatSessionResponseDTO toSessionResponse(AiChatSession session) {
+        return AiChatSessionResponseDTO.builder()
+                .sessionId(session.getSessionId())
+                .title(session.getTitle())
+                .summary(session.getSummary())
+                .status(session.getStatus())
+                .currentArtifact(session.getCurrentArtifact())
+                .currentTrailNode(session.getCurrentTrailNode())
+                .activeGuideState(sessionService.readMap(session.getActiveGuideState()))
+                .context(sessionService.readMap(session.getContextJson()))
+                .lastVisualAidTask(session.getLastVisualAidTask())
+                .createTime(session.getCreateTime())
+                .updateTime(session.getUpdateTime())
                 .build();
     }
 

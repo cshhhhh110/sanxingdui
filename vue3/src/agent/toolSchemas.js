@@ -111,6 +111,27 @@ export const AGENT_TOOL_SCHEMAS = Object.freeze({
       }
     },
     outputSchema: { type: 'object', properties: { artifact_id: { type: 'string' }, message: { type: 'string' } } }
+  },
+  generate_visual_aid: {
+    name: 'generate_visual_aid',
+    category: 'media',
+    description: 'Confirm an existing visual-aid proposal and create one image task.',
+    riskLevel: 'CONFIRMATION_REQUIRED',
+    inputSchema: {
+      type: 'object',
+      required: ['proposal_id', 'client_request_id'],
+      properties: {
+        proposal_id: { type: 'string' },
+        client_request_id: { type: 'string' }
+      }
+    },
+    outputSchema: {
+      type: 'object',
+      properties: {
+        taskId: { type: 'string' },
+        status: { type: 'string' }
+      }
+    }
   }
 })
 
