@@ -1,85 +1,117 @@
-# Sanxingdui 非遗传承系统
+# 青铜数元｜三星堆数字文博体验系统
 
-这是一个前后端分离项目：
+把文物从“看一眼”变成“顺着关系探索一圈”。
 
-- 后端：Spring Boot 3，默认端口 `8889`
-- 前端：Vue 3 + Vite，默认端口 `8800`
-- 数据库：MySQL，复现建议库名 `sanxingdui_repro`
-- 可选图谱：Neo4j，默认 `bolt://localhost:7687`
-- 图片生成：Spring Boot 直连 SiliconFlow 图片模型 API
+青铜数元是一套面向三星堆文博场景的前后端分离系统：用户可以按时间、空间和工艺浏览文物，查看三维模型和知识图谱，也可以向 AI 文博助手提问、上传图片、体验数字导览。
 
-## 环境要求
+## 项目亮点
+
+- **知识问答**：整理38份 Markdown 文档，支持带来源的 RAG 检索和回答。
+- **状态驱动 Agent**：根据当前页面、文物和导览状态，选择问答、工具调用或直接回应。
+- **三维文物**：使用 Three.js 加载5件 GLB 文物模型。
+- **关系探索**：使用 AntV G6 展示文物、年代、遗址、工艺和文化含义之间的关系。
+- **多模态体验**：支持图片理解、语音输入、视觉辅助以及图片/视频创作。
+- **可验证工程**：提供 Agent/UI 回归脚本，覆盖检索、路由、上下文、导览和多模态关键链路。
+
+## 项目作者
+
+| 项目 | 信息 |
+|---|---|
+| GitHub | [cshhhhh110](https://github.com/cshhhhh110) |
+| 学校 | 长春理工大学 |
+| 学院 | 计算机科学与技术学院 |
+| 专业 | 数据科学与大数据技术 |
+| 项目职责 | 项目作者/维护者，Agent / RAG 核心模块负责人 |
+| 联系邮箱 | `18238053579@163.com` |
+
+## 系统结构
+
+```mermaid
+flowchart LR
+    U[用户] --> V[Vue 3 前端]
+    V -->|JSON / SSE| B[Spring Boot 后端]
+    B --> R[RAG 知识检索]
+    B --> A[Agent Router 与工具]
+    B --> M[模型与多模态服务]
+    B --> D[(MySQL)]
+    B -. 可选 .-> N[(Neo4j)]
+    V --> T[Three.js 三维模型]
+    V --> G[AntV G6 图谱]
+```
+
+## 技术栈
+
+| 层次 | 技术 |
+|---|---|
+| 前端 | Vue 3、Vite、Ant Design Vue、Three.js、AntV G6 |
+| 后端 | Spring Boot 3、Java 17、MyBatis-Plus、Spring AI |
+| 数据 | MySQL 8.x；Neo4j 5.x 可选 |
+| AI能力 | OpenAI 兼容接口、Qwen 多模态模型、SiliconFlow 媒体服务 |
+| 流式交互 | SSE |
+| 测试 | JUnit 5、Playwright/Node 回归脚本 |
+
+## 快速开始
+
+### 1. 环境要求
 
 - JDK 17
-- Node.js 20/22 LTS 推荐；Node.js 24 也可运行当前前端依赖
+- Node.js 20 或 22 LTS
 - MySQL 8.x
 - Git
-- Neo4j 5.x（可选，用于知识图谱增强）
+- Neo4j 5.x（可选）
 
-## 克隆项目
+### 2. 克隆项目
 
 ```powershell
 git clone https://github.com/cshhhhh110/sanxingdui.git
 cd sanxingdui
 ```
 
-如果已经克隆过：
+### 3. 初始化数据库
 
-```powershell
-git pull origin master
-```
-
-## 初始化数据库
-
-先创建一个独立复现库，避免覆盖你本机原项目的 `heritage_db`：
+建议使用独立数据库，避免影响本机已有数据：
 
 ```powershell
 mysql -u root -p -e "CREATE DATABASE IF NOT EXISTS sanxingdui_repro DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;"
 cmd /c "mysql -u root -p sanxingdui_repro < heritage_db.sql"
 ```
 
-PowerShell 不支持 `mysql ... < heritage_db.sql` 这种输入重定向，所以导入 SQL 时要用 `cmd /c "..."`。
-
-`heritage_db.sql` 已包含时空探索需要的竞赛增量字段和 5 件核心文物数据。如果你是在旧版本仓库下已经导入过数据库，再拉取新版代码后只需要补跑一次：
+如果数据库已经导入过旧版本结构，更新代码后可按需补跑：
 
 ```powershell
 cmd /c "mysql -u root -p sanxingdui_repro < docs\sql\competition-p0.sql"
 ```
 
-## 配置后端
+### 4. 配置后端
 
-真实配置文件不提交到 GitHub。每个开发者在本机复制模板：
+复制配置模板：
 
 ```powershell
 copy springboot\src\main\resources\application-template.yml springboot\src\main\resources\application.yml
 ```
 
-然后编辑 `springboot/src/main/resources/application.yml`，至少填写：
+至少填写以下内容：
 
 - `spring.datasource.username`
 - `spring.datasource.password`
 - `jwt.secret`
-- `spring.ai.openai.api-key`（需要 AI 对话时）
-- `zhipu.api-key`（使用智谱 GLM-TTS 时，推荐通过 `ZHIPU_API_KEY` 环境变量配置）
-- `mimo.api-key` 或 `deepseek.api-key`（需要对应能力时）
+- `spring.ai.openai.api-key`（使用对话能力时）
 - `graph.neo4j.password`（启用 Neo4j 时）
 
-`application.yml` 已被 `.gitignore` 忽略，不要提交真实密码、邮箱授权码或 API Key。
+图片、视频、语音等能力按实际需要配置对应服务密钥。真实的 `application.yml` 已被 Git 忽略，请不要提交密码、授权码或 API Key。
 
-## 启动后端
+### 5. 启动后端
 
 ```powershell
 cd springboot
 .\mvnw.cmd spring-boot:run
 ```
 
-后端地址：
+后端地址：<http://localhost:8889>
 
-```text
-http://localhost:8889
-```
+### 6. 启动前端
 
-## 启动前端
+另开一个终端：
 
 ```powershell
 cd vue3
@@ -87,22 +119,35 @@ npm ci
 npm run dev
 ```
 
-前端地址：
+前端地址：<http://localhost:8800>
 
-```text
-http://localhost:8800
-```
+Vite 已配置以下代理：
 
-Vite 已配置代理：
+- `/api` → `http://localhost:8889`
+- `/files` → `http://localhost:8889`
 
-- `/api` -> `http://localhost:8889`
-- `/files` -> `http://localhost:8889`
+## 页面入口
 
-仓库内已保留首页、课程、活动、文物、商城展示需要的图片素材；课程视频属于大文件，未纳入 Git。复现环境未放入视频时，课程学习页会显示文字章节，不会返回失效视频地址。
+启动后可以直接打开这些页面：
 
-## 可选：Neo4j 图谱
+| 页面 | 地址 | 可以体验什么 |
+|---|---|---|
+| 时空探索 | <http://localhost:8800/tanmi> | 按时间、空间和工艺探索文物 |
+| 导览与图谱 | <http://localhost:8800/trail> | 三维模型、关系图谱和连续导览 |
+| 三维文物 | <http://localhost:8800/3dlist> | 浏览可用 GLB 文物模型 |
+| AI文博助手 | <http://localhost:8800/ai-chat> | RAG问答、来源查看和多模态交互 |
+| 图片创作 | <http://localhost:8800/ai-image-generator> | 视觉辅助和图片创作 |
 
-默认模板中 Neo4j 关闭：
+更多公开技术说明见：
+
+- [项目架构说明](docs/项目架构说明.md)
+- [开发与目录说明](docs/开发与目录说明.md)
+- [项目状态说明](docs/项目状态说明.md)
+- [RAG实现说明](docs/rag-implementation-plan.md)
+
+## 可选：启用 Neo4j 图谱
+
+默认配置中 Neo4j 关闭：
 
 ```yaml
 graph:
@@ -110,43 +155,18 @@ graph:
     enabled: false
 ```
 
-如果要启用：
+如需启用：
 
-1. 启动本机 Neo4j。
-2. 在 `application.yml` 中设置 `graph.neo4j.enabled: true`。
-3. 填写 `graph.neo4j.password`。
-4. 在 Neo4j Browser 或 cypher-shell 中执行：
+1. 启动本机 Neo4j；
+2. 设置 `graph.neo4j.enabled: true`；
+3. 填写 `graph.neo4j.password`；
+4. 执行 `docs/neo4j-graph-seed.cypher` 中的种子脚本。
 
-```text
-docs/neo4j-graph-seed.cypher
-```
-
-即使 Neo4j 未启用，后端仍会回退到 MySQL 图谱数据。
-
-## AI 图片生成
-
-`/ai-image-generator` 和聊天页生图模式统一请求 Spring Boot 的
-`/api/media-generation/image`。后端通过 `SiliconFlowImageGenerationProvider`
-直接调用 SiliconFlow，并将短时结果下载到 `springboot/files/generated`。
-
-图片模型默认使用 `Qwen/Qwen-Image`，可通过环境变量调整：
-
-```env
-IMAGE_GENERATION_MODEL=Qwen/Qwen-Image
-IMAGE_GENERATION_API_KEY=<your-api-key>
-```
-
-没有单独配置 `IMAGE_GENERATION_API_KEY` 时，后端复用
-`spring.ai.openai.api-key`。供应商密钥不得写入前端环境变量。
-
-视频生成使用 `Wan-AI/Wan2.2-T2V-A14B` 和
-`Wan-AI/Wan2.2-I2V-A14B`，通过 `/v1/video/submit` 提交并由后端定时查询
-`/v1/video/status`。完成后的短时视频地址会立即转存到本地，并通过
-`ffprobe` 校验后写入 `sys_file_info`。当前模型输出约 5 秒视频。
+Neo4j 未启用时，后端会回退到 MySQL 中的结构化关系数据。
 
 ## 常用验证
 
-前端打包：
+前端构建：
 
 ```powershell
 cd vue3
@@ -160,17 +180,22 @@ cd springboot
 .\mvnw.cmd -DskipTests package
 ```
 
-启动后建议访问：
+后端测试：
 
-- `http://localhost:8800/tanmi`
-- `http://localhost:8800/trail`
-- `http://localhost:8800/3dlist`
-- `http://localhost:8800/ai-image-generator`
+```powershell
+cd springboot
+.\mvnw.cmd test
+```
 
-## 协作约定
+前端回归脚本位于 `vue3/scripts/`，覆盖 Agent、知识图谱、导览、语音、视觉辅助和媒体创作等流程。
 
-- 两人默认从 `master` 拉取和推送。
-- 开始开发前先执行 `git pull origin master`。
-- 提交前检查 `git status`，确认没有真实配置和临时文件。
-- 不提交 `node_modules`、`dist`、`target`、日志、上传文件和本地 `application.yml`。
-- 如果真实密钥曾经进入 GitHub，请立刻在对应平台重置密钥。
+## 运行小贴士
+
+- 没有配置模型服务时，基础页面和部分结构化内容仍可浏览；AI问答和媒体创作需要对应服务密钥。
+- 没有启用 Neo4j 时，图谱数据会使用后端回退方案。
+- 课程视频等大文件不纳入 Git，复现环境缺少视频时，课程页仍会显示文字章节。
+- 遇到接口异常时，先确认 MySQL、后端端口 `8889` 和前端代理是否正常。
+
+## 开源说明
+
+项目主要代码由本人完成并持续维护，欢迎通过 Issue 提交可复现的问题或改进建议。提交代码前请确认没有带入本地配置、密钥、日志、`node_modules`、`target`、`dist` 或临时文件。
