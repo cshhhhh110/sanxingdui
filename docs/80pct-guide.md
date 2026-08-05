@@ -1,4 +1,4 @@
-# 80% completion guide · agent-executable
+# 80% completion guide
 
 ## Context
 Sanxingdui competition MVP. 5 pages: Home → tanmi → 3dlist → 3D → AiChat.
